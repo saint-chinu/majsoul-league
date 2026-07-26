@@ -86,6 +86,17 @@ def count_season_rows(seasons: set[int]) -> dict[int, int]:
     return counts
 
 
+def existing_season_numbers() -> set[int]:
+    seasons = set()
+
+    for path in Path(".").glob("admin_paifu_ids_season*.csv"):
+        match = SEASON_FILE_RE.match(path.name)
+        if match:
+            seasons.add(int(match.group(1)))
+
+    return seasons
+
+
 def merge_season_files(seasons: set[int]) -> int:
     rows_by_uuid: dict[str, dict[str, str]] = {}
 
@@ -473,7 +484,14 @@ def main() -> None:
             write_csv_rows(out, rows)
             print(f"saved: {out} ({len(rows)}件)")
 
-        merge_targets = {1, *range(start_season, end_season + 1)}
+        # 単体テストで「開始3 終了3」としても、既に取得済みのシーズン2を累計から落とさない。
+        merge_targets = {
+            season
+            for season in existing_season_numbers()
+            if 1 <= season <= end_season
+        }
+        merge_targets.update(range(start_season, end_season + 1))
+        merge_targets.add(1)
         total = merge_season_files(merge_targets)
         season_counts = count_season_rows(merge_targets)
         print()
