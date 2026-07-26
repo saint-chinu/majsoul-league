@@ -1,0 +1,15 @@
+.venv/
+browser-profile/
+captures/
+records_raw/
+__pycache__/
+*.pyc
+*_backup.csv
+*_result.txt
+record_list_payloads.txt
+pager_result.txt
+visible_paifu_ids.csv
+admin_paifu_ids_manual.csv
+round_events.csv
+record_list.csv
+paifu_urls.txt
