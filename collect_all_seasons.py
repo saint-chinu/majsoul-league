@@ -237,9 +237,33 @@ def click_season(page: Page, season: int) -> bool:
     for i, item in enumerate(bottom_order[: min(len(bottom_order), 12)], start=1):
         print(f"  下から{i}: {item['text']} source={item.get('source', '')} y={item['y']}")
 
+    choice = input(
+        f"シーズン{season}として押す候補。Enter=下から{season} / 数字=下からその番号 / m=手動: "
+    ).strip().lower()
+
+    if choice == "m":
+        return False
+
+    selected_no = season
+
+    if choice:
+        try:
+            selected_no = int(choice)
+        except ValueError:
+            print("数字か m を入力してください。手動に切り替えます。")
+            return False
+
+        if selected_no < 1 or selected_no > len(bottom_order):
+            print(f"候補番号が範囲外です: {selected_no}")
+            return False
+
+        target = bottom_order[selected_no - 1]
+    else:
+        target = bottom_order[season - 1]
+
     x = float(target["x"]) + float(target["width"]) / 2
     y = float(target["y"]) + float(target["height"]) / 2
-    print(f"click season {season}: 下から{season} {target['text']} source={target.get('source', '')} ({x:.1f}, {y:.1f})")
+    print(f"click season {season}: 下から{selected_no} {target['text']} source={target.get('source', '')} ({x:.1f}, {y:.1f})")
     page.mouse.click(x, y)
     page.wait_for_timeout(1800)
     return True
