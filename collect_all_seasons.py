@@ -432,12 +432,10 @@ def collect_current_season(page: Page, season: int, max_pages: int) -> list[dict
 
 
 def main() -> None:
-    start_text = input("開始シーズン。シーズン1は完了済みなので今回は2: ").strip()
-    end_text = input("終了シーズン。今ある最新シーズン番号を入力、空なら8: ").strip()
+    season_text = input("今回取得するシーズン番号。例: 3: ").strip()
     max_pages_text = input("1シーズン最大ページ数。分からなければ空Enterで50: ").strip()
 
-    start_season = int(start_text or "2")
-    end_season = int(end_text or "8")
+    season = int(season_text)
     max_pages = int(max_pages_text or "50")
 
     ensure_season1_backup()
@@ -455,42 +453,26 @@ def main() -> None:
         print()
         print("ブラウザで管理画面を開きます。")
         print("必要ならログインして、リーグ「テスト」が見える画面まで進めてください。")
-        print("開始シーズンと終了シーズンをクリックして、画面座標から下から順に取得します。")
-        input("準備できたら Enter: ")
+        print()
+        print(f"手でシーズン{season} → 大会牌譜を開いてください。")
+        print("大会牌譜の1ページ目が表示できたら PowerShell に戻って Enter。")
+        input("開けたら Enter: ")
 
-        season_coords = capture_season_clicks(page, start_season, end_season)
+        print()
+        print("=" * 40)
+        print(f"season {season}")
+        rows = collect_current_season(page, season, max_pages)
+        out = Path(f"admin_paifu_ids_season{season}.csv")
+        write_csv_rows(out, rows)
+        print(f"saved: {out} ({len(rows)}件)")
 
-        for season in range(start_season, end_season + 1):
-            print()
-            print("=" * 40)
-            print(f"season {season}")
-
-            if season_coords:
-                x, y = season_coords[season]
-                print(f"click season {season}: ({x:.1f}, {y:.1f})")
-                page.mouse.click(x, y)
-                page.wait_for_timeout(1600)
-                if not click_game_record_tab(page):
-                    print("大会牌譜タブを自動クリックできませんでした。")
-                    print("手で大会牌譜の1ページ目を開いてください。")
-                    input("開けたら Enter: ")
-            else:
-                print(f"手でシーズン{season} → 大会牌譜を開いてください。")
-                print("大会牌譜の1ページ目が表示できたら PowerShell に戻って Enter。")
-                input("開けたら Enter: ")
-
-            rows = collect_current_season(page, season, max_pages)
-            out = Path(f"admin_paifu_ids_season{season}.csv")
-            write_csv_rows(out, rows)
-            print(f"saved: {out} ({len(rows)}件)")
-
-        # 単体テストで「開始3 終了3」としても、既に取得済みのシーズン2を累計から落とさない。
+        # ひとつずつ順番に取得する前提なので、今回のシーズンより後ろの誤取得ファイルは累計に混ぜない。
         merge_targets = {
-            season
-            for season in existing_season_numbers()
-            if 1 <= season <= end_season
+            existing
+            for existing in existing_season_numbers()
+            if 1 <= existing <= season
         }
-        merge_targets.update(range(start_season, end_season + 1))
+        merge_targets.add(season)
         merge_targets.add(1)
         total = merge_season_files(merge_targets)
         season_counts = count_season_rows(merge_targets)
