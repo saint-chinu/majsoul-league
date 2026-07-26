@@ -171,11 +171,6 @@ def click_next_page(page):
           const target = candidates[0];
           const clickable = target.next.querySelector('button,a') || target.next;
           clickable.click();
-          const element = document.elementFromPoint(target.x, target.y);
-          if (!element) return null;
-          element.dispatchEvent(new MouseEvent('mousedown', {bubbles: true, clientX: target.x, clientY: target.y}));
-          element.dispatchEvent(new MouseEvent('mouseup', {bubbles: true, clientX: target.x, clientY: target.y}));
-          element.dispatchEvent(new MouseEvent('click', {bubbles: true, clientX: target.x, clientY: target.y}));
           return {
             top: target.top,
             left: target.left,
@@ -189,7 +184,7 @@ def click_next_page(page):
 
     if clicked_by_dom:
         print(f"next page: ant pagination {clicked_by_dom}")
-        page.wait_for_timeout(1800)
+        page.wait_for_timeout(2500)
         return True
 
     pager_y = find_current_pager_y(page)
@@ -235,7 +230,7 @@ def click_next_page(page):
         i, pager, box = candidates[0]
         print(f"next page: pagination {i} {box}")
         page.mouse.click(box["x"] + box["width"] / 2, box["y"] + box["height"] / 2)
-        page.wait_for_timeout(1800)
+        page.wait_for_timeout(2500)
         return True
 
     buttons = page.locator("button").all()
@@ -271,7 +266,7 @@ def click_next_page(page):
     i, button, box = candidates[0]
     print(f"next page: button {i} {box}")
     button.click(force=True, timeout=3000)
-    page.wait_for_timeout(1800)
+    page.wait_for_timeout(2500)
     return True
 
 def main():
