@@ -11,6 +11,7 @@ from collect_admin_paifu_ids import (
     START_URL,
     STOP_BEFORE,
     USER_DATA_DIR,
+    click_page_number,
     click_next_page,
     collect_visible_page,
     uuid_date_key,
@@ -423,6 +424,9 @@ def collect_current_season(page: Page, season: int, max_pages: int) -> list[dict
         if not uuids:
             print("このページで牌譜IDが取れないので、このシーズンはここで止めます。")
             break
+
+        if click_page_number(page, page_no + 1):
+            continue
 
         if not click_next_page(page):
             print("次ページがないので、このシーズンは完了です。")
