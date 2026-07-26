@@ -9,6 +9,7 @@ from google.protobuf.json_format import MessageToDict
 RAW_DIR = Path("records_raw")
 SUMMARY_OUT = Path("summary.csv")
 YAKUMAN_OUT = Path("yakuman_summary.csv")
+YAKUMAN_DETAILS_OUT = Path("yakuman_details.csv")
 
 YAKUMAN_NAMES = {
     37: "大三元",
@@ -31,6 +32,7 @@ YAKUMAN_NAMES = {
 @dataclass
 class PlayerStats:
     games: int = 0
+    score_sum: float = 0.0
     rank_sum: int = 0
     rank_counts: Counter = field(default_factory=Counter)
     rounds: int = 0
@@ -43,6 +45,13 @@ class PlayerStats:
     final_points: list = field(default_factory=list)
     yakuman_count: int = 0
     yakuman_names: Counter = field(default_factory=Counter)
+
+
+RANK_SCORE_OFFSETS = {
+    1: 20,
+    2: 35,
+    3: 50,
+}
 
 def read_varint(data, pos):
     value = 0
@@ -255,7 +264,47 @@ def yakuman_names_from_hule(hule):
 
     return names
 
-def aggregate_game(uuid, stats):
+def game_score(point, rank):
+    return round(point / 1000 - RANK_SCORE_OFFSETS.get(rank, 0), 1)
+
+def victim_rows_from_hule(uuid, round_no, msg, hule, yakuman_name, seat_to_name):
+    delta_scores = list(getattr(msg, "delta_scores", []))
+    seat = int(getattr(hule, "seat", -1))
+    winner = seat_to_name.get(seat, "")
+    victims = []
+
+    if getattr(hule, "zimo", False):
+        win_type = "ツモ"
+        for victim_seat, delta in enumerate(delta_scores):
+            if victim_seat == seat or delta >= 0:
+                continue
+            victims.append({
+                "name": seat_to_name.get(victim_seat, f"seat{victim_seat}"),
+                "point": -int(delta),
+            })
+    else:
+        win_type = "ロン"
+        loser = get_houjuu_seat(msg)
+        if loser is not None:
+            victims.append({
+                "name": seat_to_name.get(loser, f"seat{loser}"),
+                "point": hule_point(hule) or -int(delta_scores[loser]),
+            })
+
+    return [
+        {
+            "uuid": uuid,
+            "round_no": round_no,
+            "player": winner,
+            "yakuman_name": yakuman_name,
+            "win_type": win_type,
+            "victim": victim["name"],
+            "payment": victim["point"],
+        }
+        for victim in victims
+    ]
+
+def aggregate_game(uuid, stats, yakuman_details):
     record_path = RAW_DIR / f"{uuid}_record.bin"
     detail_path = RAW_DIR / f"{uuid}_detail.bin"
 
@@ -266,6 +315,7 @@ def aggregate_game(uuid, stats):
         player_stats = stats[player_name]
 
         player_stats.games += 1
+        player_stats.score_sum += game_score(detail["point"], detail["rank"])
         player_stats.rank_sum += detail["rank"]
         player_stats.rank_counts[detail["rank"]] += 1
         player_stats.final_points.append(detail["point"])
@@ -338,6 +388,9 @@ def aggregate_game(uuid, stats):
                 for yakuman_name in yakuman_names_from_hule(hule):
                     player_stats.yakuman_count += 1
                     player_stats.yakuman_names[yakuman_name] += 1
+                    yakuman_details.extend(
+                        victim_rows_from_hule(uuid, round_no, msg, hule, yakuman_name, seat_to_name)
+                    )
 
     flush_round()
 
@@ -347,6 +400,7 @@ def write_summary(stats):
         writer.writerow([
             "player",
             "games",
+            "earned_score",
             "rank1_rate",
             "rank2_rate",
             "rank3_rate",
@@ -367,6 +421,7 @@ def write_summary(stats):
             writer.writerow([
                 player_name,
                 player_stats.games,
+                round(player_stats.score_sum, 1),
                 percent(player_stats.rank_counts[1], player_stats.games),
                 percent(player_stats.rank_counts[2], player_stats.games),
                 percent(player_stats.rank_counts[3], player_stats.games),
@@ -392,8 +447,18 @@ def write_yakuman_summary(stats):
             for yakuman_name, count in sorted(player_stats.yakuman_names.items()):
                 writer.writerow([player_name, yakuman_name, count])
 
+def write_yakuman_details(rows):
+    with YAKUMAN_DETAILS_OUT.open("w", encoding="utf-8-sig", newline="") as f:
+        writer = csv.DictWriter(
+            f,
+            fieldnames=["uuid", "round_no", "player", "yakuman_name", "win_type", "victim", "payment"],
+        )
+        writer.writeheader()
+        writer.writerows(rows)
+
 def main():
     stats = defaultdict(PlayerStats)
+    yakuman_details = []
 
     record_files = sorted(RAW_DIR.glob("*_record.bin"))
     print(f"records: {len(record_files)}")
@@ -401,13 +466,15 @@ def main():
     for index, record_file in enumerate(record_files, start=1):
         uuid = record_file.name.removesuffix("_record.bin")
         print(f"[{index}/{len(record_files)}] {uuid}")
-        aggregate_game(uuid, stats)
+        aggregate_game(uuid, stats, yakuman_details)
 
     write_summary(stats)
     write_yakuman_summary(stats)
+    write_yakuman_details(yakuman_details)
 
     print(f"saved: {SUMMARY_OUT}")
     print(f"saved: {YAKUMAN_OUT}")
+    print(f"saved: {YAKUMAN_DETAILS_OUT}")
 
 if __name__ == "__main__":
     main()

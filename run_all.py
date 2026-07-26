@@ -61,6 +61,7 @@ def commit_and_push() -> None:
         "admin_paifu_ids.csv",
         "summary.csv",
         "yakuman_summary.csv",
+        "yakuman_details.csv",
         "docs/index.html",
         "admin_paifu_ids_season1.csv",
         "admin_paifu_ids_season2.csv",

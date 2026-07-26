@@ -9,6 +9,7 @@ from pathlib import Path
 
 SUMMARY_CSV = Path("summary.csv")
 YAKUMAN_CSV = Path("yakuman_summary.csv")
+YAKUMAN_DETAILS_CSV = Path("yakuman_details.csv")
 PAIFU_CSV = Path("admin_paifu_ids.csv")
 OUTPUT_HTML = Path("docs") / "index.html"
 RAW_DIR = Path("records_raw")
@@ -18,6 +19,7 @@ LABELS = {
     "rank": "順位",
     "player": "プレイヤー",
     "games": "対戦数",
+    "earned_score": "獲得スコア",
     "rank1_rate": "1位率",
     "rank2_rate": "2位率",
     "rank3_rate": "3位率",
@@ -38,6 +40,7 @@ LABELS = {
 MAIN_COLUMNS = [
     "player",
     "games",
+    "earned_score",
     "average_rank",
     "rank1_rate",
     "rank2_rate",
@@ -88,9 +91,14 @@ def pct_number(value: str) -> float:
         return 0.0
 
 
-def table(rows: list[dict[str, str]], columns: list[str], rank_by: str | None = None) -> str:
+def table(
+    rows: list[dict[str, str]],
+    columns: list[str],
+    rank_by: str | None = None,
+    reverse: bool = False,
+) -> str:
     if rank_by:
-        ranked = sorted(rows, key=lambda r: float(r.get(rank_by, "999") or 999))
+        ranked = sorted(rows, key=lambda r: float(r.get(rank_by, "0") or 0), reverse=reverse)
     else:
         ranked = rows
 
@@ -103,7 +111,9 @@ def table(rows: list[dict[str, str]], columns: list[str], rank_by: str | None = 
         for col in columns:
             value = row.get(col, "")
             cls = "name" if col == "player" else ""
-            if col in {"average_hu_point", "max_final_point", "min_final_point"}:
+            if col == "earned_score":
+                value = number(value, 1)
+            elif col in {"average_hu_point", "max_final_point", "min_final_point"}:
                 value = number(value)
             cells.append(f"<td class=\"{cls}\">{esc(value)}</td>")
         body_rows.append("<tr>" + "".join(cells) + "</tr>")
@@ -138,20 +148,39 @@ def rate_cards(rows: list[dict[str, str]]) -> str:
     return "\n".join(cards)
 
 
-def yakuman_section(yakuman_rows: list[dict[str, str]]) -> str:
+def yakuman_section(yakuman_rows: list[dict[str, str]], detail_rows: list[dict[str, str]]) -> str:
     grouped: dict[str, list[dict[str, str]]] = defaultdict(list)
     for row in yakuman_rows:
         grouped[row["player"]].append(row)
+
+    details_by_role: dict[tuple[str, str], list[dict[str, str]]] = defaultdict(list)
+    for row in detail_rows:
+        details_by_role[(row.get("player", ""), row.get("yakuman_name", ""))].append(row)
 
     if not yakuman_rows:
         return "<p class=\"empty\">役満記録なし</p>"
 
     blocks = []
     for player, rows in sorted(grouped.items()):
-        items = "".join(
-            f"<li><span>{esc(r['yakuman_name'])}</span><strong>{esc(r['count'])}</strong></li>"
-            for r in sorted(rows, key=lambda r: (-int(r["count"]), r["yakuman_name"]))
-        )
+        items = []
+        for r in sorted(rows, key=lambda r: (-int(r["count"]), r["yakuman_name"])):
+            details = details_by_role.get((player, r["yakuman_name"]), [])
+            if details:
+                victims = "".join(
+                    f"<div><span>{esc(d.get('victim', ''))}</span><strong>{number(d.get('payment', ''))}点</strong></div>"
+                    for d in details
+                )
+            else:
+                victims = "<div><span>不明</span><strong>-</strong></div>"
+            items.append(
+                f"""
+                <li>
+                  <div class="yakuman-title"><span>{esc(r['yakuman_name'])}</span><strong>{esc(r['count'])}回</strong></div>
+                  <div class="victims"><em>被害者</em>{victims}</div>
+                </li>
+                """
+            )
+        items = "".join(items)
         blocks.append(f"<article class=\"yakuman-card\"><h3>{esc(player)}</h3><ul>{items}</ul></article>")
     return "\n".join(blocks)
 
@@ -259,6 +288,7 @@ def season_label() -> str:
 def main() -> None:
     rows = read_csv(SUMMARY_CSV)
     yakuman_rows = read_csv(YAKUMAN_CSV)
+    yakuman_detail_rows = read_csv(YAKUMAN_DETAILS_CSV)
     if not rows:
         raise SystemExit("summary.csv が見つからないか空です。先に python aggregate_league.py を実行してください。")
 
@@ -266,7 +296,7 @@ def main() -> None:
     total_games = total_player_games // 3
     total_rounds = sum(int(r["rounds"]) for r in rows) // 3
     total_yakuman = sum(int(r.get("yakuman_count", 0)) for r in rows)
-    best_avg = min(rows, key=lambda r: float(r["average_rank"]))
+    best_score = max(rows, key=lambda r: float(r.get("earned_score", 0) or 0))
     best_top = max(rows, key=lambda r: pct_number(r["rank1_rate"]))
     correlation_rows = build_correlation_rows()
     seasons = season_label()
@@ -327,8 +357,12 @@ def main() -> None:
     .yakuman-grid {{ display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }}
     .yakuman-card h3 {{ margin-bottom: 8px; }}
     .yakuman-card ul {{ list-style: none; padding: 0; margin: 0; display: grid; gap: 6px; }}
-    .yakuman-card li {{ display: flex; justify-content: space-between; gap: 10px; padding: 7px 8px; border-radius: 6px; background: var(--accent-soft); }}
-    .yakuman-card strong {{ color: var(--gold); }}
+    .yakuman-card li {{ display: grid; gap: 7px; padding: 9px 10px; border-radius: 6px; background: var(--accent-soft); }}
+    .yakuman-title, .victims div {{ display: flex; justify-content: space-between; gap: 10px; }}
+    .yakuman-title strong, .victims strong {{ color: var(--gold); }}
+    .victims {{ display: grid; gap: 4px; padding-top: 7px; border-top: 1px solid rgba(15, 118, 110, .18); }}
+    .victims em {{ font-style: normal; color: var(--muted); font-size: 11px; }}
+    .victims div {{ font-size: 12px; }}
     .mermaid {{ border: 1px solid var(--line); border-radius: 8px; padding: 14px; overflow: auto; background: #fff; margin: 8px 0 16px; }}
     .subnote {{ margin: -4px 0 12px; color: var(--muted); }}
     footer {{ padding: 18px 32px 30px; border-top: 1px solid var(--line); color: var(--muted); font-size: 12px; }}
@@ -349,7 +383,7 @@ def main() -> None:
     <section class="summary" aria-label="集計概要">
       <div><span>対象半荘</span><strong>{total_games:,}</strong></div>
       <div><span>対象局数</span><strong>{total_rounds:,}</strong></div>
-      <div><span>平均順位トップ</span><strong>{esc(best_avg["player"])}</strong></div>
+      <div><span>獲得スコアトップ</span><strong>{esc(best_score["player"])}</strong></div>
       <div><span>役満合計</span><strong>{total_yakuman:,}</strong></div>
     </section>
 
@@ -360,7 +394,7 @@ def main() -> None:
 
     <h2>個人成績ランキング</h2>
     <div class="table-wrap">
-      {table(rows, MAIN_COLUMNS, rank_by="average_rank")}
+      {table(rows, MAIN_COLUMNS, rank_by="earned_score", reverse=True)}
     </div>
 
     <h2>詳細スタッツ</h2>
@@ -377,7 +411,7 @@ def main() -> None:
 
     <h2>役満内訳</h2>
     <section class="yakuman-grid">
-      {yakuman_section(yakuman_rows)}
+      {yakuman_section(yakuman_rows, yakuman_detail_rows)}
     </section>
   </main>
   <footer>
