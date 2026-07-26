@@ -5,6 +5,7 @@ import html
 from collections import defaultdict
 from itertools import combinations
 from pathlib import Path
+import re
 
 
 SUMMARY_CSV = Path("summary.csv")
@@ -13,6 +14,7 @@ YAKUMAN_DETAILS_CSV = Path("yakuman_details.csv")
 PAIFU_CSV = Path("admin_paifu_ids.csv")
 OUTPUT_HTML = Path("docs") / "index.html"
 RAW_DIR = Path("records_raw")
+SEASON_FILE_RE = re.compile(r"admin_paifu_ids_season(\d+)\.csv$")
 
 
 LABELS = {
@@ -292,7 +294,7 @@ def yakuman_ranking_table(rows: list[dict[str, object]], payment_label: str) -> 
     )
 
 
-def build_correlation_rows() -> list[dict[str, object]]:
+def build_correlation_rows(uuids: set[str] | None = None) -> list[dict[str, object]]:
     try:
         from aggregate_league import load_detail
     except Exception:
@@ -301,7 +303,16 @@ def build_correlation_rows() -> list[dict[str, object]]:
     pair_net: dict[tuple[str, str], int] = defaultdict(int)
     pair_games: dict[tuple[str, str], int] = defaultdict(int)
 
-    for detail_path in sorted(RAW_DIR.glob("*_detail.bin")):
+    if uuids is None:
+        detail_paths = sorted(RAW_DIR.glob("*_detail.bin"))
+    else:
+        detail_paths = sorted(
+            RAW_DIR / f"{uuid}_detail.bin"
+            for uuid in uuids
+            if (RAW_DIR / f"{uuid}_detail.bin").exists()
+        )
+
+    for detail_path in detail_paths:
         try:
             _, player_details = load_detail(detail_path)
         except Exception:
@@ -376,28 +387,126 @@ def correlation_mermaid(rows: list[dict[str, object]], limit: int = 15) -> str:
     return f"<pre class=\"mermaid\">{chr(10).join(lines)}</pre>"
 
 
-def season_label() -> str:
-    paifu_rows = read_csv(PAIFU_CSV)
-    seasons = sorted(
-        {
-            int(row["season"])
-            for row in paifu_rows
-            if row.get("season", "").isdigit()
-        }
-    )
-    if not seasons:
-        return "収集済みシーズン"
-    if len(seasons) == 1:
-        return f"シーズン{seasons[0]}"
-    return f"シーズン{seasons[0]}-{seasons[-1]}"
+def read_season_paifu_rows() -> list[dict[str, str]]:
+    rows_by_uuid: dict[str, dict[str, str]] = {}
+    canonical_rows = read_csv(PAIFU_CSV)
+    canonical_seasons = {
+        int(row["season"])
+        for row in canonical_rows
+        if row.get("season", "").isdigit()
+    }
+    max_canonical_season = max(canonical_seasons) if canonical_seasons else None
+
+    def add_rows(rows: list[dict[str, str]], fallback_season: int | None = None) -> None:
+        for row in rows:
+            uuid = row.get("uuid", "")
+            if not uuid:
+                continue
+            season = row.get("season", "")
+            if not season and fallback_season is not None:
+                season = str(fallback_season)
+            if not season.isdigit():
+                continue
+            rows_by_uuid[uuid] = {
+                "season": season,
+                "page_no": row.get("page_no", ""),
+                "uuid": uuid,
+                "date_key": row.get("date_key") or uuid.split("-", 1)[0],
+                "paifu_url": row.get("paifu_url") or f"https://game.mahjongsoul.com/?paipu={uuid}",
+            }
+
+    add_rows(canonical_rows)
+
+    for path in sorted(Path(".").glob("admin_paifu_ids_season*.csv")):
+        match = SEASON_FILE_RE.match(path.name)
+        if not match:
+            continue
+        season = int(match.group(1))
+        if max_canonical_season is not None and season > max_canonical_season:
+            continue
+        add_rows(read_csv(path), fallback_season=season)
+
+    return sorted(rows_by_uuid.values(), key=lambda row: (int(row["season"]), row["uuid"]))
 
 
-def main() -> None:
-    rows = read_csv(SUMMARY_CSV)
-    yakuman_rows = read_csv(YAKUMAN_CSV)
-    yakuman_detail_rows = read_csv(YAKUMAN_DETAILS_CSV)
+def aggregate_uuids(uuids: set[str]) -> tuple[list[dict[str, str]], list[dict[str, str]], list[dict[str, str]]]:
+    try:
+        from aggregate_league import PlayerStats, aggregate_game, average, percent
+    except Exception as exc:
+        raise SystemExit(f"aggregate_league.py を読み込めません: {exc}") from exc
+
+    stats = defaultdict(PlayerStats)
+    yakuman_details: list[dict[str, object]] = []
+
+    for uuid in sorted(uuids):
+        record_path = RAW_DIR / f"{uuid}_record.bin"
+        detail_path = RAW_DIR / f"{uuid}_detail.bin"
+        if not record_path.exists() or not detail_path.exists():
+            continue
+        try:
+            aggregate_game(uuid, stats, yakuman_details)
+        except Exception as exc:
+            print(f"skip {uuid}: {exc}")
+
+    summary_rows = []
+    for player_name, player_stats in sorted(stats.items(), key=lambda item: item[0]):
+        summary_rows.append(
+            {
+                "player": player_name,
+                "games": str(player_stats.games),
+                "earned_score": str(round(player_stats.score_sum, 1)),
+                "rank1_rate": percent(player_stats.rank_counts[1], player_stats.games),
+                "rank2_rate": percent(player_stats.rank_counts[2], player_stats.games),
+                "rank3_rate": percent(player_stats.rank_counts[3], player_stats.games),
+                "average_rank": str(average(player_stats.rank_sum, player_stats.games)),
+                "rounds": str(player_stats.rounds),
+                "average_hu_point": str(average(player_stats.hu_point_sum, player_stats.hu, 1)),
+                "hu_rate": percent(player_stats.hu, player_stats.rounds),
+                "tsumo_rate": percent(player_stats.tsumo, player_stats.hu),
+                "houjuu_rate": percent(player_stats.houjuu, player_stats.rounds),
+                "called_rate": percent(player_stats.called, player_stats.rounds),
+                "riichi_rate": percent(player_stats.riichi, player_stats.rounds),
+                "max_final_point": str(max(player_stats.final_points) if player_stats.final_points else ""),
+                "min_final_point": str(min(player_stats.final_points) if player_stats.final_points else ""),
+                "yakuman_count": str(player_stats.yakuman_count),
+            }
+        )
+
+    yakuman_rows = []
+    for player_name, player_stats in sorted(stats.items(), key=lambda item: item[0]):
+        for yakuman_name, count in sorted(player_stats.yakuman_names.items()):
+            yakuman_rows.append(
+                {
+                    "player": player_name,
+                    "yakuman_name": yakuman_name,
+                    "count": str(count),
+                }
+            )
+
+    detail_rows = [
+        {key: str(value) for key, value in row.items()}
+        for row in yakuman_details
+    ]
+
+    return summary_rows, yakuman_rows, detail_rows
+
+
+def build_context(key: str, label: str, uuids: set[str]) -> dict[str, object]:
+    rows, yakuman_rows, yakuman_detail_rows = aggregate_uuids(uuids)
     if not rows:
-        raise SystemExit("summary.csv が見つからないか空です。先に python aggregate_league.py を実行してください。")
+        return {
+            "key": key,
+            "label": label,
+            "rows": [],
+            "yakuman_rows": [],
+            "yakuman_detail_rows": [],
+            "correlation_rows": [],
+            "total_games": 0,
+            "total_rounds": 0,
+            "total_yakuman": 0,
+            "best_score": "",
+            "best_top": "",
+        }
 
     total_player_games = sum(int(r["games"]) for r in rows)
     total_games = total_player_games // 3
@@ -405,18 +514,151 @@ def main() -> None:
     total_yakuman = sum(int(r.get("yakuman_count", 0)) for r in rows)
     best_score = max(rows, key=lambda r: float(r.get("earned_score", 0) or 0))
     best_top = max(rows, key=lambda r: pct_number(r["rank1_rate"]))
-    correlation_rows = build_correlation_rows()
-    seasons = season_label()
+
+    return {
+        "key": key,
+        "label": label,
+        "rows": rows,
+        "yakuman_rows": yakuman_rows,
+        "yakuman_detail_rows": yakuman_detail_rows,
+        "correlation_rows": build_correlation_rows(uuids),
+        "total_games": total_games,
+        "total_rounds": total_rounds,
+        "total_yakuman": total_yakuman,
+        "best_score": best_score,
+        "best_top": best_top,
+    }
+
+
+def render_stats_panel(context: dict[str, object]) -> str:
+    rows = context["rows"]
+    if not rows:
+        return (
+            f"<section class=\"tab-panel\" id=\"panel-{esc(context['key'])}\" "
+            f"data-panel=\"{esc(context['key'])}\">"
+            "<p class=\"empty\">集計できる牌譜がありません。</p>"
+            "</section>"
+        )
+
+    yakuman_rows = context["yakuman_rows"]
+    yakuman_detail_rows = context["yakuman_detail_rows"]
+    correlation_rows = context["correlation_rows"]
+    best_score = context["best_score"]
+    best_top = context["best_top"]
+
+    return f"""
+    <section class="tab-panel" id="panel-{esc(context['key'])}" data-panel="{esc(context['key'])}">
+      <section class="summary" aria-label="集計概要">
+        <div><span>対象半荘</span><strong>{int(context['total_games']):,}</strong></div>
+        <div><span>対象局数</span><strong>{int(context['total_rounds']):,}</strong></div>
+        <div><span>獲得スコアトップ</span><strong>{esc(best_score["player"])}</strong></div>
+        <div><span>役満合計</span><strong>{int(context['total_yakuman']):,}</strong></div>
+      </section>
+
+      <h2>{esc(context['label'])} 個人成績ランキング</h2>
+      <div class="table-wrap">
+        {table(rows, MAIN_COLUMNS, rank_by="earned_score", reverse=True)}
+      </div>
+
+      <div class="ranking-grid">
+        <section class="ranking-panel">
+          <h3>役満被害者ランキング</h3>
+          <div class="table-wrap">
+            {yakuman_victim_ranking(yakuman_detail_rows)}
+          </div>
+        </section>
+        <section class="ranking-panel">
+          <h3>役満加害者ランキング</h3>
+          <div class="table-wrap">
+            {yakuman_attacker_ranking(yakuman_detail_rows)}
+          </div>
+        </section>
+      </div>
+
+      <h2>個人成績ダイジェスト</h2>
+      <section class="cards">
+        {rate_cards(rows)}
+      </section>
+
+      <h2>詳細スタッツ</h2>
+      <div class="table-wrap">
+        {table(rows, DETAIL_COLUMNS, rank_by="average_rank")}
+      </div>
+
+      <h2>許されない相関図</h2>
+      <p class="subnote">矢印は「左のプレイヤーが右のプレイヤーへ、同卓時の最終持ち点差でネット献上」。ラベルは 献上点棒 / 直接対戦数。</p>
+      {correlation_mermaid(correlation_rows)}
+      <div class="table-wrap">
+        {correlation_table(correlation_rows)}
+      </div>
+
+      <h2>役満内訳</h2>
+      <section class="yakuman-grid">
+        {yakuman_section(yakuman_rows, yakuman_detail_rows)}
+      </section>
+
+      <p class="generated-note">1位率トップ: {esc(best_top["player"])} ({esc(best_top["rank1_rate"])})</p>
+    </section>
+    """
+
+
+def main() -> None:
+    paifu_rows = read_season_paifu_rows()
+    if not paifu_rows:
+        raise SystemExit("admin_paifu_ids.csv が見つからないか空です。先に牌譜IDを収集してください。")
+
+    season_to_uuids: dict[int, set[str]] = defaultdict(set)
+    for row in paifu_rows:
+        season = row.get("season", "")
+        uuid = row.get("uuid", "")
+        if season.isdigit() and uuid:
+            season_to_uuids[int(season)].add(uuid)
+
+    season_numbers = sorted(season_to_uuids)
+    all_uuids = set().union(*season_to_uuids.values())
+
+    contexts = [build_context("all", "累計", all_uuids)]
+    for season in sorted(season_numbers, reverse=True):
+        contexts.append(build_context(f"season-{season}", f"シーズン{season}", season_to_uuids[season]))
+
+    tabs = "\n".join(
+        f'<button class="tab-button{" active" if index == 0 else ""}" type="button" data-tab="{esc(context["key"])}">{esc(context["label"])}</button>'
+        for index, context in enumerate(contexts)
+    )
+    panels = "\n".join(render_stats_panel(context) for context in contexts)
 
     html_text = f"""<!doctype html>
 <html lang="ja">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>雀魂リーグスタッツ</title>
+  <title>魚群リーグ</title>
   <script type="module">
     import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
     mermaid.initialize({{ startOnLoad: true, theme: "base", flowchart: {{ curve: "basis" }} }});
+  </script>
+  <script>
+    window.addEventListener("DOMContentLoaded", () => {{
+      const buttons = Array.from(document.querySelectorAll("[data-tab]"));
+      const panels = Array.from(document.querySelectorAll("[data-panel]"));
+
+      function activate(key) {{
+        buttons.forEach((button) => {{
+          const active = button.dataset.tab === key;
+          button.classList.toggle("active", active);
+          button.setAttribute("aria-selected", active ? "true" : "false");
+        }});
+        panels.forEach((panel) => {{
+          panel.hidden = panel.dataset.panel !== key;
+        }});
+      }}
+
+      buttons.forEach((button) => {{
+        button.addEventListener("click", () => activate(button.dataset.tab));
+      }});
+
+      if (buttons[0]) activate(buttons[0].dataset.tab);
+    }});
   </script>
   <style>
     :root {{
@@ -439,6 +681,11 @@ def main() -> None:
     h3 {{ margin: 0; font-size: 16px; }}
     p {{ margin: 0; color: var(--muted); }}
     main {{ padding: 22px 32px 44px; }}
+    .tabs {{ display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 20px; }}
+    .tab-button {{ appearance: none; border: 1px solid var(--line); background: #fff; color: var(--ink); border-radius: 8px; padding: 8px 12px; font: inherit; font-weight: 700; cursor: pointer; }}
+    .tab-button:hover {{ border-color: var(--accent); color: var(--accent); }}
+    .tab-button.active {{ background: var(--accent); border-color: var(--accent); color: #fff; }}
+    .tab-panel[hidden] {{ display: none; }}
     .summary {{ display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-bottom: 20px; }}
     .summary div {{ border: 1px solid var(--line); border-radius: 8px; padding: 12px; background: var(--fill); }}
     .summary span {{ display: block; color: var(--muted); font-size: 12px; }}
@@ -477,6 +724,7 @@ def main() -> None:
     .victims div {{ font-size: 12px; }}
     .mermaid {{ border: 1px solid var(--line); border-radius: 8px; padding: 14px; overflow: auto; background: #fff; margin: 8px 0 16px; }}
     .subnote {{ margin: -4px 0 12px; color: var(--muted); }}
+    .generated-note {{ margin-top: 18px; font-size: 12px; }}
     footer {{ padding: 18px 32px 30px; border-top: 1px solid var(--line); color: var(--muted); font-size: 12px; }}
     @media (max-width: 920px) {{
       header, main, footer {{ padding-left: 16px; padding-right: 16px; }}
@@ -489,63 +737,16 @@ def main() -> None:
 </head>
 <body>
   <header>
-    <h1>雀魂リーグ累計スタッツ</h1>
-    <p>大会「テスト」{esc(seasons)}集計。順位率、平均和了点、和了率、ツモ率、放銃率、副露率、立直率、役満内訳。</p>
+    <h1>魚群リーグ</h1>
   </header>
   <main>
-    <section class="section-band" aria-label="累計ページ">
-      <section class="summary" aria-label="集計概要">
-        <div><span>対象半荘</span><strong>{total_games:,}</strong></div>
-        <div><span>対象局数</span><strong>{total_rounds:,}</strong></div>
-        <div><span>獲得スコアトップ</span><strong>{esc(best_score["player"])}</strong></div>
-        <div><span>役満合計</span><strong>{total_yakuman:,}</strong></div>
-      </section>
-
-      <h2>累計 個人成績ランキング</h2>
-      <div class="table-wrap">
-        {table(rows, MAIN_COLUMNS, rank_by="earned_score", reverse=True)}
-      </div>
-
-      <div class="ranking-grid">
-        <section class="ranking-panel">
-          <h3>役満被害者ランキング</h3>
-          <div class="table-wrap">
-            {yakuman_victim_ranking(yakuman_detail_rows)}
-          </div>
-        </section>
-        <section class="ranking-panel">
-          <h3>役満加害者ランキング</h3>
-          <div class="table-wrap">
-            {yakuman_attacker_ranking(yakuman_detail_rows)}
-          </div>
-        </section>
-      </div>
-    </section>
-
-    <h2>個人成績ダイジェスト</h2>
-    <section class="cards">
-      {rate_cards(rows)}
-    </section>
-
-    <h2>詳細スタッツ</h2>
-    <div class="table-wrap">
-      {table(rows, DETAIL_COLUMNS, rank_by="average_rank")}
-    </div>
-
-    <h2>許されない相関図</h2>
-    <p class="subnote">矢印は「左のプレイヤーが右のプレイヤーへ、同卓時の最終持ち点差でネット献上」。ラベルは 献上点棒 / 直接対戦数。</p>
-    {correlation_mermaid(correlation_rows)}
-    <div class="table-wrap">
-      {correlation_table(correlation_rows)}
-    </div>
-
-    <h2>役満内訳</h2>
-    <section class="yakuman-grid">
-      {yakuman_section(yakuman_rows, yakuman_detail_rows)}
-    </section>
+    <nav class="tabs" aria-label="シーズン切り替え" role="tablist">
+      {tabs}
+    </nav>
+    {panels}
   </main>
   <footer>
-    Generated from summary.csv and yakuman_summary.csv. 1位率トップ: {esc(best_top["player"])} ({esc(best_top["rank1_rate"])})
+    Generated from collected Mahjong Soul records.
   </footer>
 </body>
 </html>
