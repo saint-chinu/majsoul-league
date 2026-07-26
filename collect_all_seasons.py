@@ -273,6 +273,81 @@ def click_game_record_tab(page: Page) -> bool:
     return click_visible_text(page, ["大会牌譜", "牌譜"], exact=True)
 
 
+def capture_season_clicks(page: Page, start_season: int, end_season: int) -> dict[int, tuple[float, float]] | None:
+    if start_season == end_season:
+        return None
+
+    page.evaluate(
+        """
+        () => {
+          window.__seasonClicks = [];
+          if (window.__seasonClickHandler) {
+            document.removeEventListener('click', window.__seasonClickHandler, true);
+          }
+          window.__seasonClickHandler = (event) => {
+            window.__seasonClicks.push({
+              x: event.clientX,
+              y: event.clientY,
+              text: (event.target?.innerText || event.target?.textContent || '').trim().slice(0, 80),
+            });
+          };
+          document.addEventListener('click', window.__seasonClickHandler, true);
+        }
+        """
+    )
+
+    print()
+    print("シーズン座標を記録します。")
+    print(f"ブラウザ上で、まず開始シーズン{start_season}を1回クリックしてください。")
+    print(f"次に終了シーズン{end_season}を1回クリックしてください。")
+    print("2回クリックしたら PowerShell に戻って Enter。")
+    input("クリック完了後 Enter: ")
+
+    clicks = page.evaluate("() => window.__seasonClicks || []")
+    page.evaluate(
+        """
+        () => {
+          if (window.__seasonClickHandler) {
+            document.removeEventListener('click', window.__seasonClickHandler, true);
+          }
+        }
+        """
+    )
+
+    if len(clicks) < 2:
+        print(f"クリック記録が足りません: {len(clicks)}回")
+        return None
+
+    start_click = clicks[0]
+    end_click = clicks[1]
+    x1 = float(start_click["x"])
+    y1 = float(start_click["y"])
+    x2 = float(end_click["x"])
+    y2 = float(end_click["y"])
+
+    step_count = end_season - start_season
+    if step_count == 0:
+        return None
+
+    dx = (x2 - x1) / step_count
+    dy = (y2 - y1) / step_count
+
+    coords = {}
+    for season in range(start_season, end_season + 1):
+        offset = season - start_season
+        coords[season] = (x1 + dx * offset, y1 + dy * offset)
+
+    print("推定シーズン座標:")
+    for season, (x, y) in coords.items():
+        print(f"  season {season}: ({x:.1f}, {y:.1f})")
+
+    ok = input("この座標で進めるなら Enter。やめるなら n: ").strip().lower()
+    if ok == "n":
+        return None
+
+    return coords
+
+
 def collect_current_season(page: Page, season: int, max_pages: int) -> list[dict[str, object]]:
     seen = set()
     rows: list[dict[str, object]] = []
@@ -343,17 +418,29 @@ def main() -> None:
         print()
         print("ブラウザで管理画面を開きます。")
         print("必要ならログインして、リーグ「テスト」が見える画面まで進めてください。")
-        print("シーズン選択は自動クリックしません。誤クリック防止のため、毎回手で対象シーズンの大会牌譜を開きます。")
+        print("開始シーズンと終了シーズンをクリックして、画面座標から下から順に取得します。")
         input("準備できたら Enter: ")
+
+        season_coords = capture_season_clicks(page, start_season, end_season)
 
         for season in range(start_season, end_season + 1):
             print()
             print("=" * 40)
             print(f"season {season}")
 
-            print(f"手でシーズン{season} → 大会牌譜を開いてください。")
-            print("大会牌譜の1ページ目が表示できたら PowerShell に戻って Enter。")
-            input("開けたら Enter: ")
+            if season_coords:
+                x, y = season_coords[season]
+                print(f"click season {season}: ({x:.1f}, {y:.1f})")
+                page.mouse.click(x, y)
+                page.wait_for_timeout(1600)
+                if not click_game_record_tab(page):
+                    print("大会牌譜タブを自動クリックできませんでした。")
+                    print("手で大会牌譜の1ページ目を開いてください。")
+                    input("開けたら Enter: ")
+            else:
+                print(f"手でシーズン{season} → 大会牌譜を開いてください。")
+                print("大会牌譜の1ページ目が表示できたら PowerShell に戻って Enter。")
+                input("開けたら Enter: ")
 
             rows = collect_current_season(page, season, max_pages)
             out = Path(f"admin_paifu_ids_season{season}.csv")
