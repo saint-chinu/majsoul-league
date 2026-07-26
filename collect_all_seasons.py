@@ -60,14 +60,17 @@ def ensure_season1_backup() -> None:
         print(f"season1 backup: {season1} ({len(rows)}件)")
 
 
-def merge_season_files() -> int:
+def merge_season_files(seasons: set[int]) -> int:
     rows_by_uuid: dict[str, dict[str, str]] = {}
 
     for path in sorted(Path(".").glob("admin_paifu_ids_season*.csv")):
         match = SEASON_FILE_RE.match(path.name)
         if not match:
             continue
-        season = match.group(1)
+        season_no = int(match.group(1))
+        if season_no not in seasons:
+            continue
+        season = str(season_no)
 
         for row in read_csv_rows(path):
             uuid = row.get("uuid", "")
@@ -124,25 +127,83 @@ def click_visible_text(page: Page, labels: list[str], *, exact: bool = True) -> 
     return True
 
 
+def season_candidates(page: Page) -> list[dict[str, object]]:
+    candidates = page.evaluate(
+        """
+        () => {
+          const seen = new Set();
+          const rows = [];
+          const elements = Array.from(document.querySelectorAll('button,a,li,div,span'));
+
+          for (const el of elements) {
+            const text = (el.innerText || el.textContent || '').trim().replace(/\\s+/g, ' ');
+            if (!/(シーズン|Season)/i.test(text)) continue;
+            if (text.length > 40) continue;
+
+            const rect = el.getBoundingClientRect();
+            if (rect.width < 40 || rect.height < 18) continue;
+            if (rect.bottom < 0 || rect.top > window.innerHeight) continue;
+
+            const style = window.getComputedStyle(el);
+            if (style.visibility === 'hidden' || style.display === 'none') continue;
+
+            const key = `${Math.round(rect.left / 4)}:${Math.round(rect.top / 4)}:${text}`;
+            if (seen.has(key)) continue;
+            seen.add(key);
+
+            rows.push({
+              text,
+              x: rect.left,
+              y: rect.top,
+              width: rect.width,
+              height: rect.height,
+            });
+          }
+
+          return rows;
+        }
+        """
+    )
+
+    rows = []
+    for item in candidates:
+        # 同じ行に親子要素が重なって出ることがあるので、近い座標の重複を落とす。
+        if any(abs(float(item["y"]) - float(row["y"])) < 6 and item["text"] == row["text"] for row in rows):
+            continue
+        rows.append(item)
+
+    return sorted(rows, key=lambda item: (float(item["y"]), float(item["x"])))
+
+
 def click_season(page: Page, season: int) -> bool:
-    labels = [
-        f"シーズン{season}",
-        f"シーズン {season}",
-        f"Season {season}",
-        str(season),
-    ]
+    # 管理画面では、シーズン1が一覧の一番下、シーズン2が下から2番目。
+    # そのため文字の数字ではなく、表示位置の下からN番目でクリックする。
+    candidates = season_candidates(page)
 
-    if click_visible_text(page, labels):
-        return True
+    if len(candidates) < season:
+        page.mouse.wheel(0, 1000)
+        page.wait_for_timeout(500)
+        candidates = season_candidates(page)
 
-    # シーズン一覧がスクロール領域にある場合の保険。
-    for _ in range(8):
-        page.mouse.wheel(0, 500)
-        page.wait_for_timeout(250)
-        if click_visible_text(page, labels):
-            return True
+    if len(candidates) < season:
+        print(f"シーズン候補が足りません: found={len(candidates)} need={season}")
+        for i, item in enumerate(reversed(candidates), start=1):
+            print(f"  下から{i}: {item['text']} y={item['y']}")
+        return False
 
-    return False
+    bottom_order = list(reversed(candidates))
+    target = bottom_order[season - 1]
+
+    print("シーズン候補:")
+    for i, item in enumerate(bottom_order[: min(len(bottom_order), 12)], start=1):
+        print(f"  下から{i}: {item['text']} y={item['y']}")
+
+    x = float(target["x"]) + float(target["width"]) / 2
+    y = float(target["y"]) + float(target["height"]) / 2
+    print(f"click season {season}: 下から{season} {target['text']} ({x:.1f}, {y:.1f})")
+    page.mouse.click(x, y)
+    page.wait_for_timeout(1800)
+    return True
 
 
 def click_game_record_tab(page: Page) -> bool:
@@ -218,8 +279,9 @@ def main() -> None:
 
         print()
         print("ブラウザで管理画面を開きます。")
-        print("必要ならログインして、リーグ「テスト」が見える画面まで進めてください。")
-        print("スクリプトが各シーズン → 大会牌譜 → ページ送りを順に試します。")
+        print("必要ならログインして、リーグ「テスト」のシーズン一覧が見える画面まで進めてください。")
+        print("シーズン1が一番下に見える状態にしてください。")
+        print("スクリプトは下からN番目をシーズンNとしてクリックします。")
         input("準備できたら Enter: ")
 
         for season in range(start_season, end_season + 1):
@@ -241,7 +303,8 @@ def main() -> None:
             write_csv_rows(out, rows)
             print(f"saved: {out} ({len(rows)}件)")
 
-        total = merge_season_files()
+        merge_targets = {1, *range(start_season, end_season + 1)}
+        total = merge_season_files(merge_targets)
         print()
         print(f"merged: {OUT} ({total}件)")
         input("確認したら Enter: ")

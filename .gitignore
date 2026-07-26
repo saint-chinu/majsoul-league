@@ -5,6 +5,8 @@ records_raw/
 __pycache__/
 *.pyc
 *_backup.csv
+*_backup_*.csv
+admin_paifu_ids_season*.csv
 *_result.txt
 record_list_payloads.txt
 pager_result.txt
