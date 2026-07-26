@@ -15,6 +15,7 @@ admin_paifu_ids_manual.csv
 round_events.csv
 record_list.csv
 paifu_urls.txt
+manual_paifu_ids.txt
 capture_*.py
 copy_visible_paifu_ids.py
 decode_*.py

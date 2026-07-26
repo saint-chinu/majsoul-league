@@ -67,6 +67,7 @@ def commit_and_push() -> None:
         "collect_all_seasons.py",
         "make_site.py",
         "run_all.py",
+        "run_manual_season.py",
         "run_all.bat",
     ]
 
