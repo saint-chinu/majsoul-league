@@ -185,6 +185,113 @@ def yakuman_section(yakuman_rows: list[dict[str, str]], detail_rows: list[dict[s
     return "\n".join(blocks)
 
 
+def compact_role_counts(items: list[str]) -> str:
+    counts: dict[str, int] = defaultdict(int)
+    for item in items:
+        counts[item] += 1
+    return " / ".join(
+        f"{name} x{count}" if count > 1 else name
+        for name, count in sorted(counts.items(), key=lambda item: (-item[1], item[0]))
+    )
+
+
+def yakuman_victim_ranking(detail_rows: list[dict[str, str]]) -> str:
+    grouped: dict[str, dict[str, object]] = defaultdict(
+        lambda: {"count": 0, "payment": 0, "roles": []}
+    )
+
+    for row in detail_rows:
+        victim = row.get("victim", "")
+        if not victim:
+            continue
+        grouped[victim]["count"] = int(grouped[victim]["count"]) + 1
+        grouped[victim]["payment"] = int(grouped[victim]["payment"]) + int(row.get("payment", 0) or 0)
+        grouped[victim]["roles"].append(f"{row.get('yakuman_name', '')}({row.get('win_type', '')})")
+
+    rows = []
+    for victim, data in grouped.items():
+        rows.append(
+            {
+                "player": victim,
+                "count": int(data["count"]),
+                "roles": compact_role_counts(list(data["roles"])),
+                "payment": int(data["payment"]),
+            }
+        )
+
+    rows.sort(key=lambda row: (-row["payment"], -row["count"], row["player"]))
+    return yakuman_ranking_table(rows, "支払点数")
+
+
+def yakuman_attacker_ranking(detail_rows: list[dict[str, str]]) -> str:
+    events: dict[tuple[str, str, str, str], dict[str, object]] = {}
+
+    for row in detail_rows:
+        key = (
+            row.get("uuid", ""),
+            row.get("round_no", ""),
+            row.get("player", ""),
+            row.get("yakuman_name", ""),
+        )
+        if key not in events:
+            events[key] = {
+                "player": row.get("player", ""),
+                "yakuman_name": row.get("yakuman_name", ""),
+                "win_type": row.get("win_type", ""),
+                "payment": 0,
+            }
+        events[key]["payment"] = int(events[key]["payment"]) + int(row.get("payment", 0) or 0)
+
+    grouped: dict[str, dict[str, object]] = defaultdict(
+        lambda: {"count": 0, "payment": 0, "roles": []}
+    )
+
+    for event in events.values():
+        player = str(event["player"])
+        if not player:
+            continue
+        grouped[player]["count"] = int(grouped[player]["count"]) + 1
+        grouped[player]["payment"] = int(grouped[player]["payment"]) + int(event["payment"])
+        grouped[player]["roles"].append(f"{event['yakuman_name']}({event['win_type']})")
+
+    rows = []
+    for player, data in grouped.items():
+        rows.append(
+            {
+                "player": player,
+                "count": int(data["count"]),
+                "roles": compact_role_counts(list(data["roles"])),
+                "payment": int(data["payment"]),
+            }
+        )
+
+    rows.sort(key=lambda row: (-row["payment"], -row["count"], row["player"]))
+    return yakuman_ranking_table(rows, "獲得点数")
+
+
+def yakuman_ranking_table(rows: list[dict[str, object]], payment_label: str) -> str:
+    if not rows:
+        return "<p class=\"empty\">役満記録なし</p>"
+
+    body = []
+    for i, row in enumerate(rows, 1):
+        body.append(
+            "<tr>"
+            f"<td>{i}</td>"
+            f"<td class=\"name\">{esc(row['player'])}</td>"
+            f"<td>{esc(row['count'])}</td>"
+            f"<td class=\"roles\">{esc(row['roles'])}</td>"
+            f"<td>{number(row['payment'])}</td>"
+            "</tr>"
+        )
+
+    return (
+        "<table class=\"yakuman-rank-table\">"
+        f"<thead><tr><th>順位</th><th>プレイヤー</th><th>回数</th><th>役</th><th>{esc(payment_label)}</th></tr></thead>"
+        f"<tbody>{''.join(body)}</tbody></table>"
+    )
+
+
 def build_correlation_rows() -> list[dict[str, object]]:
     try:
         from aggregate_league import load_detail
@@ -336,6 +443,10 @@ def main() -> None:
     .summary div {{ border: 1px solid var(--line); border-radius: 8px; padding: 12px; background: var(--fill); }}
     .summary span {{ display: block; color: var(--muted); font-size: 12px; }}
     .summary strong {{ display: block; margin-top: 4px; font-size: 20px; }}
+    .section-band {{ padding: 2px 0 8px; }}
+    .ranking-grid {{ display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; }}
+    .ranking-panel {{ min-width: 0; }}
+    .ranking-panel h3 {{ margin: 0 0 8px; font-size: 16px; }}
     .cards {{ display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }}
     .player-card, .yakuman-card {{ border: 1px solid var(--line); border-radius: 8px; padding: 14px; background: var(--panel); }}
     .player-card-head {{ display: flex; justify-content: space-between; gap: 10px; align-items: baseline; margin-bottom: 12px; }}
@@ -354,6 +465,7 @@ def main() -> None:
     th {{ background: var(--fill); font-weight: 700; color: #30363d; }}
     tr:last-child td {{ border-bottom: 0; }}
     td.name, th:nth-child(2) {{ text-align: left; font-weight: 700; }}
+    td.roles {{ text-align: left; white-space: normal; min-width: 240px; }}
     .yakuman-grid {{ display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }}
     .yakuman-card h3 {{ margin-bottom: 8px; }}
     .yakuman-card ul {{ list-style: none; padding: 0; margin: 0; display: grid; gap: 6px; }}
@@ -369,6 +481,7 @@ def main() -> None:
     @media (max-width: 920px) {{
       header, main, footer {{ padding-left: 16px; padding-right: 16px; }}
       .summary {{ grid-template-columns: 1fr 1fr; }}
+      .ranking-grid {{ grid-template-columns: 1fr; }}
       .cards, .yakuman-grid {{ grid-template-columns: 1fr; }}
       h1 {{ font-size: 26px; }}
     }}
@@ -376,26 +489,43 @@ def main() -> None:
 </head>
 <body>
   <header>
-    <h1>雀魂リーグスタッツ</h1>
+    <h1>雀魂リーグ累計スタッツ</h1>
     <p>大会「テスト」{esc(seasons)}集計。順位率、平均和了点、和了率、ツモ率、放銃率、副露率、立直率、役満内訳。</p>
   </header>
   <main>
-    <section class="summary" aria-label="集計概要">
-      <div><span>対象半荘</span><strong>{total_games:,}</strong></div>
-      <div><span>対象局数</span><strong>{total_rounds:,}</strong></div>
-      <div><span>獲得スコアトップ</span><strong>{esc(best_score["player"])}</strong></div>
-      <div><span>役満合計</span><strong>{total_yakuman:,}</strong></div>
+    <section class="section-band" aria-label="累計ページ">
+      <section class="summary" aria-label="集計概要">
+        <div><span>対象半荘</span><strong>{total_games:,}</strong></div>
+        <div><span>対象局数</span><strong>{total_rounds:,}</strong></div>
+        <div><span>獲得スコアトップ</span><strong>{esc(best_score["player"])}</strong></div>
+        <div><span>役満合計</span><strong>{total_yakuman:,}</strong></div>
+      </section>
+
+      <h2>累計 個人成績ランキング</h2>
+      <div class="table-wrap">
+        {table(rows, MAIN_COLUMNS, rank_by="earned_score", reverse=True)}
+      </div>
+
+      <div class="ranking-grid">
+        <section class="ranking-panel">
+          <h3>役満被害者ランキング</h3>
+          <div class="table-wrap">
+            {yakuman_victim_ranking(yakuman_detail_rows)}
+          </div>
+        </section>
+        <section class="ranking-panel">
+          <h3>役満加害者ランキング</h3>
+          <div class="table-wrap">
+            {yakuman_attacker_ranking(yakuman_detail_rows)}
+          </div>
+        </section>
+      </div>
     </section>
 
     <h2>個人成績ダイジェスト</h2>
     <section class="cards">
       {rate_cards(rows)}
     </section>
-
-    <h2>個人成績ランキング</h2>
-    <div class="table-wrap">
-      {table(rows, MAIN_COLUMNS, rank_by="earned_score", reverse=True)}
-    </div>
 
     <h2>詳細スタッツ</h2>
     <div class="table-wrap">
