@@ -131,36 +131,75 @@ def season_candidates(page: Page) -> list[dict[str, object]]:
     candidates = page.evaluate(
         """
         () => {
-          const seen = new Set();
-          const rows = [];
-          const elements = Array.from(document.querySelectorAll('button,a,li,div,span'));
+          const rejectText = /(大会牌譜|役満牌譜|牌譜削除|リロード|全て|選択|履歴|統計|ログアウト|備考|\\/ページ|JP|ID|点数|順位|獲得|プレイヤー|大会|テスト)/;
 
-          for (const el of elements) {
-            const text = (el.innerText || el.textContent || '').trim().replace(/\\s+/g, ' ');
-            if (!/(シーズン|Season)/i.test(text)) continue;
-            if (text.length > 40) continue;
-
+          function visible(el) {
             const rect = el.getBoundingClientRect();
-            if (rect.width < 40 || rect.height < 18) continue;
-            if (rect.bottom < 0 || rect.top > window.innerHeight) continue;
-
+            if (rect.width < 40 || rect.height < 18) return null;
+            if (rect.bottom < 0 || rect.top > window.innerHeight) return null;
             const style = window.getComputedStyle(el);
-            if (style.visibility === 'hidden' || style.display === 'none') continue;
-
-            const key = `${Math.round(rect.left / 4)}:${Math.round(rect.top / 4)}:${text}`;
-            if (seen.has(key)) continue;
-            seen.add(key);
-
-            rows.push({
-              text,
-              x: rect.left,
-              y: rect.top,
-              width: rect.width,
-              height: rect.height,
-            });
+            if (style.visibility === 'hidden' || style.display === 'none') return null;
+            return rect;
           }
 
-          return rows;
+          function uniq(rows) {
+            const out = [];
+            for (const row of rows.sort((a, b) => a.y - b.y || a.x - b.x)) {
+              if (out.some(x => Math.abs(x.y - row.y) < 8 && Math.abs(x.x - row.x) < 16)) continue;
+              out.push(row);
+            }
+            return out;
+          }
+
+          function collectSeasonText() {
+            const rows = [];
+            const elements = Array.from(document.querySelectorAll('button,a,li,div,span,[role="button"]'));
+            for (const el of elements) {
+              const text = (el.innerText || el.textContent || '').trim().replace(/\\s+/g, ' ');
+              if (!/(シーズン|Season)/i.test(text)) continue;
+              if (text.length > 60) continue;
+              const rect = visible(el);
+              if (!rect) continue;
+              rows.push({
+                text: text || '(textなし)',
+                x: rect.left,
+                y: rect.top,
+                width: rect.width,
+                height: rect.height,
+              });
+            }
+            return uniq(rows);
+          }
+
+          function collectClickableRows() {
+            const rows = [];
+            const elements = Array.from(document.querySelectorAll(
+              'button,a,li,[role="button"],[class*="item"],[class*="Item"],[class*="season"],[class*="Season"]'
+            ));
+            for (const el of elements) {
+            const text = (el.innerText || el.textContent || '').trim().replace(/\\s+/g, ' ');
+              if (text.length > 90) continue;
+              if (rejectText.test(text)) continue;
+              const rect = visible(el);
+              if (!rect) continue;
+              if (rect.height > 90) continue;
+              rows.push({
+                text: text || '(textなし)',
+                x: rect.left,
+                y: rect.top,
+                width: rect.width,
+                height: rect.height,
+              });
+            }
+            return uniq(rows);
+          }
+
+          const withText = collectSeasonText();
+          if (withText.length) {
+            return withText.map(row => ({...row, source: 'season-text'}));
+          }
+
+          return collectClickableRows().map(row => ({...row, source: 'clickable-row'}));
         }
         """
     )
@@ -168,7 +207,7 @@ def season_candidates(page: Page) -> list[dict[str, object]]:
     rows = []
     for item in candidates:
         # 同じ行に親子要素が重なって出ることがあるので、近い座標の重複を落とす。
-        if any(abs(float(item["y"]) - float(row["y"])) < 6 and item["text"] == row["text"] for row in rows):
+        if any(abs(float(item["y"]) - float(row["y"])) < 8 for row in rows):
             continue
         rows.append(item)
 
@@ -196,11 +235,11 @@ def click_season(page: Page, season: int) -> bool:
 
     print("シーズン候補:")
     for i, item in enumerate(bottom_order[: min(len(bottom_order), 12)], start=1):
-        print(f"  下から{i}: {item['text']} y={item['y']}")
+        print(f"  下から{i}: {item['text']} source={item.get('source', '')} y={item['y']}")
 
     x = float(target["x"]) + float(target["width"]) / 2
     y = float(target["y"]) + float(target["height"]) / 2
-    print(f"click season {season}: 下から{season} {target['text']} ({x:.1f}, {y:.1f})")
+    print(f"click season {season}: 下から{season} {target['text']} source={target.get('source', '')} ({x:.1f}, {y:.1f})")
     page.mouse.click(x, y)
     page.wait_for_timeout(1800)
     return True
