@@ -103,7 +103,14 @@ def count_complete_records_for_current_csv() -> int:
     return count
 
 
+def minimum_expected_count(max_pages: int) -> int:
+    # 10件/ページなら12ページで最大120件。最終ページが少し欠けても111件未満は取り逃し扱い。
+    return max(1, max_pages * 10 - 9)
+
+
 def collect_season_ids(season: int, max_pages: int) -> Path:
+    min_count = minimum_expected_count(max_pages)
+
     with sync_playwright() as p:
         browser = p.chromium.launch_persistent_context(
             user_data_dir=str(USER_DATA_DIR),
@@ -120,10 +127,23 @@ def collect_season_ids(season: int, max_pages: int) -> Path:
         print("そこから先のページ送りと牌譜ID取得は自動でやります。")
         input("開けたら Enter: ")
 
-        print()
-        print("=" * 40)
-        print(f"season {season}")
-        rows = collect_current_season(page, season, max_pages)
+        while True:
+            print()
+            print("=" * 40)
+            print(f"season {season}")
+            rows = collect_current_season(page, season, max_pages)
+
+            if len(rows) >= min_count:
+                break
+
+            print()
+            print(f"取得件数が少なすぎます: {len(rows)}件 / 最低期待 {min_count}件")
+            print("保存せずに再取得します。ブラウザで大会牌譜の1ページ目へ戻してください。")
+            answer = input("戻したら Enter。中止するなら q: ").strip().lower()
+            if answer == "q":
+                browser.close()
+                raise SystemExit("保存を中止しました。")
+
         browser.close()
 
     if not preview_collected_rows(season, rows):
@@ -145,8 +165,8 @@ def main() -> None:
         raise SystemExit("シーズン番号は数字で入力してください。")
 
     season = int(season_text)
-    max_pages_text = input("1シーズン最大ページ数。分からなければ空Enterで50: ").strip()
-    max_pages = int(max_pages_text or "50")
+    max_pages_text = input("1シーズン最大ページ数。今回は12。空Enterでも12: ").strip()
+    max_pages = int(max_pages_text or "12")
 
     if season == 1 and season_csv_path(1).exists():
         answer = input("シーズン1は既にあります。本当に再取得して上書きするなら yes: ").strip().lower()
