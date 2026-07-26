@@ -247,6 +247,14 @@ def hule_point(hule):
                 return value
     return 0
 
+def ron_payment_point(hule):
+    for field_name in ["point_rong", "dadian"]:
+        if hasattr(hule, field_name):
+            value = int(getattr(hule, field_name))
+            if value:
+                return value
+    return hule_point(hule)
+
 def yakuman_names_from_hule(hule):
     names = []
 
@@ -288,7 +296,7 @@ def victim_rows_from_hule(uuid, round_no, msg, hule, yakuman_name, seat_to_name)
         if loser is not None:
             victims.append({
                 "name": seat_to_name.get(loser, f"seat{loser}"),
-                "point": hule_point(hule) or -int(delta_scores[loser]),
+                "point": ron_payment_point(hule) or -int(delta_scores[loser]),
             })
 
     return [
