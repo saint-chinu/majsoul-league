@@ -60,6 +60,32 @@ def ensure_season1_backup() -> None:
         print(f"season1 backup: {season1} ({len(rows)}件)")
 
 
+def count_season_rows(seasons: set[int]) -> dict[int, int]:
+    counts = {}
+
+    for path in sorted(Path(".").glob("admin_paifu_ids_season*.csv")):
+        match = SEASON_FILE_RE.match(path.name)
+        if not match:
+            continue
+
+        season_no = int(match.group(1))
+        if season_no not in seasons:
+            continue
+
+        count = 0
+        for row in read_csv_rows(path):
+            uuid = row.get("uuid", "")
+            if not uuid:
+                continue
+            date_key = row.get("date_key") or uuid_date_key(uuid)
+            if date_key >= STOP_BEFORE:
+                count += 1
+
+        counts[season_no] = count
+
+    return counts
+
+
 def merge_season_files(seasons: set[int]) -> int:
     rows_by_uuid: dict[str, dict[str, str]] = {}
 
@@ -449,8 +475,12 @@ def main() -> None:
 
         merge_targets = {1, *range(start_season, end_season + 1)}
         total = merge_season_files(merge_targets)
+        season_counts = count_season_rows(merge_targets)
         print()
-        print(f"merged: {OUT} ({total}件)")
+        print(f"merged cumulative: {OUT} ({total}件)")
+        print("season counts:")
+        for season in sorted(season_counts):
+            print(f"  season {season}: {season_counts[season]}件")
         input("確認したら Enter: ")
         browser.close()
 
