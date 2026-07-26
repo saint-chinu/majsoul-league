@@ -11,7 +11,6 @@ from collect_admin_paifu_ids import (
     START_URL,
     STOP_BEFORE,
     USER_DATA_DIR,
-    click_page_number,
     click_next_page,
     collect_visible_page,
     uuid_date_key,
@@ -389,6 +388,7 @@ def capture_season_clicks(page: Page, start_season: int, end_season: int) -> dic
 def collect_current_season(page: Page, season: int, max_pages: int) -> list[dict[str, object]]:
     seen = set()
     rows: list[dict[str, object]] = []
+    previous_page_uuids: list[str] = []
 
     for page_no in range(1, max_pages + 1):
         print()
@@ -425,8 +425,11 @@ def collect_current_season(page: Page, season: int, max_pages: int) -> list[dict
             print("このページで牌譜IDが取れないので、このシーズンはここで止めます。")
             break
 
-        if click_page_number(page, page_no + 1):
-            continue
+        if uuids == previous_page_uuids:
+            print("前ページと同じ牌譜IDなので、ページ送り失敗として止めます。")
+            break
+
+        previous_page_uuids = uuids
 
         if not click_next_page(page):
             print("次ページがないので、このシーズンは完了です。")
