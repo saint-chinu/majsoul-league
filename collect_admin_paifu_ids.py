@@ -130,9 +130,53 @@ def click_page_number(page, page_number):
     return True
 
 def click_next_page(page):
-    buttons = page.locator("button").all()
     pager_y = find_current_pager_y(page)
 
+    # Ant Designのページャー本体を優先して押す。
+    # 画面下に役満牌譜用のページャーもあるので、上側にある大会牌譜ページャーだけを候補にする。
+    candidates = []
+    pagers = page.locator("li.ant-pagination-next").all()
+
+    for i, pager in enumerate(pagers):
+        try:
+            box = pager.bounding_box(timeout=500)
+            class_name = pager.get_attribute("class", timeout=500) or ""
+            aria_disabled = pager.get_attribute("aria-disabled", timeout=500)
+            button = pager.locator("button").first
+            button_disabled = button.is_disabled(timeout=500) if button.count() else False
+        except Exception:
+            continue
+
+        if not box:
+            continue
+
+        disabled = (
+            "disabled" in class_name
+            or aria_disabled == "true"
+            or button_disabled
+        )
+        if disabled:
+            continue
+
+        is_upper_record_pager = (
+            250 <= box["y"] <= 1300
+            and abs(box["y"] - pager_y) <= 90
+            and 20 <= box["width"] <= 50
+            and 20 <= box["height"] <= 50
+        )
+
+        if is_upper_record_pager:
+            candidates.append((i, pager, box))
+
+    if candidates:
+        candidates.sort(key=lambda item: (item[2]["y"], item[2]["x"]))
+        i, pager, box = candidates[0]
+        print(f"next page: pagination {i} {box}")
+        page.mouse.click(box["x"] + box["width"] / 2, box["y"] + box["height"] / 2)
+        page.wait_for_timeout(1800)
+        return True
+
+    buttons = page.locator("button").all()
     candidates = []
     for i, button in enumerate(buttons):
         try:
@@ -149,8 +193,8 @@ def click_next_page(page):
         # 役満牌譜側にもページャーがあるので、現在の大会牌譜ページャーの高さ付近だけを対象にする。
         is_next_button = (
             text == ""
-            and 730 <= box["x"] <= 850
-            and pager_y - 30 <= box["y"] <= pager_y + 30
+            and 600 <= box["x"] <= 950
+            and pager_y - 90 <= box["y"] <= pager_y + 90
             and 20 <= box["width"] <= 45
             and 20 <= box["height"] <= 45
         )
