@@ -7,6 +7,7 @@ import ms.protocol_pb2 as pb
 from google.protobuf.json_format import MessageToDict
 
 RAW_DIR = Path("records_raw")
+PAIFU_CSV = Path("admin_paifu_ids.csv")
 SUMMARY_OUT = Path("summary.csv")
 YAKUMAN_OUT = Path("yakuman_summary.csv")
 YAKUMAN_DETAILS_OUT = Path("yakuman_details.csv")
@@ -23,7 +24,7 @@ YAKUMAN_NAMES = {
     45: "小四喜",
     46: "緑一色",
     47: "九蓮宝燈",
-    48: "純正九蓮宝燈",
+    48: "四暗刻単騎",
     49: "四槓子",
     50: "天和",
     51: "地和",
@@ -464,16 +465,41 @@ def write_yakuman_details(rows):
         writer.writeheader()
         writer.writerows(rows)
 
+def target_uuids():
+    if not PAIFU_CSV.exists():
+        return None
+
+    with PAIFU_CSV.open("r", encoding="utf-8-sig", newline="") as f:
+        rows = list(csv.DictReader(f))
+
+    uuids = []
+    seen = set()
+    for row in rows:
+        uuid = row.get("uuid", "").strip()
+        if uuid and uuid not in seen:
+            uuids.append(uuid)
+            seen.add(uuid)
+
+    return uuids or None
+
 def main():
     stats = defaultdict(PlayerStats)
     yakuman_details = []
 
-    record_files = sorted(RAW_DIR.glob("*_record.bin"))
-    print(f"records: {len(record_files)}")
+    uuids = target_uuids()
+    if uuids is None:
+        uuids = [path.name.removesuffix("_record.bin") for path in sorted(RAW_DIR.glob("*_record.bin"))]
 
-    for index, record_file in enumerate(record_files, start=1):
-        uuid = record_file.name.removesuffix("_record.bin")
-        print(f"[{index}/{len(record_files)}] {uuid}")
+    print(f"records: {len(uuids)}")
+
+    for index, uuid in enumerate(uuids, start=1):
+        record_path = RAW_DIR / f"{uuid}_record.bin"
+        detail_path = RAW_DIR / f"{uuid}_detail.bin"
+        if not record_path.exists() or not detail_path.exists():
+            print(f"[{index}/{len(uuids)}] skip missing {uuid}")
+            continue
+
+        print(f"[{index}/{len(uuids)}] {uuid}")
         aggregate_game(uuid, stats, yakuman_details)
 
     write_summary(stats)
