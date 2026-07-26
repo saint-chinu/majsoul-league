@@ -1,17 +1,17 @@
 from __future__ import annotations
 
 import csv
-import re
 import sys
 from pathlib import Path
 
+from playwright.sync_api import sync_playwright
+
+from collect_admin_paifu_ids import START_URL, USER_DATA_DIR
+from collect_all_seasons import collect_current_season
 from run_all import ROOT, backup_if_exists, commit_and_push, count_csv, run
 
 
-UUID_RE = re.compile(r"\d{6}-[0-9a-fA-F-]{36}")
-MANUAL_INPUT = ROOT / "manual_paifu_ids.txt"
 PAIFU_CSV = ROOT / "admin_paifu_ids.csv"
-SEASON_RE = re.compile(r"admin_paifu_ids_season(\d+)\.csv$")
 SEASON_COLUMNS = ["season", "page_no", "uuid", "date_key", "paifu_url"]
 
 
@@ -29,40 +29,6 @@ def write_csv_rows(path: Path, rows: list[dict[str, object]]) -> None:
         writer.writerows(rows)
 
 
-def parse_manual_uuids() -> list[str]:
-    if not MANUAL_INPUT.exists():
-        return []
-
-    text = MANUAL_INPUT.read_text(encoding="utf-8-sig", errors="ignore")
-    seen = set()
-    uuids = []
-    for match in UUID_RE.finditer(text):
-        uuid = match.group(0)
-        if uuid in seen:
-            continue
-        seen.add(uuid)
-        uuids.append(uuid)
-    return uuids
-
-
-def write_manual_season_csv(season: int, uuids: list[str]) -> Path:
-    out = ROOT / f"admin_paifu_ids_season{season}.csv"
-    rows = []
-    for index, uuid in enumerate(uuids, start=1):
-        rows.append(
-            {
-                "season": season,
-                "page_no": "",
-                "uuid": uuid,
-                "date_key": uuid.split("-", 1)[0],
-                "paifu_url": f"https://game.mahjongsoul.com/?paipu={uuid}",
-            }
-        )
-
-    write_csv_rows(out, rows)
-    return out
-
-
 def season_csv_path(season: int) -> Path:
     return ROOT / f"admin_paifu_ids_season{season}.csv"
 
@@ -70,13 +36,9 @@ def season_csv_path(season: int) -> Path:
 def merge_seasons_through(season: int) -> int:
     rows_by_uuid: dict[str, dict[str, str]] = {}
 
-    for path in sorted(ROOT.glob("admin_paifu_ids_season*.csv")):
-        match = SEASON_RE.match(path.name)
-        if not match:
-            continue
-
-        season_no = int(match.group(1))
-        if season_no < 1 or season_no > season:
+    for season_no in range(1, season + 1):
+        path = season_csv_path(season_no)
+        if not path.exists():
             continue
 
         for row in read_csv_rows(path):
@@ -117,10 +79,38 @@ def count_complete_records_for_current_csv() -> int:
     return count
 
 
+def collect_season_ids(season: int, max_pages: int) -> Path:
+    with sync_playwright() as p:
+        browser = p.chromium.launch_persistent_context(
+            user_data_dir=str(USER_DATA_DIR),
+            headless=False,
+            viewport={"width": 1460, "height": 900},
+        )
+
+        page = browser.new_page()
+        page.goto(START_URL, wait_until="domcontentloaded")
+
+        print()
+        print("ブラウザで管理画面を開きます。")
+        print(f"手でシーズン{season} → 大会牌譜の1ページ目を開いてください。")
+        print("そこから先のページ送りと牌譜ID取得は自動でやります。")
+        input("開けたら Enter: ")
+
+        print()
+        print("=" * 40)
+        print(f"season {season}")
+        rows = collect_current_season(page, season, max_pages)
+        browser.close()
+
+    out = season_csv_path(season)
+    write_csv_rows(out, rows)
+    print(f"saved: {out.name} ({len(rows)}件)")
+    return out
+
+
 def main() -> None:
-    print("手動IDリストから、単一シーズンを集計してHPへ反映します。")
-    print("manual_paifu_ids.txt に今回シーズンの牌譜URLまたはUUIDを貼っておくと、その内容でシーズンCSVを作ります。")
-    print("manual_paifu_ids.txt が空なら、既存の admin_paifu_ids_seasonN.csv を使います。")
+    print("単一シーズンを集計してHPへ反映します。")
+    print("シーズン選択だけ手動です。大会牌譜1ページ目まで開けば、ページ送り以降は自動です。")
     print()
 
     season_text = input("今回反映するシーズン番号。例: 2: ").strip()
@@ -128,18 +118,10 @@ def main() -> None:
         raise SystemExit("シーズン番号は数字で入力してください。")
 
     season = int(season_text)
-    uuids = parse_manual_uuids()
+    max_pages_text = input("1シーズン最大ページ数。分からなければ空Enterで50: ").strip()
+    max_pages = int(max_pages_text or "50")
 
-    if uuids:
-        out = write_manual_season_csv(season, uuids)
-        print(f"saved: {out.name} ({len(uuids)}件)")
-    else:
-        out = season_csv_path(season)
-        if not out.exists() or count_csv(out) == 0:
-            raise SystemExit(
-                f"{out.name} がありません。manual_paifu_ids.txt にUUIDか牌譜URLを貼ってから再実行してください。"
-            )
-        print(f"use existing: {out.name} ({count_csv(out)}件)")
+    collect_season_ids(season, max_pages)
 
     backup_if_exists(PAIFU_CSV)
     total = merge_seasons_through(season)
@@ -162,10 +144,6 @@ def main() -> None:
     run([sys.executable, "aggregate_league.py"])
     run([sys.executable, "make_site.py"])
     commit_and_push()
-
-    if MANUAL_INPUT.exists():
-        MANUAL_INPUT.write_text("", encoding="utf-8")
-        print(f"cleared: {MANUAL_INPUT.name}")
 
     print()
     print("完了しました。")
