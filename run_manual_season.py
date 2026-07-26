@@ -66,6 +66,30 @@ def print_season_counts(season: int) -> None:
             print(f"  season {season_no}: {count_csv(path)}件")
 
 
+def preview_collected_rows(season: int, rows: list[dict[str, object]]) -> bool:
+    dates = sorted({str(row.get("date_key", "")) for row in rows if row.get("date_key")})
+    existing = season_csv_path(season)
+
+    print()
+    print("取得内容の確認")
+    print(f"  保存先: {existing.name}")
+    print(f"  取得件数: {len(rows)}件")
+    if dates:
+        print(f"  日付範囲: {dates[0]} - {dates[-1]}")
+    if existing.exists():
+        print(f"  既存件数: {count_csv(existing)}件")
+    print("  先頭5件:")
+    for row in rows[:5]:
+        print(f"    {row.get('uuid', '')}")
+
+    if not rows:
+        print("0件なので保存しません。")
+        return False
+
+    answer = input("この内容でシーズンCSVを上書きするなら y: ").strip().lower()
+    return answer == "y"
+
+
 def count_complete_records_for_current_csv() -> int:
     count = 0
     for row in read_csv_rows(PAIFU_CSV):
@@ -102,6 +126,9 @@ def collect_season_ids(season: int, max_pages: int) -> Path:
         rows = collect_current_season(page, season, max_pages)
         browser.close()
 
+    if not preview_collected_rows(season, rows):
+        raise SystemExit("保存を中止しました。")
+
     out = season_csv_path(season)
     write_csv_rows(out, rows)
     print(f"saved: {out.name} ({len(rows)}件)")
@@ -120,6 +147,11 @@ def main() -> None:
     season = int(season_text)
     max_pages_text = input("1シーズン最大ページ数。分からなければ空Enterで50: ").strip()
     max_pages = int(max_pages_text or "50")
+
+    if season == 1 and season_csv_path(1).exists():
+        answer = input("シーズン1は既にあります。本当に再取得して上書きするなら yes: ").strip().lower()
+        if answer != "yes":
+            raise SystemExit("シーズン1の上書きを中止しました。")
 
     collect_season_ids(season, max_pages)
 
