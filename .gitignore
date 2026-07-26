@@ -13,3 +13,11 @@ admin_paifu_ids_manual.csv
 round_events.csv
 record_list.csv
 paifu_urls.txt
+capture_*.py
+copy_visible_paifu_ids.py
+decode_*.py
+extract_*.py
+inspect_*.py
+make_summary.py
+parse_round_events.py
+save_login.py
