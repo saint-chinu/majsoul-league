@@ -342,9 +342,8 @@ def main() -> None:
 
         print()
         print("ブラウザで管理画面を開きます。")
-        print("必要ならログインして、リーグ「テスト」のシーズン一覧が見える画面まで進めてください。")
-        print("シーズン1が一番下に見える状態にしてください。")
-        print("スクリプトは下からN番目をシーズンNとしてクリックします。")
+        print("必要ならログインして、リーグ「テスト」が見える画面まで進めてください。")
+        print("シーズン選択は自動クリックしません。誤クリック防止のため、毎回手で対象シーズンの大会牌譜を開きます。")
         input("準備できたら Enter: ")
 
         for season in range(start_season, end_season + 1):
@@ -352,14 +351,9 @@ def main() -> None:
             print("=" * 40)
             print(f"season {season}")
 
-            if not click_season(page, season):
-                print(f"シーズン{season}を自動クリックできませんでした。")
-                print(f"手でシーズン{season} → 大会牌譜を開いてください。")
-                input("開けたら Enter: ")
-            elif not click_game_record_tab(page):
-                print("大会牌譜タブを自動クリックできませんでした。")
-                print("手で大会牌譜を開いてください。")
-                input("開けたら Enter: ")
+            print(f"手でシーズン{season} → 大会牌譜を開いてください。")
+            print("大会牌譜の1ページ目が表示できたら PowerShell に戻って Enter。")
+            input("開けたら Enter: ")
 
             rows = collect_current_season(page, season, max_pages)
             out = Path(f"admin_paifu_ids_season{season}.csv")
