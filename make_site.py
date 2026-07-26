@@ -3,12 +3,14 @@ from __future__ import annotations
 import csv
 import html
 from collections import defaultdict
+from itertools import combinations
 from pathlib import Path
 
 
 SUMMARY_CSV = Path("summary.csv")
 YAKUMAN_CSV = Path("yakuman_summary.csv")
 OUTPUT_HTML = Path("docs") / "index.html"
+RAW_DIR = Path("records_raw")
 
 
 LABELS = {
@@ -153,6 +155,90 @@ def yakuman_section(yakuman_rows: list[dict[str, str]]) -> str:
     return "\n".join(blocks)
 
 
+def build_correlation_rows() -> list[dict[str, object]]:
+    try:
+        from aggregate_league import load_detail
+    except Exception:
+        return []
+
+    pair_net: dict[tuple[str, str], int] = defaultdict(int)
+    pair_games: dict[tuple[str, str], int] = defaultdict(int)
+
+    for detail_path in sorted(RAW_DIR.glob("*_detail.bin")):
+        try:
+            _, player_details = load_detail(detail_path)
+        except Exception:
+            continue
+
+        players = [
+            {"name": detail["name"], "point": int(detail["point"])}
+            for detail in player_details.values()
+            if detail.get("name")
+        ]
+        for left, right in combinations(players, 2):
+            a, b = sorted([left["name"], right["name"]])
+            point_by_name = {left["name"]: left["point"], right["name"]: right["point"]}
+            pair_net[(a, b)] += point_by_name[a] - point_by_name[b]
+            pair_games[(a, b)] += 1
+
+    rows = []
+    for (a, b), net in pair_net.items():
+        if net == 0:
+            continue
+        if net > 0:
+            giver, receiver, amount = b, a, net
+        else:
+            giver, receiver, amount = a, b, -net
+        rows.append(
+            {
+                "giver": giver,
+                "receiver": receiver,
+                "amount": amount,
+                "games": pair_games[(a, b)],
+            }
+        )
+    return sorted(rows, key=lambda row: (-int(row["amount"]), row["giver"], row["receiver"]))
+
+
+def correlation_table(rows: list[dict[str, object]]) -> str:
+    if not rows:
+        return "<p class=\"empty\">相関図の元データがありません。</p>"
+
+    body = []
+    for i, row in enumerate(rows, 1):
+        body.append(
+            "<tr>"
+            f"<td>{i}</td>"
+            f"<td class=\"name\">{esc(row['giver'])}</td>"
+            f"<td class=\"name\">{esc(row['receiver'])}</td>"
+            f"<td>{number(row['amount'])}</td>"
+            f"<td>{esc(row['games'])}</td>"
+            "</tr>"
+        )
+
+    return (
+        "<table class=\"relation-table\">"
+        "<thead><tr><th>順位</th><th>献上者</th><th>受取人</th><th>ネット献上点棒</th><th>直接対戦数</th></tr></thead>"
+        f"<tbody>{''.join(body)}</tbody></table>"
+    )
+
+
+def correlation_mermaid(rows: list[dict[str, object]], limit: int = 15) -> str:
+    if not rows:
+        return ""
+
+    names = sorted({str(row["giver"]) for row in rows} | {str(row["receiver"]) for row in rows})
+    node_ids = {name: f"p{i + 1}" for i, name in enumerate(names)}
+    lines = ["flowchart LR"]
+    for name in names:
+        lines.append(f'  {node_ids[name]}["{esc(name)}"]')
+    for row in rows[:limit]:
+        label = f"{number(row['amount'])}点 / {row['games']}戦"
+        lines.append(f'  {node_ids[str(row["giver"])]} -->|"{esc(label)}"| {node_ids[str(row["receiver"])]}')
+
+    return f"<pre class=\"mermaid\">{chr(10).join(lines)}</pre>"
+
+
 def main() -> None:
     rows = read_csv(SUMMARY_CSV)
     yakuman_rows = read_csv(YAKUMAN_CSV)
@@ -165,6 +251,7 @@ def main() -> None:
     total_yakuman = sum(int(r.get("yakuman_count", 0)) for r in rows)
     best_avg = min(rows, key=lambda r: float(r["average_rank"]))
     best_top = max(rows, key=lambda r: pct_number(r["rank1_rate"]))
+    correlation_rows = build_correlation_rows()
 
     html_text = f"""<!doctype html>
 <html lang="ja">
@@ -172,6 +259,10 @@ def main() -> None:
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>雀魂リーグスタッツ</title>
+  <script type="module">
+    import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+    mermaid.initialize({{ startOnLoad: true, theme: "base", flowchart: {{ curve: "basis" }} }});
+  </script>
   <style>
     :root {{
       color-scheme: light;
@@ -220,6 +311,8 @@ def main() -> None:
     .yakuman-card ul {{ list-style: none; padding: 0; margin: 0; display: grid; gap: 6px; }}
     .yakuman-card li {{ display: flex; justify-content: space-between; gap: 10px; padding: 7px 8px; border-radius: 6px; background: var(--accent-soft); }}
     .yakuman-card strong {{ color: var(--gold); }}
+    .mermaid {{ border: 1px solid var(--line); border-radius: 8px; padding: 14px; overflow: auto; background: #fff; margin: 8px 0 16px; }}
+    .subnote {{ margin: -4px 0 12px; color: var(--muted); }}
     footer {{ padding: 18px 32px 30px; border-top: 1px solid var(--line); color: var(--muted); font-size: 12px; }}
     @media (max-width: 920px) {{
       header, main, footer {{ padding-left: 16px; padding-right: 16px; }}
@@ -255,6 +348,13 @@ def main() -> None:
     <h2>詳細スタッツ</h2>
     <div class="table-wrap">
       {table(rows, DETAIL_COLUMNS, rank_by="average_rank")}
+    </div>
+
+    <h2>許されない相関図</h2>
+    <p class="subnote">矢印は「左のプレイヤーが右のプレイヤーへ、同卓時の最終持ち点差でネット献上」。ラベルは 献上点棒 / 直接対戦数。</p>
+    {correlation_mermaid(correlation_rows)}
+    <div class="table-wrap">
+      {correlation_table(correlation_rows)}
     </div>
 
     <h2>役満内訳</h2>

@@ -4,6 +4,10 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>雀魂リーグスタッツ</title>
+  <script type="module">
+    import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+    mermaid.initialize({ startOnLoad: true, theme: "base", flowchart: { curve: "basis" } });
+  </script>
   <style>
     :root {
       color-scheme: light;
@@ -52,6 +56,8 @@
     .yakuman-card ul { list-style: none; padding: 0; margin: 0; display: grid; gap: 6px; }
     .yakuman-card li { display: flex; justify-content: space-between; gap: 10px; padding: 7px 8px; border-radius: 6px; background: var(--accent-soft); }
     .yakuman-card strong { color: var(--gold); }
+    .mermaid { border: 1px solid var(--line); border-radius: 8px; padding: 14px; overflow: auto; background: #fff; margin: 8px 0 16px; }
+    .subnote { margin: -4px 0 12px; color: var(--muted); }
     footer { padding: 18px 32px 30px; border-top: 1px solid var(--line); color: var(--muted); font-size: 12px; }
     @media (max-width: 920px) {
       header, main, footer { padding-left: 16px; padding-right: 16px; }
@@ -176,6 +182,31 @@
     <h2>詳細スタッツ</h2>
     <div class="table-wrap">
       <table><thead><tr><th>順位</th><th>プレイヤー</th><th>参加局数</th><th>平均和了点</th><th>最高終了時持ち点</th><th>最低終了時持ち点</th></tr></thead><tbody><tr><td>1</td><td class="name">鯛ofカルピス</td><td class="">368</td><td class="">20,405</td><td class="">87,300</td><td class="">-51,100</td></tr><tr><td>2</td><td class="name">流れ者金融</td><td class="">403</td><td class="">25,173</td><td class="">98,600</td><td class="">-23,100</td></tr><tr><td>3</td><td class="name">ひなんじょ</td><td class="">498</td><td class="">22,791</td><td class="">102,700</td><td class="">-15,900</td></tr><tr><td>4</td><td class="name">アリスkey</td><td class="">498</td><td class="">25,456</td><td class="">91,500</td><td class="">-45,100</td></tr><tr><td>5</td><td class="name">29ちゃん</td><td class="">628</td><td class="">23,351</td><td class="">106,800</td><td class="">-21,600</td></tr><tr><td>6</td><td class="name">葡萄海ぶどう</td><td class="">593</td><td class="">20,933</td><td class="">89,600</td><td class="">-22,900</td></tr></tbody></table>
+    </div>
+
+    <h2>許されない相関図</h2>
+    <p class="subnote">矢印は「左のプレイヤーが右のプレイヤーへ、同卓時の最終持ち点差でネット献上」。ラベルは 献上点棒 / 直接対戦数。</p>
+    <pre class="mermaid">flowchart LR
+  p1["29ちゃん"]
+  p2["ひなんじょ"]
+  p3["アリスkey"]
+  p4["流れ者金融"]
+  p5["葡萄海ぶどう"]
+  p6["鯛ofカルピス"]
+  p5 -->|"222,200点 / 38戦"| p1
+  p3 -->|"206,800点 / 19戦"| p6
+  p6 -->|"160,200点 / 15戦"| p2
+  p6 -->|"144,500点 / 15戦"| p4
+  p4 -->|"97,000点 / 24戦"| p1
+  p5 -->|"83,500点 / 19戦"| p6
+  p4 -->|"83,000点 / 17戦"| p3
+  p5 -->|"82,500点 / 28戦"| p2
+  p3 -->|"37,600点 / 27戦"| p1
+  p2 -->|"30,200点 / 35戦"| p1
+  p2 -->|"16,600点 / 22戦"| p4
+  p3 -->|"5,100点 / 29戦"| p5</pre>
+    <div class="table-wrap">
+      <table class="relation-table"><thead><tr><th>順位</th><th>献上者</th><th>受取人</th><th>ネット献上点棒</th><th>直接対戦数</th></tr></thead><tbody><tr><td>1</td><td class="name">葡萄海ぶどう</td><td class="name">29ちゃん</td><td>222,200</td><td>38</td></tr><tr><td>2</td><td class="name">アリスkey</td><td class="name">鯛ofカルピス</td><td>206,800</td><td>19</td></tr><tr><td>3</td><td class="name">鯛ofカルピス</td><td class="name">ひなんじょ</td><td>160,200</td><td>15</td></tr><tr><td>4</td><td class="name">鯛ofカルピス</td><td class="name">流れ者金融</td><td>144,500</td><td>15</td></tr><tr><td>5</td><td class="name">流れ者金融</td><td class="name">29ちゃん</td><td>97,000</td><td>24</td></tr><tr><td>6</td><td class="name">葡萄海ぶどう</td><td class="name">鯛ofカルピス</td><td>83,500</td><td>19</td></tr><tr><td>7</td><td class="name">流れ者金融</td><td class="name">アリスkey</td><td>83,000</td><td>17</td></tr><tr><td>8</td><td class="name">葡萄海ぶどう</td><td class="name">ひなんじょ</td><td>82,500</td><td>28</td></tr><tr><td>9</td><td class="name">アリスkey</td><td class="name">29ちゃん</td><td>37,600</td><td>27</td></tr><tr><td>10</td><td class="name">ひなんじょ</td><td class="name">29ちゃん</td><td>30,200</td><td>35</td></tr><tr><td>11</td><td class="name">ひなんじょ</td><td class="name">流れ者金融</td><td>16,600</td><td>22</td></tr><tr><td>12</td><td class="name">アリスkey</td><td class="name">葡萄海ぶどう</td><td>5,100</td><td>29</td></tr></tbody></table>
     </div>
 
     <h2>役満内訳</h2>
