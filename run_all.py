@@ -62,7 +62,16 @@ def commit_and_push() -> None:
         "summary.csv",
         "yakuman_summary.csv",
         "docs/index.html",
+        "admin_paifu_ids_season1.csv",
+        "admin_paifu_ids_season2.csv",
+        "admin_paifu_ids_season3.csv",
+        "admin_paifu_ids_season4.csv",
+        "admin_paifu_ids_season5.csv",
+        "admin_paifu_ids_season6.csv",
+        "admin_paifu_ids_season7.csv",
+        "admin_paifu_ids_season8.csv",
         "collect_admin_paifu_ids.py",
+        "collect_all_seasons.py",
         "make_site.py",
         "run_all.py",
         "run_all.bat",
@@ -83,13 +92,13 @@ def commit_and_push() -> None:
 
 def main() -> None:
     print("雀魂リーグ集計をまとめて実行します。")
-    print("途中でブラウザが開いたら、対象シーズンの大会牌譜ページを表示してEnterしてください。")
+    print("途中でブラウザが開いたら、管理画面でリーグ「テスト」が見える状態にしてEnterしてください。")
 
     input("開始するなら Enter: ")
 
     backup_if_exists(ROOT / "admin_paifu_ids.csv")
 
-    run([sys.executable, "collect_admin_paifu_ids.py"])
+    run([sys.executable, "collect_all_seasons.py"])
     paifu_count = count_csv(ROOT / "admin_paifu_ids.csv")
     print(f"牌譜ID: {paifu_count} 件")
 

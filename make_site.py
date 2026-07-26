@@ -9,6 +9,7 @@ from pathlib import Path
 
 SUMMARY_CSV = Path("summary.csv")
 YAKUMAN_CSV = Path("yakuman_summary.csv")
+PAIFU_CSV = Path("admin_paifu_ids.csv")
 OUTPUT_HTML = Path("docs") / "index.html"
 RAW_DIR = Path("records_raw")
 
@@ -239,6 +240,22 @@ def correlation_mermaid(rows: list[dict[str, object]], limit: int = 15) -> str:
     return f"<pre class=\"mermaid\">{chr(10).join(lines)}</pre>"
 
 
+def season_label() -> str:
+    paifu_rows = read_csv(PAIFU_CSV)
+    seasons = sorted(
+        {
+            int(row["season"])
+            for row in paifu_rows
+            if row.get("season", "").isdigit()
+        }
+    )
+    if not seasons:
+        return "収集済みシーズン"
+    if len(seasons) == 1:
+        return f"シーズン{seasons[0]}"
+    return f"シーズン{seasons[0]}-{seasons[-1]}"
+
+
 def main() -> None:
     rows = read_csv(SUMMARY_CSV)
     yakuman_rows = read_csv(YAKUMAN_CSV)
@@ -252,6 +269,7 @@ def main() -> None:
     best_avg = min(rows, key=lambda r: float(r["average_rank"]))
     best_top = max(rows, key=lambda r: pct_number(r["rank1_rate"]))
     correlation_rows = build_correlation_rows()
+    seasons = season_label()
 
     html_text = f"""<!doctype html>
 <html lang="ja">
@@ -325,7 +343,7 @@ def main() -> None:
 <body>
   <header>
     <h1>雀魂リーグスタッツ</h1>
-    <p>大会「テスト」シーズン1集計。順位率、平均和了点、和了率、ツモ率、放銃率、副露率、立直率、役満内訳。</p>
+    <p>大会「テスト」{esc(seasons)}集計。順位率、平均和了点、和了率、ツモ率、放銃率、副露率、立直率、役満内訳。</p>
   </header>
   <main>
     <section class="summary" aria-label="集計概要">
