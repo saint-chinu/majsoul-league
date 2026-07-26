@@ -130,6 +130,68 @@ def click_page_number(page, page_number):
     return True
 
 def click_next_page(page):
+    clicked_by_dom = page.evaluate(
+        """
+        () => {
+          const paginations = Array.from(document.querySelectorAll('ul.ant-pagination'));
+          const candidates = [];
+
+          for (const pagination of paginations) {
+            const rect = pagination.getBoundingClientRect();
+            if (rect.width < 80 || rect.height < 20) continue;
+            if (rect.bottom < 0 || rect.top > window.innerHeight + 800) continue;
+
+            const next = pagination.querySelector('li.ant-pagination-next');
+            if (!next) continue;
+
+            const className = next.className || '';
+            const disabled =
+              className.includes('disabled') ||
+              next.getAttribute('aria-disabled') === 'true' ||
+              next.querySelector('button')?.disabled === true;
+
+            if (disabled) continue;
+
+            const active = pagination.querySelector('li.ant-pagination-item-active');
+            const activeText = active ? (active.innerText || active.textContent || '').trim() : '';
+            const nextRect = next.getBoundingClientRect();
+            candidates.push({
+              next,
+              top: rect.top,
+              left: rect.left,
+              activeText,
+              x: nextRect.left + nextRect.width / 2,
+              y: nextRect.top + nextRect.height / 2,
+            });
+          }
+
+          if (!candidates.length) return null;
+
+          candidates.sort((a, b) => a.top - b.top || a.left - b.left);
+          const target = candidates[0];
+          const clickable = target.next.querySelector('button,a') || target.next;
+          clickable.click();
+          const element = document.elementFromPoint(target.x, target.y);
+          if (!element) return null;
+          element.dispatchEvent(new MouseEvent('mousedown', {bubbles: true, clientX: target.x, clientY: target.y}));
+          element.dispatchEvent(new MouseEvent('mouseup', {bubbles: true, clientX: target.x, clientY: target.y}));
+          element.dispatchEvent(new MouseEvent('click', {bubbles: true, clientX: target.x, clientY: target.y}));
+          return {
+            top: target.top,
+            left: target.left,
+            activeText: target.activeText,
+            x: target.x,
+            y: target.y,
+          };
+        }
+        """
+    )
+
+    if clicked_by_dom:
+        print(f"next page: ant pagination {clicked_by_dom}")
+        page.wait_for_timeout(1800)
+        return True
+
     pager_y = find_current_pager_y(page)
 
     # Ant Designのページャー本体を優先して押す。
