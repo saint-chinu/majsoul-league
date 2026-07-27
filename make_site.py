@@ -12,6 +12,7 @@ SUMMARY_CSV = Path("summary.csv")
 YAKUMAN_CSV = Path("yakuman_summary.csv")
 YAKUMAN_DETAILS_CSV = Path("yakuman_details.csv")
 PAIFU_CSV = Path("admin_paifu_ids.csv")
+TEAM_CSV = Path("team_members.csv")
 OUTPUT_HTML = Path("docs") / "index.html"
 RAW_DIR = Path("records_raw")
 SEASON_FILE_RE = re.compile(r"admin_paifu_ids_season(\d+)\.csv$")
@@ -120,6 +121,141 @@ def table(
             cells.append(f"<td class=\"{cls}\">{esc(value)}</td>")
         body_rows.append("<tr>" + "".join(cells) + "</tr>")
     return f"<table><thead><tr>{head}</tr></thead><tbody>{''.join(body_rows)}</tbody></table>"
+
+
+def read_team_members() -> dict[int, dict[str, list[str]]]:
+    rows = read_csv(TEAM_CSV)
+    teams: dict[int, dict[str, list[str]]] = defaultdict(lambda: defaultdict(list))
+    for row in rows:
+        season = row.get("season", "").strip()
+        team = row.get("team", "").strip()
+        player = row.get("player", "").strip()
+        if not season.isdigit() or not team or not player:
+            continue
+        members = teams[int(season)][team]
+        if player not in members:
+            members.append(player)
+    return teams
+
+
+def build_team_rows(rows: list[dict[str, str]], season_teams: dict[str, list[str]]) -> list[dict[str, object]]:
+    by_player = {row["player"]: row for row in rows}
+    team_rows = []
+    for team, members in sorted(season_teams.items()):
+        member_details = []
+        total_score = 0.0
+        total_games = 0
+        for player in members:
+            row = by_player.get(player)
+            if not row:
+                member_details.append(f"{player}: 未出場")
+                continue
+            score = float(row.get("earned_score", 0) or 0)
+            total_score += score
+            total_games += int(row.get("games", 0) or 0)
+            member_details.append(
+                f"{player}: {number(score, 1)} / 平均{row.get('average_rank', '-')}"
+            )
+        team_rows.append(
+            {
+                "team": team,
+                "members": " / ".join(members),
+                "member_details": " / ".join(member_details),
+                "total_score": round(total_score, 1),
+                "total_games": total_games,
+            }
+        )
+    return sorted(team_rows, key=lambda row: (-float(row["total_score"]), str(row["team"])))
+
+
+def team_section(team_rows: list[dict[str, object]]) -> str:
+    if not TEAM_CSV.exists():
+        return (
+            "<p class=\"empty\">team_members.csv が未設定です。"
+            "season,team,player の列でチーム割り当てを入れると表示されます。</p>"
+        )
+    if not team_rows:
+        return "<p class=\"empty\">このシーズンのチーム割り当てがありません。</p>"
+
+    body = []
+    for i, row in enumerate(team_rows, 1):
+        body.append(
+            "<tr>"
+            f"<td>{i}</td>"
+            f"<td class=\"name\">{esc(row['team'])}</td>"
+            f"<td class=\"roles\">{esc(row['members'])}</td>"
+            f"<td class=\"roles\">{esc(row['member_details'])}</td>"
+            f"<td>{number(row['total_score'], 1)}</td>"
+            f"<td>{number(row['total_games'])}</td>"
+            "</tr>"
+        )
+    return (
+        "<div class=\"table-wrap\">"
+        "<table class=\"team-table\">"
+        "<thead><tr><th>チーム順位</th><th>チーム</th><th>メンバー</th><th>単体成績</th><th>合計成績</th><th>合計対戦数</th></tr></thead>"
+        f"<tbody>{''.join(body)}</tbody></table>"
+        "</div>"
+    )
+
+
+def team_champion_rows(season_contexts: list[dict[str, object]]) -> list[dict[str, object]]:
+    grouped: dict[str, dict[str, object]] = defaultdict(
+        lambda: {"wins": 0, "seasons": [], "members": set()}
+    )
+    for context in season_contexts:
+        team_rows = list(context.get("team_rows", []))
+        if not team_rows:
+            continue
+        champion = team_rows[0]
+        season_label = context.get("label", "")
+        members = str(champion.get("members", "")).split(" / ")
+        for player in members:
+            if not player:
+                continue
+            grouped[player]["wins"] = int(grouped[player]["wins"]) + 1
+            grouped[player]["seasons"].append(str(season_label))
+            grouped[player]["members"].add(str(champion.get("team", "")))
+
+    rows = []
+    for player, data in grouped.items():
+        rows.append(
+            {
+                "player": player,
+                "wins": int(data["wins"]),
+                "seasons": " / ".join(data["seasons"]),
+                "teams": " / ".join(sorted(data["members"])),
+            }
+        )
+    return sorted(rows, key=lambda row: (-int(row["wins"]), row["player"]))
+
+
+def team_champion_section(rows: list[dict[str, object]]) -> str:
+    if not TEAM_CSV.exists():
+        return (
+            "<p class=\"empty\">team_members.csv が未設定です。"
+            "チーム優勝経験はチーム割り当て入力後に表示されます。</p>"
+        )
+    if not rows:
+        return "<p class=\"empty\">チーム優勝経験の集計対象がありません。</p>"
+
+    body = []
+    for i, row in enumerate(rows, 1):
+        body.append(
+            "<tr>"
+            f"<td>{i}</td>"
+            f"<td class=\"name\">{esc(row['player'])}</td>"
+            f"<td>{esc(row['wins'])}</td>"
+            f"<td class=\"roles\">{esc(row['seasons'])}</td>"
+            f"<td class=\"roles\">{esc(row['teams'])}</td>"
+            "</tr>"
+        )
+    return (
+        "<div class=\"table-wrap\">"
+        "<table class=\"team-table\">"
+        "<thead><tr><th>順位</th><th>プレイヤー</th><th>チーム優勝回数</th><th>優勝シーズン</th><th>優勝チーム</th></tr></thead>"
+        f"<tbody>{''.join(body)}</tbody></table>"
+        "</div>"
+    )
 
 
 def rate_cards(rows: list[dict[str, str]]) -> str:
@@ -491,7 +627,13 @@ def aggregate_uuids(uuids: set[str]) -> tuple[list[dict[str, str]], list[dict[st
     return summary_rows, yakuman_rows, detail_rows
 
 
-def build_context(key: str, label: str, uuids: set[str]) -> dict[str, object]:
+def build_context(
+    key: str,
+    label: str,
+    uuids: set[str],
+    season: int | None = None,
+    teams_by_season: dict[int, dict[str, list[str]]] | None = None,
+) -> dict[str, object]:
     rows, yakuman_rows, yakuman_detail_rows = aggregate_uuids(uuids)
     if not rows:
         return {
@@ -506,6 +648,8 @@ def build_context(key: str, label: str, uuids: set[str]) -> dict[str, object]:
             "total_yakuman": 0,
             "best_score": "",
             "best_top": "",
+            "team_rows": [],
+            "team_champion_rows": [],
         }
 
     total_player_games = sum(int(r["games"]) for r in rows)
@@ -514,6 +658,9 @@ def build_context(key: str, label: str, uuids: set[str]) -> dict[str, object]:
     total_yakuman = sum(int(r.get("yakuman_count", 0)) for r in rows)
     best_score = max(rows, key=lambda r: float(r.get("earned_score", 0) or 0))
     best_top = max(rows, key=lambda r: pct_number(r["rank1_rate"]))
+    team_rows = []
+    if season is not None and teams_by_season is not None:
+        team_rows = build_team_rows(rows, teams_by_season.get(season, {}))
 
     return {
         "key": key,
@@ -527,6 +674,8 @@ def build_context(key: str, label: str, uuids: set[str]) -> dict[str, object]:
         "total_yakuman": total_yakuman,
         "best_score": best_score,
         "best_top": best_top,
+        "team_rows": team_rows,
+        "team_champion_rows": [],
     }
 
 
@@ -545,6 +694,12 @@ def render_stats_panel(context: dict[str, object]) -> str:
     correlation_rows = context["correlation_rows"]
     best_score = context["best_score"]
     best_top = context["best_top"]
+    if context["key"] == "all":
+        team_block_title = "チーム優勝経験"
+        team_block = team_champion_section(list(context.get("team_champion_rows", [])))
+    else:
+        team_block_title = f"{context['label']} チーム成績"
+        team_block = team_section(list(context.get("team_rows", [])))
 
     return f"""
     <section class="tab-panel" id="panel-{esc(context['key'])}" data-panel="{esc(context['key'])}">
@@ -559,6 +714,9 @@ def render_stats_panel(context: dict[str, object]) -> str:
       <div class="table-wrap">
         {table(rows, MAIN_COLUMNS, rank_by="earned_score", reverse=True)}
       </div>
+
+      <h2>{esc(team_block_title)}</h2>
+      {team_block}
 
       <div class="ranking-grid">
         <section class="ranking-panel">
@@ -616,10 +774,23 @@ def main() -> None:
 
     season_numbers = sorted(season_to_uuids)
     all_uuids = set().union(*season_to_uuids.values())
+    teams_by_season = read_team_members()
 
-    contexts = [build_context("all", "累計", all_uuids)]
+    season_contexts = []
     for season in sorted(season_numbers, reverse=True):
-        contexts.append(build_context(f"season-{season}", f"シーズン{season}", season_to_uuids[season]))
+        season_contexts.append(
+            build_context(
+                f"season-{season}",
+                f"シーズン{season}",
+                season_to_uuids[season],
+                season=season,
+                teams_by_season=teams_by_season,
+            )
+        )
+
+    cumulative_context = build_context("all", "累計", all_uuids)
+    cumulative_context["team_champion_rows"] = team_champion_rows(season_contexts)
+    contexts = [cumulative_context] + season_contexts
 
     tabs = "\n".join(
         f'<button class="tab-button{" active" if index == 0 else ""}" type="button" data-tab="{esc(context["key"])}">{esc(context["label"])}</button>'

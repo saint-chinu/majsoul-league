@@ -2,6 +2,7 @@ from pathlib import Path
 from collections import defaultdict, Counter
 from dataclasses import dataclass, field
 import csv
+import re
 
 import ms.protocol_pb2 as pb
 from google.protobuf.json_format import MessageToDict
@@ -19,7 +20,7 @@ YAKUMAN_NAMES = {
     40: "字一色",
     41: "清老頭",
     42: "国士無双",
-    43: "国士無双十三面",
+    43: "小四喜",
     44: "大四喜",
     45: "小四喜",
     46: "緑一色",
@@ -256,6 +257,63 @@ def ron_payment_point(hule):
                 return value
     return hule_point(hule)
 
+def ming_tiles(ming):
+    text = str(ming)
+    return re.findall(r"[0-9][mpsz]", text)
+
+def hule_tiles(hule):
+    tiles = list(getattr(hule, "hand", []))
+    hu_tile = getattr(hule, "hu_tile", "")
+    if hu_tile:
+        tiles.append(hu_tile)
+    for ming in getattr(hule, "ming", []):
+        tiles.extend(ming_tiles(ming))
+    return tiles
+
+def kokushi_name(hule):
+    required = {
+        "1m", "9m", "1p", "9p", "1s", "9s",
+        "1z", "2z", "3z", "4z", "5z", "6z", "7z",
+    }
+    if list(getattr(hule, "ming", [])):
+        return None
+
+    hand = list(getattr(hule, "hand", []))
+    hu_tile = getattr(hule, "hu_tile", "")
+    tiles = hand + ([hu_tile] if hu_tile else [])
+    counts = Counter(tiles)
+    if set(counts) != required:
+        return None
+    if sorted(counts.values()) != [1] * 12 + [2]:
+        return None
+    if set(hand) == required and hu_tile in required:
+        return "国士無双十三面"
+    return "国士無双"
+
+def wind_yakuman_name(hule):
+    counts = Counter(hule_tiles(hule))
+    winds = ["1z", "2z", "3z", "4z"]
+    triplet_count = sum(1 for tile in winds if counts[tile] >= 3)
+    pair_count = sum(1 for tile in winds if counts[tile] == 2)
+    if triplet_count == 4:
+        return "大四喜"
+    if triplet_count == 3 and pair_count >= 1:
+        return "小四喜"
+    return None
+
+def yakuman_name_from_fan(hule, fan_id):
+    if fan_id in {42, 43}:
+        name = kokushi_name(hule)
+        if name:
+            return name
+
+    if fan_id in {43, 44, 45}:
+        name = wind_yakuman_name(hule)
+        if name:
+            return name
+
+    return YAKUMAN_NAMES.get(fan_id)
+
 def yakuman_names_from_hule(hule):
     names = []
 
@@ -267,7 +325,7 @@ def yakuman_names_from_hule(hule):
         fan_val = int(getattr(fan, "val", 0))
 
         if fan_id in YAKUMAN_NAMES:
-            names.append(YAKUMAN_NAMES[fan_id])
+            names.append(yakuman_name_from_fan(hule, fan_id) or YAKUMAN_NAMES[fan_id])
         elif fan_val >= 13:
             names.append(f"役満ID{fan_id}")
 
