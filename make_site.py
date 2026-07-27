@@ -32,6 +32,8 @@ LABELS = {
     "hu_rate": "和了率",
     "tsumo_rate": "ツモ率",
     "houjuu_rate": "放銃率",
+    "average_houjuu_point": "放銃平均打点",
+    "top_keep_rate": "トップキープ率",
     "called_rate": "副露率",
     "riichi_rate": "立直率",
     "max_final_point": "最高終了時持ち点",
@@ -51,6 +53,8 @@ MAIN_COLUMNS = [
     "hu_rate",
     "tsumo_rate",
     "houjuu_rate",
+    "average_houjuu_point",
+    "top_keep_rate",
     "called_rate",
     "riichi_rate",
     "yakuman_count",
@@ -61,6 +65,8 @@ DETAIL_COLUMNS = [
     "player",
     "rounds",
     "average_hu_point",
+    "average_houjuu_point",
+    "top_keep_rate",
     "max_final_point",
     "min_final_point",
 ]
@@ -116,7 +122,7 @@ def table(
             cls = "name" if col == "player" else ""
             if col == "earned_score":
                 value = number(value, 1)
-            elif col in {"average_hu_point", "max_final_point", "min_final_point"}:
+            elif col in {"average_hu_point", "average_houjuu_point", "max_final_point", "min_final_point"}:
                 value = number(value)
             cells.append(f"<td class=\"{cls}\">{esc(value)}</td>")
         body_rows.append("<tr>" + "".join(cells) + "</tr>")
@@ -600,6 +606,8 @@ def aggregate_uuids(uuids: set[str]) -> tuple[list[dict[str, str]], list[dict[st
                 "hu_rate": percent(player_stats.hu, player_stats.rounds),
                 "tsumo_rate": percent(player_stats.tsumo, player_stats.hu),
                 "houjuu_rate": percent(player_stats.houjuu, player_stats.rounds),
+                "average_houjuu_point": str(average(player_stats.houjuu_point_sum, player_stats.houjuu, 1)),
+                "top_keep_rate": percent(player_stats.top_keep_successes, player_stats.top_keep_chances),
                 "called_rate": percent(player_stats.called, player_stats.rounds),
                 "riichi_rate": percent(player_stats.riichi, player_stats.rounds),
                 "max_final_point": str(max(player_stats.final_points) if player_stats.final_points else ""),

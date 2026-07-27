@@ -42,11 +42,14 @@ class PlayerStats:
     tsumo: int = 0
     hu_point_sum: int = 0
     houjuu: int = 0
+    houjuu_point_sum: int = 0
     called: int = 0
     riichi: int = 0
     final_points: list = field(default_factory=list)
     yakuman_count: int = 0
     yakuman_names: Counter = field(default_factory=Counter)
+    top_keep_chances: int = 0
+    top_keep_successes: int = 0
 
 
 RANK_SCORE_OFFSETS = {
@@ -257,6 +260,17 @@ def ron_payment_point(hule):
                 return value
     return hule_point(hule)
 
+def single_top_seat(scores):
+    if not scores:
+        return None
+
+    score_list = [int(score) for score in scores[:3]]
+    top_score = max(score_list)
+    if score_list.count(top_score) != 1:
+        return None
+
+    return score_list.index(top_score)
+
 def ming_tiles(ming):
     text = str(ming)
     return re.findall(r"[0-9][mpsz]", text)
@@ -393,6 +407,26 @@ def aggregate_game(uuid, stats, yakuman_details):
     riichi = set()
     called = set()
     houjuu = set()
+    had_single_top = {0: False, 1: False, 2: False}
+    kept_single_top = {0: False, 1: False, 2: False}
+
+    def observe_scores(scores):
+        if len(scores) < 3:
+            return
+
+        top = single_top_seat(scores)
+        if top is None:
+            for seat in [0, 1, 2]:
+                if had_single_top[seat] and kept_single_top[seat]:
+                    kept_single_top[seat] = False
+            return
+
+        for seat in [0, 1, 2]:
+            if seat == top and not had_single_top[seat]:
+                had_single_top[seat] = True
+                kept_single_top[seat] = True
+            elif had_single_top[seat] and kept_single_top[seat] and seat != top:
+                kept_single_top[seat] = False
 
     def flush_round():
         if round_no == 0:
@@ -419,6 +453,8 @@ def aggregate_game(uuid, stats, yakuman_details):
             riichi = set()
             called = set()
             houjuu = set()
+            if msg is not None and hasattr(msg, "scores"):
+                observe_scores(list(msg.scores))
 
         elif record_name == ".lq.RecordDiscardTile":
             seat = getattr(msg, "seat", None)
@@ -438,6 +474,11 @@ def aggregate_game(uuid, stats, yakuman_details):
                 loser = get_houjuu_seat(msg)
                 if loser is not None:
                     houjuu.add(loser)
+                    loser_name = seat_to_name.get(loser)
+                    if loser_name:
+                        for hule in msg.hules:
+                            if not getattr(hule, "zimo", False):
+                                stats[loser_name].houjuu_point_sum += ron_payment_point(hule)
 
             for hule in msg.hules:
                 seat = int(getattr(hule, "seat", -1))
@@ -459,7 +500,25 @@ def aggregate_game(uuid, stats, yakuman_details):
                         victim_rows_from_hule(uuid, round_no, msg, hule, yakuman_name, seat_to_name)
                     )
 
+            if hasattr(msg, "scores"):
+                observe_scores(list(msg.scores))
+
+        elif record_name == ".lq.RecordNoTile":
+            if msg is not None and hasattr(msg, "scores"):
+                observe_scores(list(msg.scores))
+
     flush_round()
+
+    for seat in [0, 1, 2]:
+        player_name = seat_to_name.get(seat)
+        detail = player_details.get(seat)
+        if not player_name or not detail or not had_single_top[seat]:
+            continue
+
+        player_stats = stats[player_name]
+        player_stats.top_keep_chances += 1
+        if kept_single_top[seat] and detail["rank"] == 1:
+            player_stats.top_keep_successes += 1
 
 def write_summary(stats):
     with SUMMARY_OUT.open("w", encoding="utf-8-sig", newline="") as f:
@@ -477,6 +536,8 @@ def write_summary(stats):
             "hu_rate",
             "tsumo_rate",
             "houjuu_rate",
+            "average_houjuu_point",
+            "top_keep_rate",
             "called_rate",
             "riichi_rate",
             "max_final_point",
@@ -498,6 +559,8 @@ def write_summary(stats):
                 percent(player_stats.hu, player_stats.rounds),
                 percent(player_stats.tsumo, player_stats.hu),
                 percent(player_stats.houjuu, player_stats.rounds),
+                average(player_stats.houjuu_point_sum, player_stats.houjuu, 1),
+                percent(player_stats.top_keep_successes, player_stats.top_keep_chances),
                 percent(player_stats.called, player_stats.rounds),
                 percent(player_stats.riichi, player_stats.rounds),
                 max(player_stats.final_points) if player_stats.final_points else "",
