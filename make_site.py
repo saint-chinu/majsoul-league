@@ -264,6 +264,65 @@ def team_champion_section(rows: list[dict[str, object]]) -> str:
     )
 
 
+def season_mvp_rows(season_contexts: list[dict[str, object]]) -> list[dict[str, object]]:
+    grouped: dict[str, dict[str, object]] = defaultdict(
+        lambda: {"wins": 0, "seasons": [], "scores": []}
+    )
+    for context in season_contexts:
+        rows = list(context.get("rows", []))
+        if not rows:
+            continue
+
+        best_score = max(float(row.get("earned_score", 0) or 0) for row in rows)
+        season_label = str(context.get("label", ""))
+        for row in rows:
+            score = float(row.get("earned_score", 0) or 0)
+            if score != best_score:
+                continue
+            player = row.get("player", "")
+            if not player:
+                continue
+            grouped[player]["wins"] = int(grouped[player]["wins"]) + 1
+            grouped[player]["seasons"].append(season_label)
+            grouped[player]["scores"].append(f"{season_label}: {number(score, 1)}")
+
+    rows = []
+    for player, data in grouped.items():
+        rows.append(
+            {
+                "player": player,
+                "wins": int(data["wins"]),
+                "seasons": " / ".join(data["seasons"]),
+                "scores": " / ".join(data["scores"]),
+            }
+        )
+    return sorted(rows, key=lambda row: (-int(row["wins"]), row["player"]))
+
+
+def season_mvp_section(rows: list[dict[str, object]]) -> str:
+    if not rows:
+        return "<p class=\"empty\">シーズンMVPの集計対象がありません。</p>"
+
+    body = []
+    for i, row in enumerate(rows, 1):
+        body.append(
+            "<tr>"
+            f"<td>{i}</td>"
+            f"<td class=\"name\">{esc(row['player'])}</td>"
+            f"<td>{esc(row['wins'])}</td>"
+            f"<td class=\"roles\">{esc(row['seasons'])}</td>"
+            f"<td class=\"roles\">{esc(row['scores'])}</td>"
+            "</tr>"
+        )
+    return (
+        "<div class=\"table-wrap\">"
+        "<table class=\"team-table\">"
+        "<thead><tr><th>順位</th><th>プレイヤー</th><th>MVP回数</th><th>MVPシーズン</th><th>獲得スコア</th></tr></thead>"
+        f"<tbody>{''.join(body)}</tbody></table>"
+        "</div>"
+    )
+
+
 def rate_cards(rows: list[dict[str, str]]) -> str:
     cards = []
     for row in sorted(rows, key=lambda r: float(r.get("average_rank", "999") or 999)):
@@ -658,6 +717,7 @@ def build_context(
             "best_top": "",
             "team_rows": [],
             "team_champion_rows": [],
+            "season_mvp_rows": [],
         }
 
     total_player_games = sum(int(r["games"]) for r in rows)
@@ -684,6 +744,7 @@ def build_context(
         "best_top": best_top,
         "team_rows": team_rows,
         "team_champion_rows": [],
+        "season_mvp_rows": [],
     }
 
 
@@ -705,9 +766,14 @@ def render_stats_panel(context: dict[str, object]) -> str:
     if context["key"] == "all":
         team_block_title = "チーム優勝経験"
         team_block = team_champion_section(list(context.get("team_champion_rows", [])))
+        mvp_block = (
+            "<h2>シーズンMVP経験</h2>"
+            + season_mvp_section(list(context.get("season_mvp_rows", [])))
+        )
     else:
         team_block_title = f"{context['label']} チーム成績"
         team_block = team_section(list(context.get("team_rows", [])))
+        mvp_block = ""
 
     return f"""
     <section class="tab-panel" id="panel-{esc(context['key'])}" data-panel="{esc(context['key'])}">
@@ -725,6 +791,7 @@ def render_stats_panel(context: dict[str, object]) -> str:
 
       <h2>{esc(team_block_title)}</h2>
       {team_block}
+      {mvp_block}
 
       <div class="ranking-grid">
         <section class="ranking-panel">
@@ -798,6 +865,7 @@ def main() -> None:
 
     cumulative_context = build_context("all", "累計", all_uuids)
     cumulative_context["team_champion_rows"] = team_champion_rows(season_contexts)
+    cumulative_context["season_mvp_rows"] = season_mvp_rows(season_contexts)
     contexts = [cumulative_context] + season_contexts
 
     tabs = "\n".join(
