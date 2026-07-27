@@ -6,6 +6,7 @@ import sys
 TEAM_CSV = Path("team_members.csv")
 CAPTURES_DIR = Path("captures")
 HEADERS = ["season", "team", "player"]
+UNKNOWN_TEAM = "職業不詳"
 
 
 def latest_snapshot():
@@ -36,7 +37,7 @@ def normalize_cell(value):
 def extract_rows(snapshot_path, season):
     data = json.loads(snapshot_path.read_text(encoding="utf-8"))
     extracted = []
-    skipped = []
+    filled_unknown = []
 
     for table in data.get("tables", []):
         rows = table.get("rows", [])
@@ -60,8 +61,8 @@ def extract_rows(snapshot_path, season):
             if not player or player == "データがありません":
                 continue
             if not team:
-                skipped.append(player)
-                continue
+                team = UNKNOWN_TEAM
+                filled_unknown.append(player)
 
             extracted.append(
                 {
@@ -80,7 +81,7 @@ def extract_rows(snapshot_path, season):
         unique.append(row)
         seen.add(key)
 
-    return unique, skipped
+    return unique, filled_unknown
 
 
 def merge_for_season(existing, new_rows, season):
@@ -101,7 +102,7 @@ def main():
     if not snapshot_path.exists():
         raise SystemExit(f"ファイルが見つかりません: {snapshot_path}")
 
-    new_rows, skipped = extract_rows(snapshot_path, season)
+    new_rows, filled_unknown = extract_rows(snapshot_path, season)
     if not new_rows:
         raise SystemExit("チーム所属を抽出できませんでした。チーム名が見える画面で capture_team_page.py を取り直してください。")
 
@@ -115,9 +116,9 @@ def main():
     for row in new_rows:
         print(f"  {row['team']}: {row['player']}")
 
-    if skipped:
-        print("チーム空欄のためスキップ:")
-        for player in skipped:
+    if filled_unknown:
+        print(f"チーム空欄のため {UNKNOWN_TEAM} に置き換え:")
+        for player in filled_unknown:
             print(f"  {player}")
 
 
