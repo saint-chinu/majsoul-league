@@ -316,15 +316,13 @@ def wind_yakuman_name(hule):
     return None
 
 def yakuman_name_from_fan(hule, fan_id):
-    if fan_id in {42, 43}:
-        name = kokushi_name(hule)
-        if name:
-            return name
+    name = kokushi_name(hule)
+    if name:
+        return name
 
-    if fan_id in {43, 44, 45}:
-        name = wind_yakuman_name(hule)
-        if name:
-            return name
+    name = wind_yakuman_name(hule)
+    if name and fan_id in {43, 44, 45}:
+        return name
 
     return YAKUMAN_NAMES.get(fan_id)
 
