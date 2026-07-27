@@ -418,6 +418,13 @@ def hule_point(hule):
                 return value
     return 0
 
+def hule_income(msg, hule):
+    seat = int(getattr(hule, "seat", -1))
+    delta_scores = list(getattr(msg, "delta_scores", []))
+    if 0 <= seat < len(delta_scores) and int(delta_scores[seat]) > 0:
+        return int(delta_scores[seat])
+    return hule_point(hule)
+
 def ron_payment_point(hule):
     for field_name in ["point_rong", "dadian"]:
         if hasattr(hule, field_name):
@@ -701,7 +708,7 @@ def aggregate_game(uuid, stats, yakuman_details):
 
                 player_stats = stats[player_name]
                 player_stats.hu += 1
-                player_stats.hu_point_sum += hule_point(hule)
+                player_stats.hu_point_sum += hule_income(msg, hule)
 
                 if getattr(hule, "zimo", False):
                     player_stats.tsumo += 1
