@@ -50,6 +50,9 @@ class PlayerStats:
     yakuman_names: Counter = field(default_factory=Counter)
     top_keep_chances: int = 0
     top_keep_successes: int = 0
+    opening_shanten_sum: int = 0
+    opening_dora_sum: int = 0
+    opening_samples: int = 0
 
 
 RANK_SCORE_OFFSETS = {
@@ -244,6 +247,169 @@ def average(numerator, denominator, digits=2):
         return 0
     return round(numerator / denominator, digits)
 
+def normalize_tile(tile):
+    if not tile:
+        return tile
+    if tile[0] == "0":
+        return "5" + tile[1:]
+    return tile
+
+def tile_index(tile):
+    tile = normalize_tile(tile)
+    if len(tile) != 2:
+        return None
+
+    number = int(tile[0])
+    suit = tile[1]
+    if suit == "m":
+        return number - 1
+    if suit == "p":
+        return 9 + number - 1
+    if suit == "s":
+        return 18 + number - 1
+    if suit == "z":
+        return 27 + number - 1
+    return None
+
+def tile_counts(tiles):
+    counts = [0] * 34
+    for tile in tiles:
+        index = tile_index(tile)
+        if index is not None:
+            counts[index] += 1
+    return counts
+
+def shanten_kokushi(counts):
+    terminals = [0, 8, 9, 17, 18, 26, 27, 28, 29, 30, 31, 32, 33]
+    unique = sum(1 for index in terminals if counts[index] > 0)
+    has_pair = any(counts[index] >= 2 for index in terminals)
+    return 13 - unique - int(has_pair)
+
+def shanten_chiitoi(counts):
+    pairs = sum(1 for count in counts if count >= 2)
+    unique = sum(1 for count in counts if count > 0)
+    return 6 - pairs + max(0, 7 - unique)
+
+def shanten_normal(counts):
+    best = 8
+
+    def walk(local_counts, index, melds, taatsu, pair):
+        nonlocal best
+
+        while index < 34 and local_counts[index] == 0:
+            index += 1
+
+        if index >= 34:
+            usable_taatsu = min(taatsu, 4 - melds)
+            best = min(best, 8 - melds * 2 - usable_taatsu - pair)
+            return
+
+        if best <= -1:
+            return
+
+        if local_counts[index] >= 3:
+            local_counts[index] -= 3
+            walk(local_counts, index, melds + 1, taatsu, pair)
+            local_counts[index] += 3
+
+        if index < 27 and index % 9 <= 6 and local_counts[index + 1] and local_counts[index + 2]:
+            local_counts[index] -= 1
+            local_counts[index + 1] -= 1
+            local_counts[index + 2] -= 1
+            walk(local_counts, index, melds + 1, taatsu, pair)
+            local_counts[index] += 1
+            local_counts[index + 1] += 1
+            local_counts[index + 2] += 1
+
+        if pair == 0 and local_counts[index] >= 2:
+            local_counts[index] -= 2
+            walk(local_counts, index, melds, taatsu, 1)
+            local_counts[index] += 2
+
+        if local_counts[index] >= 2:
+            local_counts[index] -= 2
+            walk(local_counts, index, melds, taatsu + 1, pair)
+            local_counts[index] += 2
+
+        if index < 27 and index % 9 <= 7 and local_counts[index + 1]:
+            local_counts[index] -= 1
+            local_counts[index + 1] -= 1
+            walk(local_counts, index, melds, taatsu + 1, pair)
+            local_counts[index] += 1
+            local_counts[index + 1] += 1
+
+        if index < 27 and index % 9 <= 6 and local_counts[index + 2]:
+            local_counts[index] -= 1
+            local_counts[index + 2] -= 1
+            walk(local_counts, index, melds, taatsu + 1, pair)
+            local_counts[index] += 1
+            local_counts[index + 2] += 1
+
+        local_counts[index] -= 1
+        walk(local_counts, index, melds, taatsu, pair)
+        local_counts[index] += 1
+
+    walk(counts[:], 0, 0, 0, 0)
+    return best
+
+def shanten(tiles):
+    counts = tile_counts(tiles)
+    return min(
+        shanten_normal(counts),
+        shanten_chiitoi(counts),
+        shanten_kokushi(counts),
+    )
+
+def next_dora(indicator):
+    tile = normalize_tile(indicator)
+    if len(tile) != 2:
+        return tile
+
+    number = int(tile[0])
+    suit = tile[1]
+    if suit in {"m", "p", "s"}:
+        return f"{1 if number == 9 else number + 1}{suit}"
+    if suit == "z":
+        if 1 <= number <= 4:
+            return f"{1 if number == 4 else number + 1}z"
+        if 5 <= number <= 7:
+            return f"{5 if number == 7 else number + 1}z"
+    return tile
+
+def count_opening_dora(tiles, dora_indicators, kita_count):
+    dora_tiles = Counter(next_dora(tile) for tile in dora_indicators)
+    count = kita_count
+    for tile in tiles:
+        normalized = normalize_tile(tile)
+        count += dora_tiles[normalized]
+        if tile.startswith("0"):
+            count += 1
+    return count
+
+def remove_one_tile(tiles, tile):
+    normalized = normalize_tile(tile)
+    for index, hand_tile in enumerate(tiles):
+        if normalize_tile(hand_tile) == normalized:
+            del tiles[index]
+            return
+
+def repeated_field_values(msg, field_name):
+    if msg is None or not hasattr(msg, field_name):
+        return []
+    value = getattr(msg, field_name)
+    if isinstance(value, str):
+        return [value] if value else []
+    return list(value)
+
+def new_round_tiles(msg, seat):
+    return repeated_field_values(msg, f"tiles{seat}")
+
+def new_round_dora_indicators(msg):
+    doras = repeated_field_values(msg, "doras")
+    if doras:
+        return doras
+    return repeated_field_values(msg, "dora")
+
 def hule_point(hule):
     for field_name in ["point_sum", "dadian", "point_rong", "point_zimo_qin", "point_zimo_xian"]:
         if hasattr(hule, field_name):
@@ -405,6 +571,10 @@ def aggregate_game(uuid, stats, yakuman_details):
     riichi = set()
     called = set()
     houjuu = set()
+    opening_hands = {0: [], 1: [], 2: []}
+    opening_kita = {0: 0, 1: 0, 2: 0}
+    opening_done = set()
+    opening_dora_indicators = []
     had_single_top = {0: False, 1: False, 2: False}
     kept_single_top = {0: False, 1: False, 2: False}
 
@@ -441,6 +611,25 @@ def aggregate_game(uuid, stats, yakuman_details):
             player_stats.called += int(seat in called)
             player_stats.houjuu += int(seat in houjuu)
 
+    def record_opening_sample(seat):
+        player_name = seat_to_name.get(seat)
+        if not player_name or seat in opening_done:
+            return
+
+        tiles = opening_hands.get(seat, [])
+        if not tiles:
+            return
+
+        player_stats = stats[player_name]
+        player_stats.opening_shanten_sum += shanten(tiles)
+        player_stats.opening_dora_sum += count_opening_dora(
+            tiles,
+            opening_dora_indicators,
+            opening_kita.get(seat, 0),
+        )
+        player_stats.opening_samples += 1
+        opening_done.add(seat)
+
     for wrapper in wrappers:
         record_name = wrapper["name"]
         msg = decode_record(record_name, wrapper["body"])
@@ -451,13 +640,39 @@ def aggregate_game(uuid, stats, yakuman_details):
             riichi = set()
             called = set()
             houjuu = set()
+            opening_hands = {seat: new_round_tiles(msg, seat) for seat in [0, 1, 2]}
+            opening_kita = {0: 0, 1: 0, 2: 0}
+            opening_done = set()
+            opening_dora_indicators = new_round_dora_indicators(msg)
             if msg is not None and hasattr(msg, "scores"):
                 observe_scores(list(msg.scores))
 
         elif record_name == ".lq.RecordDiscardTile":
             seat = getattr(msg, "seat", None)
-            if seat is not None and is_riichi_discard(msg):
-                riichi.add(int(seat))
+            if seat is not None:
+                seat = int(seat)
+                if seat not in opening_done:
+                    remove_one_tile(opening_hands[seat], getattr(msg, "tile", ""))
+                    record_opening_sample(seat)
+                if is_riichi_discard(msg):
+                    riichi.add(seat)
+
+        elif record_name == ".lq.RecordDealTile":
+            seat = getattr(msg, "seat", None)
+            if seat is not None:
+                seat = int(seat)
+                if seat not in opening_done:
+                    tile = getattr(msg, "tile", "")
+                    if tile:
+                        opening_hands[seat].append(tile)
+
+        elif record_name == ".lq.RecordBaBei":
+            seat = getattr(msg, "seat", None)
+            if seat is not None:
+                seat = int(seat)
+                if seat not in opening_done:
+                    remove_one_tile(opening_hands[seat], "4z")
+                    opening_kita[seat] += 1
 
         elif record_name in [".lq.RecordChiPengGang", ".lq.RecordAnGangAddGang"]:
             seat = getattr(msg, "seat", None)
@@ -536,6 +751,8 @@ def write_summary(stats):
             "houjuu_rate",
             "average_houjuu_point",
             "top_keep_rate",
+            "average_opening_shanten",
+            "average_opening_dora",
             "called_rate",
             "riichi_rate",
             "max_final_point",
@@ -559,6 +776,8 @@ def write_summary(stats):
                 percent(player_stats.houjuu, player_stats.rounds),
                 average(player_stats.houjuu_point_sum, player_stats.houjuu, 1),
                 percent(player_stats.top_keep_successes, player_stats.top_keep_chances),
+                average(player_stats.opening_shanten_sum, player_stats.opening_samples, 2),
+                average(player_stats.opening_dora_sum, player_stats.opening_samples, 2),
                 percent(player_stats.called, player_stats.rounds),
                 percent(player_stats.riichi, player_stats.rounds),
                 max(player_stats.final_points) if player_stats.final_points else "",
@@ -584,6 +803,37 @@ def write_yakuman_details(rows):
         writer.writeheader()
         writer.writerows(rows)
 
+def has_record_files(uuid):
+    return (
+        (RAW_DIR / f"{uuid}_record.bin").exists()
+        and (RAW_DIR / f"{uuid}_detail.bin").exists()
+    )
+
+def complete_season_rows(rows):
+    rows_by_season = defaultdict(list)
+    rows_without_season = []
+
+    for row in rows:
+        season = row.get("season", "").strip()
+        if season.isdigit():
+            rows_by_season[int(season)].append(row)
+        else:
+            rows_without_season.append(row)
+
+    complete_rows = list(rows_without_season)
+    for season, season_rows in sorted(rows_by_season.items()):
+        missing = [
+            row.get("uuid", "").strip()
+            for row in season_rows
+            if not has_record_files(row.get("uuid", "").strip())
+        ]
+        if missing:
+            print(f"skip incomplete season {season}: {len(season_rows) - len(missing)}/{len(season_rows)} records ready")
+            continue
+        complete_rows.extend(season_rows)
+
+    return complete_rows
+
 def target_uuids():
     if not PAIFU_CSV.exists():
         return None
@@ -593,7 +843,7 @@ def target_uuids():
 
     uuids = []
     seen = set()
-    for row in rows:
+    for row in complete_season_rows(rows):
         uuid = row.get("uuid", "").strip()
         if uuid and uuid not in seen:
             uuids.append(uuid)

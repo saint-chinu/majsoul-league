@@ -34,6 +34,8 @@ LABELS = {
     "houjuu_rate": "放銃率",
     "average_houjuu_point": "放銃平均打点",
     "top_keep_rate": "トップキープ率",
+    "average_opening_shanten": "平均配牌シャンテン",
+    "average_opening_dora": "平均配牌ドラ",
     "called_rate": "副露率",
     "riichi_rate": "立直率",
     "max_final_point": "最高終了時持ち点",
@@ -55,6 +57,8 @@ MAIN_COLUMNS = [
     "houjuu_rate",
     "average_houjuu_point",
     "top_keep_rate",
+    "average_opening_shanten",
+    "average_opening_dora",
     "called_rate",
     "riichi_rate",
     "yakuman_count",
@@ -67,6 +71,8 @@ DETAIL_COLUMNS = [
     "average_hu_point",
     "average_houjuu_point",
     "top_keep_rate",
+    "average_opening_shanten",
+    "average_opening_dora",
     "max_final_point",
     "min_final_point",
 ]
@@ -122,6 +128,8 @@ def table(
             cls = "name" if col == "player" else ""
             if col == "earned_score":
                 value = number(value, 1)
+            elif col in {"average_opening_shanten", "average_opening_dora"}:
+                value = number(value, 2)
             elif col in {"average_hu_point", "average_houjuu_point", "max_final_point", "min_final_point"}:
                 value = number(value)
             cells.append(f"<td class=\"{cls}\">{esc(value)}</td>")
@@ -627,7 +635,23 @@ def read_season_paifu_rows() -> list[dict[str, str]]:
             continue
         add_rows(read_csv(path), fallback_season=season)
 
-    return sorted(rows_by_uuid.values(), key=lambda row: (int(row["season"]), row["uuid"]))
+    rows_by_season: dict[int, list[dict[str, str]]] = defaultdict(list)
+    for row in rows_by_uuid.values():
+        rows_by_season[int(row["season"])].append(row)
+
+    complete_rows: list[dict[str, str]] = []
+    for season, rows in sorted(rows_by_season.items()):
+        ready = [
+            row for row in rows
+            if (RAW_DIR / f"{row['uuid']}_record.bin").exists()
+            and (RAW_DIR / f"{row['uuid']}_detail.bin").exists()
+        ]
+        if len(ready) != len(rows):
+            print(f"skip incomplete season {season}: {len(ready)}/{len(rows)} records ready")
+            continue
+        complete_rows.extend(rows)
+
+    return sorted(complete_rows, key=lambda row: (int(row["season"]), row["uuid"]))
 
 
 def aggregate_uuids(uuids: set[str]) -> tuple[list[dict[str, str]], list[dict[str, str]], list[dict[str, str]]]:
@@ -667,6 +691,12 @@ def aggregate_uuids(uuids: set[str]) -> tuple[list[dict[str, str]], list[dict[st
                 "houjuu_rate": percent(player_stats.houjuu, player_stats.rounds),
                 "average_houjuu_point": str(average(player_stats.houjuu_point_sum, player_stats.houjuu, 1)),
                 "top_keep_rate": percent(player_stats.top_keep_successes, player_stats.top_keep_chances),
+                "average_opening_shanten": str(
+                    average(player_stats.opening_shanten_sum, player_stats.opening_samples, 2)
+                ),
+                "average_opening_dora": str(
+                    average(player_stats.opening_dora_sum, player_stats.opening_samples, 2)
+                ),
                 "called_rate": percent(player_stats.called, player_stats.rounds),
                 "riichi_rate": percent(player_stats.riichi, player_stats.rounds),
                 "max_final_point": str(max(player_stats.final_points) if player_stats.final_points else ""),
