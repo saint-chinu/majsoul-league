@@ -41,6 +41,11 @@ LABELS = {
     "max_final_point": "最高終了時持ち点",
     "min_final_point": "最低終了時持ち点",
     "yakuman_count": "役満回数",
+    "season": "シーズン",
+    "metric": "項目",
+    "value": "値",
+    "rank_text": "順位",
+    "direction": "評価",
 }
 
 
@@ -79,6 +84,42 @@ DETAIL_COLUMNS = [
 ]
 
 
+PLAYER_SEASON_COLUMNS = [
+    "season",
+    "games",
+    "earned_score",
+    "average_rank",
+    "hu_rate",
+    "average_hu_point",
+    "houjuu_rate",
+    "average_houjuu_point",
+    "top_keep_rate",
+    "tsumo_rate",
+    "called_rate",
+    "riichi_rate",
+    "average_opening_shanten",
+    "average_opening_dora",
+    "yakuman_count",
+]
+
+
+PLAYER_RANK_METRICS = [
+    ("earned_score", True, "高い方が上位"),
+    ("average_rank", False, "低い方が上位"),
+    ("rank1_rate", True, "高い方が上位"),
+    ("hu_rate", True, "高い方が上位"),
+    ("average_hu_point", True, "高い方が上位"),
+    ("houjuu_rate", False, "低い方が上位"),
+    ("average_houjuu_point", False, "低い方が上位"),
+    ("top_keep_rate", True, "高い方が上位"),
+    ("average_opening_shanten", False, "低い方が上位"),
+    ("average_opening_dora", True, "高い方が上位"),
+    ("called_rate", True, "高い順"),
+    ("riichi_rate", True, "高い順"),
+    ("yakuman_count", True, "高い方が上位"),
+]
+
+
 def read_csv(path: Path) -> list[dict[str, str]]:
     if not path.exists():
         return []
@@ -107,6 +148,39 @@ def pct_number(value: str) -> float:
         return 0.0
 
 
+def metric_value(row: dict[str, str], col: str) -> float:
+    value = row.get(col, "")
+    if isinstance(value, str) and value.endswith("%"):
+        return pct_number(value)
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def format_cell_value(col: str, value: str | int | float) -> str:
+    if col == "earned_score":
+        return number(value, 1)
+    if col in {"average_opening_shanten", "average_opening_dora"}:
+        return number(value, 2)
+    if col in {"average_hu_point", "average_houjuu_point", "max_final_point", "min_final_point"}:
+        return number(value)
+    return esc(value)
+
+
+def metric_rank(rows: list[dict[str, str]], player: str, col: str, reverse: bool) -> tuple[int, int]:
+    ranked_values = sorted(
+        {metric_value(row, col) for row in rows},
+        reverse=reverse,
+    )
+    player_row = next((row for row in rows if row.get("player") == player), None)
+    if not player_row:
+        return 0, len(rows)
+    value = metric_value(player_row, col)
+    rank = ranked_values.index(value) + 1 if value in ranked_values else 0
+    return rank, len(rows)
+
+
 def table(
     rows: list[dict[str, str]],
     columns: list[str],
@@ -127,13 +201,8 @@ def table(
         for col in columns:
             value = row.get(col, "")
             cls = "name" if col == "player" else ""
-            if col == "earned_score":
-                value = number(value, 1)
-            elif col in {"average_opening_shanten", "average_opening_dora"}:
-                value = number(value, 2)
-            elif col in {"average_hu_point", "average_houjuu_point", "max_final_point", "min_final_point"}:
-                value = number(value)
-            cells.append(f"<td class=\"{cls}\">{esc(value)}</td>")
+            value = format_cell_value(col, value)
+            cells.append(f"<td class=\"{cls}\">{value}</td>")
         body_rows.append("<tr>" + "".join(cells) + "</tr>")
     return f"<table><thead><tr>{head}</tr></thead><tbody>{''.join(body_rows)}</tbody></table>"
 
@@ -776,6 +845,168 @@ def build_context(
     }
 
 
+def player_row_from(context: dict[str, object], player: str) -> dict[str, str] | None:
+    return next(
+        (row for row in list(context.get("rows", [])) if row.get("player") == player),
+        None,
+    )
+
+
+def player_season_rows(player: str, season_contexts: list[dict[str, object]]) -> list[dict[str, str]]:
+    rows = []
+    for context in season_contexts:
+        row = player_row_from(context, player)
+        if not row:
+            continue
+        season_row = dict(row)
+        season_row["season"] = str(context.get("label", ""))
+        rows.append(season_row)
+    return rows
+
+
+def player_metric_rank_rows(player: str, cumulative_rows: list[dict[str, str]]) -> list[dict[str, str]]:
+    row = next((r for r in cumulative_rows if r.get("player") == player), None)
+    if not row:
+        return []
+
+    rank_rows = []
+    for col, reverse, direction in PLAYER_RANK_METRICS:
+        rank, total = metric_rank(cumulative_rows, player, col, reverse)
+        rank_rows.append(
+            {
+                "metric": LABELS[col],
+                "value": format_cell_value(col, row.get(col, "")),
+                "rank_text": f"{rank} / {total}",
+                "direction": direction,
+            }
+        )
+    return rank_rows
+
+
+def player_rank_table(rows: list[dict[str, str]]) -> str:
+    if not rows:
+        return "<p class=\"empty\">順位データがありません。</p>"
+    columns = ["metric", "value", "rank_text", "direction"]
+    head = "".join(f"<th>{esc(LABELS[c])}</th>" for c in columns)
+    body = []
+    for row in rows:
+        body.append(
+            "<tr>"
+            f"<td class=\"name\">{esc(row['metric'])}</td>"
+            f"<td>{row['value']}</td>"
+            f"<td>{esc(row['rank_text'])}</td>"
+            f"<td>{esc(row['direction'])}</td>"
+            "</tr>"
+        )
+    return f"<table class=\"player-rank-table\"><thead><tr>{head}</tr></thead><tbody>{''.join(body)}</tbody></table>"
+
+
+def player_analysis(player: str, cumulative_rows: list[dict[str, str]]) -> tuple[str, str]:
+    row = next((r for r in cumulative_rows if r.get("player") == player), None)
+    if not row:
+        return "データ不足です。", "追加の牌譜取得後に再評価します。"
+
+    ranks = {
+        col: metric_rank(cumulative_rows, player, col, reverse)[0]
+        for col, reverse, _ in PLAYER_RANK_METRICS
+    }
+    total = len(cumulative_rows)
+
+    style_bits = []
+    if ranks["earned_score"] <= 2:
+        style_bits.append("獲得スコアで上位に入り、長期戦の収支を作れている")
+    if ranks["hu_rate"] <= 2:
+        style_bits.append("和了率が高く、局参加から着実にあがりまで持っていく")
+    if ranks["average_hu_point"] <= 2:
+        style_bits.append("平均和了点が高く、決め手の打点を作れる")
+    if ranks["houjuu_rate"] <= 2:
+        style_bits.append("放銃率が低く、守備の安定感がある")
+    if ranks["top_keep_rate"] <= 2:
+        style_bits.append("トップ目に立った後の押し引きが安定している")
+    if ranks["called_rate"] <= 2:
+        style_bits.append("副露率が高く、速度で局面を動かす")
+    if ranks["riichi_rate"] <= 2:
+        style_bits.append("立直率が高く、門前の圧を使う")
+
+    if not style_bits:
+        style_bits.append("大きな突出よりもバランス型で、局ごとの対応幅が広い")
+
+    risk_bits = []
+    if ranks["houjuu_rate"] >= total - 1:
+        risk_bits.append("放銃率が相対的に高いので、親番・終盤の押し返し基準を一段絞る")
+    if ranks["average_houjuu_point"] >= total - 1:
+        risk_bits.append("放銃平均打点が重いので、高打点気配への撤退を早める")
+    if ranks["hu_rate"] >= total - 1:
+        risk_bits.append("和了率が伸びにくいので、序盤の孤立牌選択と鳴き判断で速度を補う")
+    if ranks["top_keep_rate"] >= total - 1:
+        risk_bits.append("トップキープ率が課題なので、トップ目では局消化と放銃回避を優先する")
+    if ranks["average_opening_shanten"] >= total - 1:
+        risk_bits.append("平均配牌シャンテンが重めなので、無理な高打点固定より受け入れ枚数を優先する")
+
+    if not risk_bits:
+        risk_bits.append("明確な穴は小さいので、現在の強みを保ちつつ局面別の押し引きを精密化する")
+
+    style = f"{player}は、" + "。".join(style_bits[:3]) + "タイプ。"
+    advice = "改善点は、" + "。".join(risk_bits[:3]) + "こと。"
+    return style, advice
+
+
+def render_player_panel(
+    player: str,
+    cumulative_context: dict[str, object],
+    season_contexts: list[dict[str, object]],
+) -> str:
+    cumulative_rows = list(cumulative_context.get("rows", []))
+    cumulative_row = player_row_from(cumulative_context, player)
+    if not cumulative_row:
+        return (
+            f"<section class=\"tab-panel\" id=\"panel-player-{esc(player)}\" "
+            f"data-panel=\"player-{esc(player)}\"><p class=\"empty\">{esc(player)}の集計データがありません。</p></section>"
+        )
+
+    season_rows = player_season_rows(player, season_contexts)
+    rank_rows = player_metric_rank_rows(player, cumulative_rows)
+    style, advice = player_analysis(player, cumulative_rows)
+
+    return f"""
+    <section class="tab-panel" id="panel-player-{esc(player)}" data-panel="player-{esc(player)}">
+      <section class="summary" aria-label="{esc(player)} 集計概要">
+        <div><span>対戦数</span><strong>{number(cumulative_row.get("games", ""))}</strong></div>
+        <div><span>獲得スコア</span><strong>{number(cumulative_row.get("earned_score", ""), 1)}</strong></div>
+        <div><span>平均順位</span><strong>{esc(cumulative_row.get("average_rank", ""))}</strong></div>
+        <div><span>役満回数</span><strong>{number(cumulative_row.get("yakuman_count", ""))}</strong></div>
+      </section>
+
+      <h2>{esc(player)} 累計成績</h2>
+      <div class="table-wrap">
+        {table([cumulative_row], MAIN_COLUMNS)}
+      </div>
+
+      <h2>{esc(player)} シーズン別推移</h2>
+      <div class="table-wrap">
+        {table(season_rows, PLAYER_SEASON_COLUMNS)}
+      </div>
+
+      <h2>{esc(player)} 項目別順位</h2>
+      <div class="table-wrap">
+        {player_rank_table(rank_rows)}
+      </div>
+
+      <h2>AI雀風分析</h2>
+      <section class="analysis-grid">
+        <article class="analysis-card">
+          <h3>雀風</h3>
+          <p>{esc(style)}</p>
+        </article>
+        <article class="analysis-card">
+          <h3>改善点</h3>
+          <p>{esc(advice)}</p>
+        </article>
+      </section>
+    </section>
+    """
+
+
 def render_stats_panel(context: dict[str, object]) -> str:
     rows = context["rows"]
     if not rows:
@@ -895,12 +1126,31 @@ def main() -> None:
     cumulative_context["team_champion_rows"] = team_champion_rows(season_contexts)
     cumulative_context["season_mvp_rows"] = season_mvp_rows(season_contexts)
     contexts = [cumulative_context] + season_contexts
+    player_names = [
+        row["player"]
+        for row in sorted(
+            list(cumulative_context.get("rows", [])),
+            key=lambda r: float(r.get("earned_score", 0) or 0),
+            reverse=True,
+        )
+        if row.get("player")
+    ]
 
-    tabs = "\n".join(
+    season_tabs = "\n".join(
         f'<button class="tab-button{" active" if index == 0 else ""}" type="button" data-tab="{esc(context["key"])}">{esc(context["label"])}</button>'
         for index, context in enumerate(contexts)
     )
-    panels = "\n".join(render_stats_panel(context) for context in contexts)
+    player_tabs = "\n".join(
+        f'<button class="tab-button player-tab" type="button" data-tab="player-{esc(player)}">{esc(player)}</button>'
+        for player in player_names
+    )
+    tabs = season_tabs + "\n" + player_tabs
+    stats_panels = "\n".join(render_stats_panel(context) for context in contexts)
+    player_panels = "\n".join(
+        render_player_panel(player, cumulative_context, season_contexts)
+        for player in player_names
+    )
+    panels = stats_panels + "\n" + player_panels
 
     html_text = f"""<!doctype html>
 <html lang="ja">
@@ -960,6 +1210,7 @@ def main() -> None:
     .tab-button {{ appearance: none; border: 1px solid var(--line); background: #fff; color: var(--ink); border-radius: 8px; padding: 8px 12px; font: inherit; font-weight: 700; cursor: pointer; }}
     .tab-button:hover {{ border-color: var(--accent); color: var(--accent); }}
     .tab-button.active {{ background: var(--accent); border-color: var(--accent); color: #fff; }}
+    .player-tab {{ border-style: dashed; }}
     .tab-panel[hidden] {{ display: none; }}
     .summary {{ display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-bottom: 20px; }}
     .summary div {{ border: 1px solid var(--line); border-radius: 8px; padding: 12px; background: var(--fill); }}
@@ -969,6 +1220,10 @@ def main() -> None:
     .ranking-grid {{ display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; }}
     .ranking-panel {{ min-width: 0; }}
     .ranking-panel h3 {{ margin: 0 0 8px; font-size: 16px; }}
+    .analysis-grid {{ display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }}
+    .analysis-card {{ border: 1px solid var(--line); border-radius: 8px; padding: 14px; background: var(--panel); }}
+    .analysis-card h3 {{ margin-bottom: 8px; }}
+    .analysis-card p {{ line-height: 1.8; color: var(--ink); }}
     .cards {{ display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }}
     .player-card, .yakuman-card {{ border: 1px solid var(--line); border-radius: 8px; padding: 14px; background: var(--panel); }}
     .player-card-head {{ display: flex; justify-content: space-between; gap: 10px; align-items: baseline; margin-bottom: 12px; }}
@@ -1005,6 +1260,7 @@ def main() -> None:
       header, main, footer {{ padding-left: 16px; padding-right: 16px; }}
       .summary {{ grid-template-columns: 1fr 1fr; }}
       .ranking-grid {{ grid-template-columns: 1fr; }}
+      .analysis-grid {{ grid-template-columns: 1fr; }}
       .cards, .yakuman-grid {{ grid-template-columns: 1fr; }}
       h1 {{ font-size: 26px; }}
     }}
@@ -1015,7 +1271,7 @@ def main() -> None:
     <h1>魚群リーグ</h1>
   </header>
   <main>
-    <nav class="tabs" aria-label="シーズン切り替え" role="tablist">
+    <nav class="tabs" aria-label="ページ切り替え" role="tablist">
       {tabs}
     </nav>
     {panels}
