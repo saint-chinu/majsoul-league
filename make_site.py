@@ -109,6 +109,7 @@ PLAYER_RANK_METRICS = [
     ("rank1_rate", True, "高い方が上位"),
     ("hu_rate", True, "高い方が上位"),
     ("average_hu_point", True, "高い方が上位"),
+    ("tsumo_rate", True, "高い方が上位"),
     ("houjuu_rate", False, "低い方が上位"),
     ("average_houjuu_point", False, "低い方が上位"),
     ("top_keep_rate", True, "高い方が上位"),
@@ -878,6 +879,7 @@ def player_metric_rank_rows(player: str, cumulative_rows: list[dict[str, str]]) 
                 "value": format_cell_value(col, row.get(col, "")),
                 "rank_text": f"{rank} / {total}",
                 "direction": direction,
+                "is_best": "1" if rank == 1 else "",
             }
         )
     return rank_rows
@@ -890,8 +892,9 @@ def player_rank_table(rows: list[dict[str, str]]) -> str:
     head = "".join(f"<th>{esc(LABELS[c])}</th>" for c in columns)
     body = []
     for row in rows:
+        tr_class = " class=\"metric-best\"" if row.get("is_best") else ""
         body.append(
-            "<tr>"
+            f"<tr{tr_class}>"
             f"<td class=\"name\">{esc(row['metric'])}</td>"
             f"<td>{row['value']}</td>"
             f"<td>{esc(row['rank_text'])}</td>"
@@ -901,10 +904,10 @@ def player_rank_table(rows: list[dict[str, str]]) -> str:
     return f"<table class=\"player-rank-table\"><thead><tr>{head}</tr></thead><tbody>{''.join(body)}</tbody></table>"
 
 
-def player_analysis(player: str, cumulative_rows: list[dict[str, str]]) -> tuple[str, str]:
+def player_analysis(player: str, cumulative_rows: list[dict[str, str]]) -> tuple[str, str, str]:
     row = next((r for r in cumulative_rows if r.get("player") == player), None)
     if not row:
-        return "データ不足です。", "追加の牌譜取得後に再評価します。"
+        return "データ不足です。", "追加の牌譜取得後に再評価します。", "まだ傾向を断定できません。"
 
     ranks = {
         col: metric_rank(cumulative_rows, player, col, reverse)[0]
@@ -931,6 +934,23 @@ def player_analysis(player: str, cumulative_rows: list[dict[str, str]]) -> tuple
     if not style_bits:
         style_bits.append("大きな突出よりもバランス型で、局ごとの対応幅が広い")
 
+    strength_bits = []
+    if ranks["rank1_rate"] <= 2:
+        strength_bits.append("トップ率が高く、勝ち切る半荘を作る力がある")
+    if ranks["average_opening_dora"] <= 2:
+        strength_bits.append("平均配牌ドラが多く、序盤から打点ルートを見やすい")
+    if ranks["average_opening_shanten"] <= 2:
+        strength_bits.append("平均配牌シャンテンが軽く、先手を取りやすい")
+    if ranks["tsumo_rate"] <= 2:
+        strength_bits.append("ツモ率が高く、リーチや仕掛け後に自力決着へ持ち込みやすい")
+    if ranks["average_houjuu_point"] <= 2:
+        strength_bits.append("放銃時の失点が軽く、刺さる場面でも致命傷を避けている")
+    if ranks["yakuman_count"] <= 2:
+        strength_bits.append("役満回数も上位で、爆発力が数字に残っている")
+
+    if not strength_bits:
+        strength_bits.append("極端な尖りよりも、複数項目を中位以上にまとめる総合力が強み")
+
     risk_bits = []
     if ranks["houjuu_rate"] >= total - 1:
         risk_bits.append("放銃率が相対的に高いので、親番・終盤の押し返し基準を一段絞る")
@@ -946,9 +966,29 @@ def player_analysis(player: str, cumulative_rows: list[dict[str, str]]) -> tuple
     if not risk_bits:
         risk_bits.append("明確な穴は小さいので、現在の強みを保ちつつ局面別の押し引きを精密化する")
 
-    style = f"{player}は、" + "。".join(style_bits[:3]) + "タイプ。"
-    advice = "改善点は、" + "。".join(risk_bits[:3]) + "こと。"
-    return style, advice
+    top_count = sum(1 for rank in ranks.values() if rank == 1)
+    score = format_cell_value("earned_score", row.get("earned_score", ""))
+    avg_rank = row.get("average_rank", "")
+    hu = row.get("hu_rate", "")
+    deal_in = row.get("houjuu_rate", "")
+
+    style = (
+        f"{player}は、累計獲得スコア{score}、平均順位{avg_rank}の成績。"
+        + "。".join(style_bits[:4])
+        + f"。和了率{hu}、放銃率{deal_in}のバランスを見ると、"
+        "ただ前に出るだけではなく、収支を残す局面選択ができているタイプ。"
+    )
+    strength = (
+        f"項目別1位は{top_count}項目。"
+        + "。".join(strength_bits[:4])
+        + "。この強みがある半荘では、序盤から主導権を握るか、勝負所で一気に着順を押し上げられる。"
+    )
+    advice = (
+        "改善点は、"
+        + "。".join(risk_bits[:4])
+        + "こと。特に自分の強い土俵に入っていない局では、打点固定・速度・撤退のどれを優先するかを早めに決めると成績が安定しやすい。"
+    )
+    return style, strength, advice
 
 
 def render_player_panel(
@@ -966,7 +1006,7 @@ def render_player_panel(
 
     season_rows = player_season_rows(player, season_contexts)
     rank_rows = player_metric_rank_rows(player, cumulative_rows)
-    style, advice = player_analysis(player, cumulative_rows)
+    style, strength, advice = player_analysis(player, cumulative_rows)
 
     return f"""
     <section class="tab-panel" id="panel-player-{esc(player)}" data-panel="player-{esc(player)}">
@@ -997,6 +1037,10 @@ def render_player_panel(
         <article class="analysis-card">
           <h3>雀風</h3>
           <p>{esc(style)}</p>
+        </article>
+        <article class="analysis-card">
+          <h3>強み</h3>
+          <p>{esc(strength)}</p>
         </article>
         <article class="analysis-card">
           <h3>改善点</h3>
@@ -1220,10 +1264,13 @@ def main() -> None:
     .ranking-grid {{ display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; }}
     .ranking-panel {{ min-width: 0; }}
     .ranking-panel h3 {{ margin: 0 0 8px; font-size: 16px; }}
-    .analysis-grid {{ display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }}
+    .analysis-grid {{ display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }}
     .analysis-card {{ border: 1px solid var(--line); border-radius: 8px; padding: 14px; background: var(--panel); }}
     .analysis-card h3 {{ margin-bottom: 8px; }}
     .analysis-card p {{ line-height: 1.8; color: var(--ink); }}
+    .metric-best td {{ background: #fff7df; }}
+    .metric-best td:first-child {{ color: var(--gold); }}
+    .metric-best td:nth-child(3) {{ font-weight: 800; color: var(--gold); }}
     .cards {{ display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }}
     .player-card, .yakuman-card {{ border: 1px solid var(--line); border-radius: 8px; padding: 14px; background: var(--panel); }}
     .player-card-head {{ display: flex; justify-content: space-between; gap: 10px; align-items: baseline; margin-bottom: 12px; }}

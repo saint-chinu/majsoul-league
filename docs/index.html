@@ -66,10 +66,13 @@
     .ranking-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; }
     .ranking-panel { min-width: 0; }
     .ranking-panel h3 { margin: 0 0 8px; font-size: 16px; }
-    .analysis-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .analysis-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
     .analysis-card { border: 1px solid var(--line); border-radius: 8px; padding: 14px; background: var(--panel); }
     .analysis-card h3 { margin-bottom: 8px; }
     .analysis-card p { line-height: 1.8; color: var(--ink); }
+    .metric-best td { background: #fff7df; }
+    .metric-best td:first-child { color: var(--gold); }
+    .metric-best td:nth-child(3) { font-weight: 800; color: var(--gold); }
     .cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
     .player-card, .yakuman-card { border: 1px solid var(--line); border-radius: 8px; padding: 14px; background: var(--panel); }
     .player-card-head { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; margin-bottom: 12px; }
@@ -2057,18 +2060,22 @@
 
       <h2>流れ者金融 項目別順位</h2>
       <div class="table-wrap">
-        <table class="player-rank-table"><thead><tr><th>項目</th><th>値</th><th>順位</th><th>評価</th></tr></thead><tbody><tr><td class="name">獲得スコア</td><td>4,270.6</td><td>1 / 6</td><td>高い方が上位</td></tr><tr><td class="name">平均順位</td><td>1.83</td><td>1 / 6</td><td>低い方が上位</td></tr><tr><td class="name">1位率</td><td>43.27%</td><td>1 / 6</td><td>高い方が上位</td></tr><tr><td class="name">和了率</td><td>32.79%</td><td>1 / 6</td><td>高い方が上位</td></tr><tr><td class="name">平均和了点</td><td>10,266</td><td>4 / 6</td><td>高い方が上位</td></tr><tr><td class="name">放銃率</td><td>15.10%</td><td>2 / 6</td><td>低い方が上位</td></tr><tr><td class="name">放銃平均打点</td><td>8,873</td><td>1 / 6</td><td>低い方が上位</td></tr><tr><td class="name">トップキープ率</td><td>36.78%</td><td>1 / 6</td><td>高い方が上位</td></tr><tr><td class="name">平均配牌シャンテン</td><td>2.87</td><td>4 / 6</td><td>低い方が上位</td></tr><tr><td class="name">平均配牌ドラ</td><td>1.21</td><td>6 / 6</td><td>高い方が上位</td></tr><tr><td class="name">副露率</td><td>35.65%</td><td>1 / 6</td><td>高い順</td></tr><tr><td class="name">立直率</td><td>25.38%</td><td>4 / 6</td><td>高い順</td></tr><tr><td class="name">役満回数</td><td>17</td><td>1 / 6</td><td>高い方が上位</td></tr></tbody></table>
+        <table class="player-rank-table"><thead><tr><th>項目</th><th>値</th><th>順位</th><th>評価</th></tr></thead><tbody><tr class="metric-best"><td class="name">獲得スコア</td><td>4,270.6</td><td>1 / 6</td><td>高い方が上位</td></tr><tr class="metric-best"><td class="name">平均順位</td><td>1.83</td><td>1 / 6</td><td>低い方が上位</td></tr><tr class="metric-best"><td class="name">1位率</td><td>43.27%</td><td>1 / 6</td><td>高い方が上位</td></tr><tr class="metric-best"><td class="name">和了率</td><td>32.79%</td><td>1 / 6</td><td>高い方が上位</td></tr><tr><td class="name">平均和了点</td><td>10,266</td><td>4 / 6</td><td>高い方が上位</td></tr><tr><td class="name">ツモ率</td><td>43.10%</td><td>4 / 6</td><td>高い方が上位</td></tr><tr><td class="name">放銃率</td><td>15.10%</td><td>2 / 6</td><td>低い方が上位</td></tr><tr class="metric-best"><td class="name">放銃平均打点</td><td>8,873</td><td>1 / 6</td><td>低い方が上位</td></tr><tr class="metric-best"><td class="name">トップキープ率</td><td>36.78%</td><td>1 / 6</td><td>高い方が上位</td></tr><tr><td class="name">平均配牌シャンテン</td><td>2.87</td><td>4 / 6</td><td>低い方が上位</td></tr><tr><td class="name">平均配牌ドラ</td><td>1.21</td><td>6 / 6</td><td>高い方が上位</td></tr><tr class="metric-best"><td class="name">副露率</td><td>35.65%</td><td>1 / 6</td><td>高い順</td></tr><tr><td class="name">立直率</td><td>25.38%</td><td>4 / 6</td><td>高い順</td></tr><tr class="metric-best"><td class="name">役満回数</td><td>17</td><td>1 / 6</td><td>高い方が上位</td></tr></tbody></table>
       </div>
 
       <h2>AI雀風分析</h2>
       <section class="analysis-grid">
         <article class="analysis-card">
           <h3>雀風</h3>
-          <p>流れ者金融は、獲得スコアで上位に入り、長期戦の収支を作れている。和了率が高く、局参加から着実にあがりまで持っていく。放銃率が低く、守備の安定感があるタイプ。</p>
+          <p>流れ者金融は、累計獲得スコア4,270.6、平均順位1.83の成績。獲得スコアで上位に入り、長期戦の収支を作れている。和了率が高く、局参加から着実にあがりまで持っていく。放銃率が低く、守備の安定感がある。トップ目に立った後の押し引きが安定している。和了率32.79%、放銃率15.10%のバランスを見ると、ただ前に出るだけではなく、収支を残す局面選択ができているタイプ。</p>
+        </article>
+        <article class="analysis-card">
+          <h3>強み</h3>
+          <p>項目別1位は8項目。トップ率が高く、勝ち切る半荘を作る力がある。放銃時の失点が軽く、刺さる場面でも致命傷を避けている。役満回数も上位で、爆発力が数字に残っている。この強みがある半荘では、序盤から主導権を握るか、勝負所で一気に着順を押し上げられる。</p>
         </article>
         <article class="analysis-card">
           <h3>改善点</h3>
-          <p>改善点は、明確な穴は小さいので、現在の強みを保ちつつ局面別の押し引きを精密化すること。</p>
+          <p>改善点は、明確な穴は小さいので、現在の強みを保ちつつ局面別の押し引きを精密化すること。特に自分の強い土俵に入っていない局では、打点固定・速度・撤退のどれを優先するかを早めに決めると成績が安定しやすい。</p>
         </article>
       </section>
     </section>
@@ -2094,18 +2101,22 @@
 
       <h2>ひなんじょ 項目別順位</h2>
       <div class="table-wrap">
-        <table class="player-rank-table"><thead><tr><th>項目</th><th>値</th><th>順位</th><th>評価</th></tr></thead><tbody><tr><td class="name">獲得スコア</td><td>577.5</td><td>2 / 6</td><td>高い方が上位</td></tr><tr><td class="name">平均順位</td><td>1.98</td><td>2 / 6</td><td>低い方が上位</td></tr><tr><td class="name">1位率</td><td>34.70%</td><td>3 / 6</td><td>高い方が上位</td></tr><tr><td class="name">和了率</td><td>30.92%</td><td>3 / 6</td><td>高い方が上位</td></tr><tr><td class="name">平均和了点</td><td>10,414</td><td>2 / 6</td><td>高い方が上位</td></tr><tr><td class="name">放銃率</td><td>16.78%</td><td>4 / 6</td><td>低い方が上位</td></tr><tr><td class="name">放銃平均打点</td><td>9,536</td><td>6 / 6</td><td>低い方が上位</td></tr><tr><td class="name">トップキープ率</td><td>29.17%</td><td>4 / 6</td><td>高い方が上位</td></tr><tr><td class="name">平均配牌シャンテン</td><td>2.86</td><td>3 / 6</td><td>低い方が上位</td></tr><tr><td class="name">平均配牌ドラ</td><td>1.24</td><td>3 / 6</td><td>高い方が上位</td></tr><tr><td class="name">副露率</td><td>28.82%</td><td>4 / 6</td><td>高い順</td></tr><tr><td class="name">立直率</td><td>31.81%</td><td>1 / 6</td><td>高い順</td></tr><tr><td class="name">役満回数</td><td>12</td><td>3 / 6</td><td>高い方が上位</td></tr></tbody></table>
+        <table class="player-rank-table"><thead><tr><th>項目</th><th>値</th><th>順位</th><th>評価</th></tr></thead><tbody><tr><td class="name">獲得スコア</td><td>577.5</td><td>2 / 6</td><td>高い方が上位</td></tr><tr><td class="name">平均順位</td><td>1.98</td><td>2 / 6</td><td>低い方が上位</td></tr><tr><td class="name">1位率</td><td>34.70%</td><td>3 / 6</td><td>高い方が上位</td></tr><tr><td class="name">和了率</td><td>30.92%</td><td>3 / 6</td><td>高い方が上位</td></tr><tr><td class="name">平均和了点</td><td>10,414</td><td>2 / 6</td><td>高い方が上位</td></tr><tr><td class="name">ツモ率</td><td>45.73%</td><td>2 / 6</td><td>高い方が上位</td></tr><tr><td class="name">放銃率</td><td>16.78%</td><td>4 / 6</td><td>低い方が上位</td></tr><tr><td class="name">放銃平均打点</td><td>9,536</td><td>6 / 6</td><td>低い方が上位</td></tr><tr><td class="name">トップキープ率</td><td>29.17%</td><td>4 / 6</td><td>高い方が上位</td></tr><tr><td class="name">平均配牌シャンテン</td><td>2.86</td><td>3 / 6</td><td>低い方が上位</td></tr><tr><td class="name">平均配牌ドラ</td><td>1.24</td><td>3 / 6</td><td>高い方が上位</td></tr><tr><td class="name">副露率</td><td>28.82%</td><td>4 / 6</td><td>高い順</td></tr><tr class="metric-best"><td class="name">立直率</td><td>31.81%</td><td>1 / 6</td><td>高い順</td></tr><tr><td class="name">役満回数</td><td>12</td><td>3 / 6</td><td>高い方が上位</td></tr></tbody></table>
       </div>
 
       <h2>AI雀風分析</h2>
       <section class="analysis-grid">
         <article class="analysis-card">
           <h3>雀風</h3>
-          <p>ひなんじょは、獲得スコアで上位に入り、長期戦の収支を作れている。平均和了点が高く、決め手の打点を作れる。立直率が高く、門前の圧を使うタイプ。</p>
+          <p>ひなんじょは、累計獲得スコア577.5、平均順位1.98の成績。獲得スコアで上位に入り、長期戦の収支を作れている。平均和了点が高く、決め手の打点を作れる。立直率が高く、門前の圧を使う。和了率30.92%、放銃率16.78%のバランスを見ると、ただ前に出るだけではなく、収支を残す局面選択ができているタイプ。</p>
+        </article>
+        <article class="analysis-card">
+          <h3>強み</h3>
+          <p>項目別1位は1項目。ツモ率が高く、リーチや仕掛け後に自力決着へ持ち込みやすい。この強みがある半荘では、序盤から主導権を握るか、勝負所で一気に着順を押し上げられる。</p>
         </article>
         <article class="analysis-card">
           <h3>改善点</h3>
-          <p>改善点は、放銃平均打点が重いので、高打点気配への撤退を早めること。</p>
+          <p>改善点は、放銃平均打点が重いので、高打点気配への撤退を早めること。特に自分の強い土俵に入っていない局では、打点固定・速度・撤退のどれを優先するかを早めに決めると成績が安定しやすい。</p>
         </article>
       </section>
     </section>
@@ -2131,18 +2142,22 @@
 
       <h2>鯛ofカルピス 項目別順位</h2>
       <div class="table-wrap">
-        <table class="player-rank-table"><thead><tr><th>項目</th><th>値</th><th>順位</th><th>評価</th></tr></thead><tbody><tr><td class="name">獲得スコア</td><td>315.0</td><td>3 / 6</td><td>高い方が上位</td></tr><tr><td class="name">平均順位</td><td>2.0</td><td>3 / 6</td><td>低い方が上位</td></tr><tr><td class="name">1位率</td><td>34.77%</td><td>2 / 6</td><td>高い方が上位</td></tr><tr><td class="name">和了率</td><td>32.06%</td><td>2 / 6</td><td>高い方が上位</td></tr><tr><td class="name">平均和了点</td><td>9,936</td><td>5 / 6</td><td>高い方が上位</td></tr><tr><td class="name">放銃率</td><td>18.37%</td><td>6 / 6</td><td>低い方が上位</td></tr><tr><td class="name">放銃平均打点</td><td>9,370</td><td>5 / 6</td><td>低い方が上位</td></tr><tr><td class="name">トップキープ率</td><td>29.93%</td><td>2 / 6</td><td>高い方が上位</td></tr><tr><td class="name">平均配牌シャンテン</td><td>2.81</td><td>1 / 6</td><td>低い方が上位</td></tr><tr><td class="name">平均配牌ドラ</td><td>1.27</td><td>1 / 6</td><td>高い方が上位</td></tr><tr><td class="name">副露率</td><td>32.35%</td><td>3 / 6</td><td>高い順</td></tr><tr><td class="name">立直率</td><td>24.18%</td><td>5 / 6</td><td>高い順</td></tr><tr><td class="name">役満回数</td><td>9</td><td>4 / 6</td><td>高い方が上位</td></tr></tbody></table>
+        <table class="player-rank-table"><thead><tr><th>項目</th><th>値</th><th>順位</th><th>評価</th></tr></thead><tbody><tr><td class="name">獲得スコア</td><td>315.0</td><td>3 / 6</td><td>高い方が上位</td></tr><tr><td class="name">平均順位</td><td>2.0</td><td>3 / 6</td><td>低い方が上位</td></tr><tr><td class="name">1位率</td><td>34.77%</td><td>2 / 6</td><td>高い方が上位</td></tr><tr><td class="name">和了率</td><td>32.06%</td><td>2 / 6</td><td>高い方が上位</td></tr><tr><td class="name">平均和了点</td><td>9,936</td><td>5 / 6</td><td>高い方が上位</td></tr><tr class="metric-best"><td class="name">ツモ率</td><td>47.84%</td><td>1 / 6</td><td>高い方が上位</td></tr><tr><td class="name">放銃率</td><td>18.37%</td><td>6 / 6</td><td>低い方が上位</td></tr><tr><td class="name">放銃平均打点</td><td>9,370</td><td>5 / 6</td><td>低い方が上位</td></tr><tr><td class="name">トップキープ率</td><td>29.93%</td><td>2 / 6</td><td>高い方が上位</td></tr><tr class="metric-best"><td class="name">平均配牌シャンテン</td><td>2.81</td><td>1 / 6</td><td>低い方が上位</td></tr><tr class="metric-best"><td class="name">平均配牌ドラ</td><td>1.27</td><td>1 / 6</td><td>高い方が上位</td></tr><tr><td class="name">副露率</td><td>32.35%</td><td>3 / 6</td><td>高い順</td></tr><tr><td class="name">立直率</td><td>24.18%</td><td>5 / 6</td><td>高い順</td></tr><tr><td class="name">役満回数</td><td>9</td><td>4 / 6</td><td>高い方が上位</td></tr></tbody></table>
       </div>
 
       <h2>AI雀風分析</h2>
       <section class="analysis-grid">
         <article class="analysis-card">
           <h3>雀風</h3>
-          <p>鯛ofカルピスは、和了率が高く、局参加から着実にあがりまで持っていく。トップ目に立った後の押し引きが安定しているタイプ。</p>
+          <p>鯛ofカルピスは、累計獲得スコア315.0、平均順位2.0の成績。和了率が高く、局参加から着実にあがりまで持っていく。トップ目に立った後の押し引きが安定している。和了率32.06%、放銃率18.37%のバランスを見ると、ただ前に出るだけではなく、収支を残す局面選択ができているタイプ。</p>
+        </article>
+        <article class="analysis-card">
+          <h3>強み</h3>
+          <p>項目別1位は3項目。トップ率が高く、勝ち切る半荘を作る力がある。平均配牌ドラが多く、序盤から打点ルートを見やすい。平均配牌シャンテンが軽く、先手を取りやすい。ツモ率が高く、リーチや仕掛け後に自力決着へ持ち込みやすい。この強みがある半荘では、序盤から主導権を握るか、勝負所で一気に着順を押し上げられる。</p>
         </article>
         <article class="analysis-card">
           <h3>改善点</h3>
-          <p>改善点は、放銃率が相対的に高いので、親番・終盤の押し返し基準を一段絞る。放銃平均打点が重いので、高打点気配への撤退を早めること。</p>
+          <p>改善点は、放銃率が相対的に高いので、親番・終盤の押し返し基準を一段絞る。放銃平均打点が重いので、高打点気配への撤退を早めること。特に自分の強い土俵に入っていない局では、打点固定・速度・撤退のどれを優先するかを早めに決めると成績が安定しやすい。</p>
         </article>
       </section>
     </section>
@@ -2168,18 +2183,22 @@
 
       <h2>アリスkey 項目別順位</h2>
       <div class="table-wrap">
-        <table class="player-rank-table"><thead><tr><th>項目</th><th>値</th><th>順位</th><th>評価</th></tr></thead><tbody><tr><td class="name">獲得スコア</td><td>-796.2</td><td>4 / 6</td><td>高い方が上位</td></tr><tr><td class="name">平均順位</td><td>2.02</td><td>4 / 6</td><td>低い方が上位</td></tr><tr><td class="name">1位率</td><td>29.61%</td><td>5 / 6</td><td>高い方が上位</td></tr><tr><td class="name">和了率</td><td>28.87%</td><td>4 / 6</td><td>高い方が上位</td></tr><tr><td class="name">平均和了点</td><td>9,856</td><td>6 / 6</td><td>高い方が上位</td></tr><tr><td class="name">放銃率</td><td>15.29%</td><td>3 / 6</td><td>低い方が上位</td></tr><tr><td class="name">放銃平均打点</td><td>9,275</td><td>3 / 6</td><td>低い方が上位</td></tr><tr><td class="name">トップキープ率</td><td>23.53%</td><td>6 / 6</td><td>高い方が上位</td></tr><tr><td class="name">平均配牌シャンテン</td><td>2.85</td><td>2 / 6</td><td>低い方が上位</td></tr><tr><td class="name">平均配牌ドラ</td><td>1.22</td><td>5 / 6</td><td>高い方が上位</td></tr><tr><td class="name">副露率</td><td>32.58%</td><td>2 / 6</td><td>高い順</td></tr><tr><td class="name">立直率</td><td>27.03%</td><td>3 / 6</td><td>高い順</td></tr><tr><td class="name">役満回数</td><td>7</td><td>5 / 6</td><td>高い方が上位</td></tr></tbody></table>
+        <table class="player-rank-table"><thead><tr><th>項目</th><th>値</th><th>順位</th><th>評価</th></tr></thead><tbody><tr><td class="name">獲得スコア</td><td>-796.2</td><td>4 / 6</td><td>高い方が上位</td></tr><tr><td class="name">平均順位</td><td>2.02</td><td>4 / 6</td><td>低い方が上位</td></tr><tr><td class="name">1位率</td><td>29.61%</td><td>5 / 6</td><td>高い方が上位</td></tr><tr><td class="name">和了率</td><td>28.87%</td><td>4 / 6</td><td>高い方が上位</td></tr><tr><td class="name">平均和了点</td><td>9,856</td><td>6 / 6</td><td>高い方が上位</td></tr><tr><td class="name">ツモ率</td><td>42.55%</td><td>6 / 6</td><td>高い方が上位</td></tr><tr><td class="name">放銃率</td><td>15.29%</td><td>3 / 6</td><td>低い方が上位</td></tr><tr><td class="name">放銃平均打点</td><td>9,275</td><td>3 / 6</td><td>低い方が上位</td></tr><tr><td class="name">トップキープ率</td><td>23.53%</td><td>6 / 6</td><td>高い方が上位</td></tr><tr><td class="name">平均配牌シャンテン</td><td>2.85</td><td>2 / 6</td><td>低い方が上位</td></tr><tr><td class="name">平均配牌ドラ</td><td>1.22</td><td>5 / 6</td><td>高い方が上位</td></tr><tr><td class="name">副露率</td><td>32.58%</td><td>2 / 6</td><td>高い順</td></tr><tr><td class="name">立直率</td><td>27.03%</td><td>3 / 6</td><td>高い順</td></tr><tr><td class="name">役満回数</td><td>7</td><td>5 / 6</td><td>高い方が上位</td></tr></tbody></table>
       </div>
 
       <h2>AI雀風分析</h2>
       <section class="analysis-grid">
         <article class="analysis-card">
           <h3>雀風</h3>
-          <p>アリスkeyは、副露率が高く、速度で局面を動かすタイプ。</p>
+          <p>アリスkeyは、累計獲得スコア-796.2、平均順位2.02の成績。副露率が高く、速度で局面を動かす。和了率28.87%、放銃率15.29%のバランスを見ると、ただ前に出るだけではなく、収支を残す局面選択ができているタイプ。</p>
+        </article>
+        <article class="analysis-card">
+          <h3>強み</h3>
+          <p>項目別1位は0項目。平均配牌シャンテンが軽く、先手を取りやすい。この強みがある半荘では、序盤から主導権を握るか、勝負所で一気に着順を押し上げられる。</p>
         </article>
         <article class="analysis-card">
           <h3>改善点</h3>
-          <p>改善点は、トップキープ率が課題なので、トップ目では局消化と放銃回避を優先すること。</p>
+          <p>改善点は、トップキープ率が課題なので、トップ目では局消化と放銃回避を優先すること。特に自分の強い土俵に入っていない局では、打点固定・速度・撤退のどれを優先するかを早めに決めると成績が安定しやすい。</p>
         </article>
       </section>
     </section>
@@ -2205,18 +2224,22 @@
 
       <h2>29ちゃん 項目別順位</h2>
       <div class="table-wrap">
-        <table class="player-rank-table"><thead><tr><th>項目</th><th>値</th><th>順位</th><th>評価</th></tr></thead><tbody><tr><td class="name">獲得スコア</td><td>-1,545.9</td><td>5 / 6</td><td>高い方が上位</td></tr><tr><td class="name">平均順位</td><td>2.05</td><td>5 / 6</td><td>低い方が上位</td></tr><tr><td class="name">1位率</td><td>30.54%</td><td>4 / 6</td><td>高い方が上位</td></tr><tr><td class="name">和了率</td><td>26.43%</td><td>6 / 6</td><td>高い方が上位</td></tr><tr><td class="name">平均和了点</td><td>10,339</td><td>3 / 6</td><td>高い方が上位</td></tr><tr><td class="name">放銃率</td><td>14.78%</td><td>1 / 6</td><td>低い方が上位</td></tr><tr><td class="name">放銃平均打点</td><td>9,066</td><td>2 / 6</td><td>低い方が上位</td></tr><tr><td class="name">トップキープ率</td><td>29.63%</td><td>3 / 6</td><td>高い方が上位</td></tr><tr><td class="name">平均配牌シャンテン</td><td>2.86</td><td>3 / 6</td><td>低い方が上位</td></tr><tr><td class="name">平均配牌ドラ</td><td>1.23</td><td>4 / 6</td><td>高い方が上位</td></tr><tr><td class="name">副露率</td><td>26.75%</td><td>5 / 6</td><td>高い順</td></tr><tr><td class="name">立直率</td><td>23.07%</td><td>6 / 6</td><td>高い順</td></tr><tr><td class="name">役満回数</td><td>14</td><td>2 / 6</td><td>高い方が上位</td></tr></tbody></table>
+        <table class="player-rank-table"><thead><tr><th>項目</th><th>値</th><th>順位</th><th>評価</th></tr></thead><tbody><tr><td class="name">獲得スコア</td><td>-1,545.9</td><td>5 / 6</td><td>高い方が上位</td></tr><tr><td class="name">平均順位</td><td>2.05</td><td>5 / 6</td><td>低い方が上位</td></tr><tr><td class="name">1位率</td><td>30.54%</td><td>4 / 6</td><td>高い方が上位</td></tr><tr><td class="name">和了率</td><td>26.43%</td><td>6 / 6</td><td>高い方が上位</td></tr><tr><td class="name">平均和了点</td><td>10,339</td><td>3 / 6</td><td>高い方が上位</td></tr><tr><td class="name">ツモ率</td><td>42.87%</td><td>5 / 6</td><td>高い方が上位</td></tr><tr class="metric-best"><td class="name">放銃率</td><td>14.78%</td><td>1 / 6</td><td>低い方が上位</td></tr><tr><td class="name">放銃平均打点</td><td>9,066</td><td>2 / 6</td><td>低い方が上位</td></tr><tr><td class="name">トップキープ率</td><td>29.63%</td><td>3 / 6</td><td>高い方が上位</td></tr><tr><td class="name">平均配牌シャンテン</td><td>2.86</td><td>3 / 6</td><td>低い方が上位</td></tr><tr><td class="name">平均配牌ドラ</td><td>1.23</td><td>4 / 6</td><td>高い方が上位</td></tr><tr><td class="name">副露率</td><td>26.75%</td><td>5 / 6</td><td>高い順</td></tr><tr><td class="name">立直率</td><td>23.07%</td><td>6 / 6</td><td>高い順</td></tr><tr><td class="name">役満回数</td><td>14</td><td>2 / 6</td><td>高い方が上位</td></tr></tbody></table>
       </div>
 
       <h2>AI雀風分析</h2>
       <section class="analysis-grid">
         <article class="analysis-card">
           <h3>雀風</h3>
-          <p>29ちゃんは、放銃率が低く、守備の安定感があるタイプ。</p>
+          <p>29ちゃんは、累計獲得スコア-1,545.9、平均順位2.05の成績。放銃率が低く、守備の安定感がある。和了率26.43%、放銃率14.78%のバランスを見ると、ただ前に出るだけではなく、収支を残す局面選択ができているタイプ。</p>
+        </article>
+        <article class="analysis-card">
+          <h3>強み</h3>
+          <p>項目別1位は1項目。放銃時の失点が軽く、刺さる場面でも致命傷を避けている。役満回数も上位で、爆発力が数字に残っている。この強みがある半荘では、序盤から主導権を握るか、勝負所で一気に着順を押し上げられる。</p>
         </article>
         <article class="analysis-card">
           <h3>改善点</h3>
-          <p>改善点は、和了率が伸びにくいので、序盤の孤立牌選択と鳴き判断で速度を補うこと。</p>
+          <p>改善点は、和了率が伸びにくいので、序盤の孤立牌選択と鳴き判断で速度を補うこと。特に自分の強い土俵に入っていない局では、打点固定・速度・撤退のどれを優先するかを早めに決めると成績が安定しやすい。</p>
         </article>
       </section>
     </section>
@@ -2242,18 +2265,22 @@
 
       <h2>葡萄海ぶどう 項目別順位</h2>
       <div class="table-wrap">
-        <table class="player-rank-table"><thead><tr><th>項目</th><th>値</th><th>順位</th><th>評価</th></tr></thead><tbody><tr><td class="name">獲得スコア</td><td>-2,821.0</td><td>6 / 6</td><td>高い方が上位</td></tr><tr><td class="name">平均順位</td><td>2.11</td><td>6 / 6</td><td>低い方が上位</td></tr><tr><td class="name">1位率</td><td>27.68%</td><td>6 / 6</td><td>高い方が上位</td></tr><tr><td class="name">和了率</td><td>26.76%</td><td>5 / 6</td><td>高い方が上位</td></tr><tr><td class="name">平均和了点</td><td>10,524</td><td>1 / 6</td><td>高い方が上位</td></tr><tr><td class="name">放銃率</td><td>17.19%</td><td>5 / 6</td><td>低い方が上位</td></tr><tr><td class="name">放銃平均打点</td><td>9,311</td><td>4 / 6</td><td>低い方が上位</td></tr><tr><td class="name">トップキープ率</td><td>25.55%</td><td>5 / 6</td><td>高い方が上位</td></tr><tr><td class="name">平均配牌シャンテン</td><td>2.88</td><td>5 / 6</td><td>低い方が上位</td></tr><tr><td class="name">平均配牌ドラ</td><td>1.26</td><td>2 / 6</td><td>高い方が上位</td></tr><tr><td class="name">副露率</td><td>25.38%</td><td>6 / 6</td><td>高い順</td></tr><tr><td class="name">立直率</td><td>29.82%</td><td>2 / 6</td><td>高い順</td></tr><tr><td class="name">役満回数</td><td>7</td><td>5 / 6</td><td>高い方が上位</td></tr></tbody></table>
+        <table class="player-rank-table"><thead><tr><th>項目</th><th>値</th><th>順位</th><th>評価</th></tr></thead><tbody><tr><td class="name">獲得スコア</td><td>-2,821.0</td><td>6 / 6</td><td>高い方が上位</td></tr><tr><td class="name">平均順位</td><td>2.11</td><td>6 / 6</td><td>低い方が上位</td></tr><tr><td class="name">1位率</td><td>27.68%</td><td>6 / 6</td><td>高い方が上位</td></tr><tr><td class="name">和了率</td><td>26.76%</td><td>5 / 6</td><td>高い方が上位</td></tr><tr class="metric-best"><td class="name">平均和了点</td><td>10,524</td><td>1 / 6</td><td>高い方が上位</td></tr><tr><td class="name">ツモ率</td><td>45.35%</td><td>3 / 6</td><td>高い方が上位</td></tr><tr><td class="name">放銃率</td><td>17.19%</td><td>5 / 6</td><td>低い方が上位</td></tr><tr><td class="name">放銃平均打点</td><td>9,311</td><td>4 / 6</td><td>低い方が上位</td></tr><tr><td class="name">トップキープ率</td><td>25.55%</td><td>5 / 6</td><td>高い方が上位</td></tr><tr><td class="name">平均配牌シャンテン</td><td>2.88</td><td>5 / 6</td><td>低い方が上位</td></tr><tr><td class="name">平均配牌ドラ</td><td>1.26</td><td>2 / 6</td><td>高い方が上位</td></tr><tr><td class="name">副露率</td><td>25.38%</td><td>6 / 6</td><td>高い順</td></tr><tr><td class="name">立直率</td><td>29.82%</td><td>2 / 6</td><td>高い順</td></tr><tr><td class="name">役満回数</td><td>7</td><td>5 / 6</td><td>高い方が上位</td></tr></tbody></table>
       </div>
 
       <h2>AI雀風分析</h2>
       <section class="analysis-grid">
         <article class="analysis-card">
           <h3>雀風</h3>
-          <p>葡萄海ぶどうは、平均和了点が高く、決め手の打点を作れる。立直率が高く、門前の圧を使うタイプ。</p>
+          <p>葡萄海ぶどうは、累計獲得スコア-2,821.0、平均順位2.11の成績。平均和了点が高く、決め手の打点を作れる。立直率が高く、門前の圧を使う。和了率26.76%、放銃率17.19%のバランスを見ると、ただ前に出るだけではなく、収支を残す局面選択ができているタイプ。</p>
+        </article>
+        <article class="analysis-card">
+          <h3>強み</h3>
+          <p>項目別1位は1項目。平均配牌ドラが多く、序盤から打点ルートを見やすい。この強みがある半荘では、序盤から主導権を握るか、勝負所で一気に着順を押し上げられる。</p>
         </article>
         <article class="analysis-card">
           <h3>改善点</h3>
-          <p>改善点は、放銃率が相対的に高いので、親番・終盤の押し返し基準を一段絞る。和了率が伸びにくいので、序盤の孤立牌選択と鳴き判断で速度を補う。トップキープ率が課題なので、トップ目では局消化と放銃回避を優先すること。</p>
+          <p>改善点は、放銃率が相対的に高いので、親番・終盤の押し返し基準を一段絞る。和了率が伸びにくいので、序盤の孤立牌選択と鳴き判断で速度を補う。トップキープ率が課題なので、トップ目では局消化と放銃回避を優先する。平均配牌シャンテンが重めなので、無理な高打点固定より受け入れ枚数を優先すること。特に自分の強い土俵に入っていない局では、打点固定・速度・撤退のどれを優先するかを早めに決めると成績が安定しやすい。</p>
         </article>
       </section>
     </section>
