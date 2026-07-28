@@ -108,8 +108,8 @@ def minimum_expected_count(max_pages: int) -> int:
     return max(1, max_pages * 10 - 9)
 
 
-def collect_season_ids(season: int, max_pages: int) -> Path:
-    min_count = minimum_expected_count(max_pages)
+def collect_season_ids(season: int, max_pages: int, in_progress: bool = False) -> Path:
+    min_count = 1 if in_progress else minimum_expected_count(max_pages)
 
     with sync_playwright() as p:
         browser = p.chromium.launch_persistent_context(
@@ -167,13 +167,14 @@ def main() -> None:
     season = int(season_text)
     max_pages_text = input("1シーズン最大ページ数。今回は12。空Enterでも12: ").strip()
     max_pages = int(max_pages_text or "12")
+    in_progress = input("進行中シーズンで120半荘未満なら y。完了済みなら Enter: ").strip().lower() == "y"
 
     if season == 1 and season_csv_path(1).exists():
         answer = input("シーズン1は既にあります。本当に再取得して上書きするなら yes: ").strip().lower()
         if answer != "yes":
             raise SystemExit("シーズン1の上書きを中止しました。")
 
-    collect_season_ids(season, max_pages)
+    collect_season_ids(season, max_pages, in_progress=in_progress)
 
     backup_if_exists(PAIFU_CSV)
     total = merge_seasons_through(season)

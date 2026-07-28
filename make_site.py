@@ -121,6 +121,40 @@ PLAYER_RANK_METRICS = [
 ]
 
 
+MANUAL_PLAYER_ANALYSIS: dict[str, tuple[str, str, str]] = {
+    "流れ者金融": (
+        "累計スコアが大きく抜けていて、平均順位もトップ。和了率とトップ率が高いだけでなく、放銃平均打点が低く、押した時のリターンと失点管理の両方で勝っている。副露率も高めなので、面前だけでなく鳴きで局を動かして、相手の遅い手を置き去りにするタイプ。トップキープ率も高く、いったん前に出た後の試合運びがうまい。",
+        "最大の強みは、局収支ではなく半荘単位で勝ち切る設計ができているところ。スピードで先制し、必要なところで加点し、危ない局では失点を軽く済ませる流れが数字に出ている。役満回数も多く、ただ堅いだけではなく爆発力もある。リーグ全体ではかなり完成度の高い万能型寄りの攻撃型。",
+        "改善点は、平均配牌ドラが最下位なので、手なりで打点が乗らない局の作り方。ドラがない配牌では、無理に主導権を取りに行くより、役牌・北・赤・良形変化をどこまで拾うかの設計を明確にしたい。強者ゆえに押せてしまう場面も多いので、リード時だけはさらに局消化優先へ寄せると取りこぼしが減る。",
+    ),
+    "ひなんじょ": (
+        "立直率がトップで、門前リーチを軸に圧をかけるタイプ。ツモ率も高く、リーチ後や勝負手で自力決着に持ち込む力がある。累計スコア、平均順位ともに上位で、攻めの選択が収支につながっている。一方で放銃平均打点は重めで、負ける時に大きく削られる傾向もある。",
+        "強みは、門前で形を作って相手に対応を迫れるところ。副露で細かく局を流すより、リーチの打点とツモ抽選で一気に局面を取るスタイルが合っている。シーズン4と7でMVPを取っていて、爆発シーズンを作れるのも魅力。手が入った時の押し切り性能はかなり高い。",
+        "改善点は、押し返された時の失点管理。放銃そのものよりも、刺さった時の打点が重いのが痛い。親の高打点気配、ドラポン、終盤リーチには、現物枚数と自分の待ち価値をもう一段厳しく見ると安定する。攻撃力は十分なので、降りる局を少し増やしても総合成績は落ちにくいはず。",
+    ),
+    "鯛ofカルピス": (
+        "配牌シャンテンと配牌ドラがかなり良く、ツモ率もトップ。素材の良い手を自然に伸ばして、自力で決着する半荘が多いタイプ。和了率も上位で、手が入った時にきちんとあがりまで持っていけている。反面、放銃率と放銃平均打点は重く、攻めた局の反動も大きい。",
+        "強みは、先手を取れる配牌品質をしっかり結果に変えているところ。シーズン2、3、5でチーム優勝に絡んでいて、チーム戦でプラス役になれる期間が多い。打点よりもツモ決着の比率が高く、相手の守備を崩さずとも点棒を持ってくる力がある。",
+        "改善点は、良い手が多いからこそ押し過ぎになりやすいところ。自分の手が十分に見える局でも、相手の打点が濃い時は放銃平均を抑える意識がほしい。特に終盤の一向聴押し、親相手の無筋連打、ドラ周辺の勝負は、あがり率より失点期待値を優先するとさらに強くなる。",
+    ),
+    "アリスkey": (
+        "序盤シーズンはやや苦しんでいたが、後半にかけて明確に成績が上向いている。シーズン6以降は大きく崩れにくくなり、シーズン7ではプラス、シーズン8も微マイナスで踏みとどまっている。副露率は高めで、局を進める判断は積極的。累計ではまだマイナスだが、最近の内容は初期とは別物に近い。",
+        "強みは、回を重ねるごとに押し引きと参加判断が整ってきている点。平均放銃点も極端には悪くなく、和了率も中位を保っているので、基礎部分はかなり改善している。シーズン4と2でチーム優勝経験があり、チーム戦の中で役割を果たせる力もある。伸びしろ込みで一番コメントが変わりやすいプレイヤー。",
+        "改善点は、トップを取り切る決定力。後半シーズンで安定はしてきたので、次はトップ率とトップキープ率を上げたい。副露で速度を取る局と、門前で打点を見る局の線引きをもう少し濃くすると、2着止まりや微マイナス半荘がトップに変わる。改善傾向が出ているので、今の方向性はかなり良い。",
+    ),
+    "29ちゃん": (
+        "放銃率が最も低く、放銃平均打点も軽い。守備面の安定感がはっきり出ているタイプ。役満回数も多く、守っているだけではなく、チャンス手では大きく仕留める力もある。一方で和了率と立直率は低めで、自分から局を取りに行く回数は少ない。",
+        "強みは、余計な失点をしないこと。三麻リーグでは一度の放銃がかなり重くなりやすいので、低放銃率はそれだけで大きな武器。シーズン6ではチーム優勝もあり、守備寄りの安定感がチーム成績に貢献している。役満を引ける爆発力もあり、耐えて大物手で返す展開がある。",
+        "改善点は、和了率を少しだけ上げること。守備を崩す必要はないが、序盤の良形固定、役牌バック、北抜き後の速度判断で拾える和了を増やしたい。守備力はリーグ上位なので、攻撃参加を少し増やしても致命傷にはなりにくい。小さい和了を増やせると平均順位が一段上がる。",
+    ),
+    "葡萄海ぶどう": (
+        "平均和了点がトップで、打点を作る力が一番強く出ている。立直率も高めで、門前高打点や勝負手の破壊力があるタイプ。配牌ドラも上位なので、打点ルートに乗る局はかなり魅力がある。一方で累計スコアと平均順位は苦しく、あがれなかった局の失点や着順落ちが響いている。",
+        "強みは、1回の和了で局面をひっくり返せること。安い手を細かく刻むより、打点を見て一撃で順位を変える麻雀になっている。平均和了点トップはかなりはっきりした個性で、相手からすると常に高打点を警戒しないといけない存在。伸ばす方向性は見えている。",
+        "改善点は、打点志向と守備のバランス。高打点を狙う価値はあるが、和了率・放銃率・トップキープ率が下位なので、勝負手ではない局の撤退を増やしたい。配牌ドラがある局は攻め、ない局は速度か守備に寄せる、という切り替えを早めると、平均和了点の強みを残したまま失点を減らせる。",
+    ),
+}
+
+
 def read_csv(path: Path) -> list[dict[str, str]]:
     if not path.exists():
         return []
@@ -905,6 +939,9 @@ def player_rank_table(rows: list[dict[str, str]]) -> str:
 
 
 def player_analysis(player: str, cumulative_rows: list[dict[str, str]]) -> tuple[str, str, str]:
+    if player in MANUAL_PLAYER_ANALYSIS:
+        return MANUAL_PLAYER_ANALYSIS[player]
+
     row = next((r for r in cumulative_rows if r.get("player") == player), None)
     if not row:
         return "データ不足です。", "追加の牌譜取得後に再評価します。", "まだ傾向を断定できません。"
@@ -1138,6 +1175,12 @@ def render_stats_panel(context: dict[str, object]) -> str:
     """
 
 
+def display_season_label(season: int, latest_season: int, game_count: int) -> str:
+    if season == latest_season and game_count < 120:
+        return f"シーズン{season}（進行中）"
+    return f"シーズン{season}"
+
+
 def main() -> None:
     paifu_rows = read_season_paifu_rows()
     if not paifu_rows:
@@ -1155,11 +1198,13 @@ def main() -> None:
     teams_by_season = read_team_members()
 
     season_contexts = []
+    latest_season = max(season_numbers)
     for season in sorted(season_numbers, reverse=True):
+        label = display_season_label(season, latest_season, len(season_to_uuids[season]))
         season_contexts.append(
             build_context(
                 f"season-{season}",
-                f"シーズン{season}",
+                label,
                 season_to_uuids[season],
                 season=season,
                 teams_by_season=teams_by_season,
@@ -1188,7 +1233,6 @@ def main() -> None:
         f'<button class="tab-button player-tab" type="button" data-tab="player-{esc(player)}">{esc(player)}</button>'
         for player in player_names
     )
-    tabs = season_tabs + "\n" + player_tabs
     stats_panels = "\n".join(render_stats_panel(context) for context in contexts)
     player_panels = "\n".join(
         render_player_panel(player, cumulative_context, season_contexts)
@@ -1251,6 +1295,9 @@ def main() -> None:
     p {{ margin: 0; color: var(--muted); }}
     main {{ padding: 22px 32px 44px; }}
     .tabs {{ display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 20px; }}
+    .tab-groups {{ display: grid; gap: 14px; margin: 0 0 20px; }}
+    .tab-group h2 {{ margin: 0 0 8px; font-size: 15px; color: var(--muted); }}
+    .tab-group .tabs {{ margin: 0; }}
     .tab-button {{ appearance: none; border: 1px solid var(--line); background: #fff; color: var(--ink); border-radius: 8px; padding: 8px 12px; font: inherit; font-weight: 700; cursor: pointer; }}
     .tab-button:hover {{ border-color: var(--accent); color: var(--accent); }}
     .tab-button.active {{ background: var(--accent); border-color: var(--accent); color: #fff; }}
@@ -1318,9 +1365,20 @@ def main() -> None:
     <h1>魚群リーグ</h1>
   </header>
   <main>
-    <nav class="tabs" aria-label="ページ切り替え" role="tablist">
-      {tabs}
-    </nav>
+    <section class="tab-groups" aria-label="ページ切り替え">
+      <div class="tab-group">
+        <h2>シーズンメニュー</h2>
+        <nav class="tabs" aria-label="シーズンメニュー" role="tablist">
+          {season_tabs}
+        </nav>
+      </div>
+      <div class="tab-group">
+        <h2>プレイヤー別データ</h2>
+        <nav class="tabs" aria-label="プレイヤー別データ" role="tablist">
+          {player_tabs}
+        </nav>
+      </div>
+    </section>
     {panels}
   </main>
   <footer>
