@@ -275,7 +275,7 @@ def team_champion_section(rows: list[dict[str, object]]) -> str:
 
 def season_mvp_rows(season_contexts: list[dict[str, object]]) -> list[dict[str, object]]:
     grouped: dict[str, dict[str, object]] = defaultdict(
-        lambda: {"wins": 0, "seasons": [], "scores": []}
+        lambda: {"wins": 0, "details": []}
     )
     for context in season_contexts:
         rows = list(context.get("rows", []))
@@ -292,8 +292,7 @@ def season_mvp_rows(season_contexts: list[dict[str, object]]) -> list[dict[str, 
             if not player:
                 continue
             grouped[player]["wins"] = int(grouped[player]["wins"]) + 1
-            grouped[player]["seasons"].append(season_label)
-            grouped[player]["scores"].append(f"{season_label}: {number(score, 1)}")
+            grouped[player]["details"].append(f"{season_label}: {number(score, 1)}")
 
     rows = []
     for player, data in grouped.items():
@@ -301,8 +300,7 @@ def season_mvp_rows(season_contexts: list[dict[str, object]]) -> list[dict[str, 
             {
                 "player": player,
                 "wins": int(data["wins"]),
-                "seasons": " / ".join(data["seasons"]),
-                "scores": " / ".join(data["scores"]),
+                "details": " / ".join(data["details"]),
             }
         )
     return sorted(rows, key=lambda row: (-int(row["wins"]), row["player"]))
@@ -319,14 +317,13 @@ def season_mvp_section(rows: list[dict[str, object]]) -> str:
             f"<td>{i}</td>"
             f"<td class=\"name\">{esc(row['player'])}</td>"
             f"<td>{esc(row['wins'])}</td>"
-            f"<td class=\"roles\">{esc(row['seasons'])}</td>"
-            f"<td class=\"roles\">{esc(row['scores'])}</td>"
+            f"<td class=\"roles\">{esc(row['details'])}</td>"
             "</tr>"
         )
     return (
         "<div class=\"table-wrap\">"
         "<table class=\"team-table\">"
-        "<thead><tr><th>順位</th><th>プレイヤー</th><th>MVP回数</th><th>MVPシーズン</th><th>獲得スコア</th></tr></thead>"
+        "<thead><tr><th>順位</th><th>プレイヤー</th><th>MVP回数</th><th>内訳</th></tr></thead>"
         f"<tbody>{''.join(body)}</tbody></table>"
         "</div>"
     )
