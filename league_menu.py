@@ -9,6 +9,7 @@ from pathlib import Path
 
 ROOT = Path(sys.executable).resolve().parent if getattr(sys, "frozen", False) else Path(__file__).resolve().parent
 GIT = Path(r"C:\Users\pgzdv\AppData\Local\GitHubDesktop\app-3.5.9\resources\app\git\cmd\git.exe")
+PROJECT_PYTHON = ROOT / ".venv" / "Scripts" / "python.exe"
 
 
 def run_script(script_name: str, *args: str) -> None:
@@ -17,15 +18,19 @@ def run_script(script_name: str, *args: str) -> None:
         raise SystemExit(f"ファイルが見つかりません: {script_path}")
 
     old_argv = sys.argv[:]
+    old_executable = sys.executable
     old_cwd = Path.cwd()
     try:
         os.chdir(ROOT)
+        if PROJECT_PYTHON.exists():
+            sys.executable = str(PROJECT_PYTHON)
         sys.argv = [str(script_path), *args]
         print()
         print(">>> " + " ".join(sys.argv))
         runpy.run_path(str(script_path), run_name="__main__")
     finally:
         sys.argv = old_argv
+        sys.executable = old_executable
         os.chdir(old_cwd)
 
 
@@ -159,12 +164,16 @@ def dispatch_script_mode() -> bool:
         raise SystemExit(f"ファイルが見つかりません: {script_path}")
 
     old_argv = sys.argv[:]
+    old_executable = sys.executable
     try:
         os.chdir(ROOT)
+        if PROJECT_PYTHON.exists():
+            sys.executable = str(PROJECT_PYTHON)
         sys.argv = [str(script_path), *old_argv[2:]]
         runpy.run_path(str(script_path), run_name="__main__")
     finally:
         sys.argv = old_argv
+        sys.executable = old_executable
     return True
 
 
