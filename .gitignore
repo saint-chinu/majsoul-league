@@ -4,6 +4,10 @@ captures/
 records_raw/
 __pycache__/
 *.pyc
+build/
+dist/
+*.spec
+*.exe
 *_backup.csv
 *_backup_*.csv
 admin_paifu_ids_season*.csv
