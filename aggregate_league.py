@@ -1,6 +1,7 @@
 from pathlib import Path
 from collections import defaultdict, Counter
 from dataclasses import dataclass, field
+from functools import lru_cache
 import csv
 import re
 
@@ -45,6 +46,9 @@ class PlayerStats:
     houjuu_point_sum: int = 0
     called: int = 0
     riichi: int = 0
+    riichi_miss: int = 0
+    bad_shape_riichi: int = 0
+    top_riichi: int = 0
     final_points: list = field(default_factory=list)
     yakuman_count: int = 0
     yakuman_names: Counter = field(default_factory=Counter)
@@ -352,13 +356,60 @@ def shanten_normal(counts):
     walk(counts[:], 0, 0, 0, 0)
     return best
 
-def shanten(tiles):
-    counts = tile_counts(tiles)
+@lru_cache(maxsize=None)
+def shanten_from_counts(counts_key):
+    counts = list(counts_key)
     return min(
         shanten_normal(counts),
         shanten_chiitoi(counts),
         shanten_kokushi(counts),
     )
+
+def shanten(tiles):
+    return shanten_from_counts(tuple(tile_counts(tiles)))
+
+ALL_TILES = [
+    *(f"{number}m" for number in range(1, 10)),
+    *(f"{number}p" for number in range(1, 10)),
+    *(f"{number}s" for number in range(1, 10)),
+    *(f"{number}z" for number in range(1, 8)),
+]
+
+def hand_key(tiles):
+    return tuple(sorted(normalize_tile(tile) for tile in tiles if tile))
+
+@lru_cache(maxsize=None)
+def winning_waits_from_key(key):
+    if len(key) % 3 != 1:
+        return []
+
+    counts = Counter(key)
+    waits = []
+    for tile in ALL_TILES:
+        if counts[tile] >= 4:
+            continue
+        if shanten(list(key) + [tile]) == -1:
+            waits.append(tile)
+    return waits
+
+def winning_waits(tiles):
+    return list(winning_waits_from_key(hand_key(tiles)))
+
+def full_wait_count(tiles, waits):
+    counts = Counter(normalize_tile(tile) for tile in tiles)
+    return sum(max(0, 4 - counts[wait]) for wait in waits)
+
+def is_bad_shape_riichi(tiles):
+    waits = winning_waits(tiles)
+    if not waits:
+        return False
+    return full_wait_count(tiles, waits) <= 4
+
+def has_top_score(scores, seat):
+    if len(scores) < 3 or seat not in {0, 1, 2}:
+        return False
+    score_list = [int(score) for score in scores[:3]]
+    return score_list[seat] == max(score_list)
 
 def next_dora(indicator):
     tile = normalize_tile(indicator)
@@ -584,11 +635,17 @@ def aggregate_game(uuid, stats, yakuman_details):
     opening_dora_indicators = []
     had_single_top = {0: False, 1: False, 2: False}
     kept_single_top = {0: False, 1: False, 2: False}
+    current_hands = {0: [], 1: [], 2: []}
+    current_scores = [35000, 35000, 35000]
+    riichi_winners = set()
 
     def observe_scores(scores):
+        nonlocal current_scores
+
         if len(scores) < 3:
             return
 
+        current_scores = [int(score) for score in scores[:3]]
         top = single_top_seat(scores)
         if top is None:
             for seat in [0, 1, 2]:
@@ -615,6 +672,7 @@ def aggregate_game(uuid, stats, yakuman_details):
             player_stats = stats[player_name]
             player_stats.rounds += 1
             player_stats.riichi += int(seat in riichi)
+            player_stats.riichi_miss += int(seat in riichi and seat not in riichi_winners)
             player_stats.called += int(seat in called)
             player_stats.houjuu += int(seat in houjuu)
 
@@ -645,9 +703,14 @@ def aggregate_game(uuid, stats, yakuman_details):
             flush_round()
             round_no += 1
             riichi = set()
+            riichi_winners = set()
             called = set()
             houjuu = set()
             opening_hands = {seat: new_round_tiles(msg, seat) for seat in [0, 1, 2]}
+            current_hands = {
+                seat: [normalize_tile(tile) for tile in new_round_tiles(msg, seat)]
+                for seat in [0, 1, 2]
+            }
             opening_kita = {0: 0, 1: 0, 2: 0}
             opening_done = set()
             opening_dora_indicators = new_round_dora_indicators(msg)
@@ -658,18 +721,36 @@ def aggregate_game(uuid, stats, yakuman_details):
             seat = getattr(msg, "seat", None)
             if seat is not None:
                 seat = int(seat)
+                discard_tile = getattr(msg, "tile", "")
+                remove_one_tile(current_hands[seat], discard_tile)
                 if seat not in opening_done:
-                    remove_one_tile(opening_hands[seat], getattr(msg, "tile", ""))
+                    remove_one_tile(opening_hands[seat], discard_tile)
                     record_opening_sample(seat)
-                if is_riichi_discard(msg):
+                if is_riichi_discard(msg) and seat not in riichi:
                     riichi.add(seat)
+                    player_name = seat_to_name.get(seat)
+                    if player_name:
+                        player_stats = stats[player_name]
+                        waits = [
+                            normalize_tile(getattr(info, "tile", ""))
+                            for info in repeated_field_values(msg, "tingpais")
+                            if getattr(info, "tile", "")
+                        ]
+                        if waits:
+                            bad_shape = full_wait_count(current_hands[seat], waits) <= 4
+                        else:
+                            bad_shape = is_bad_shape_riichi(current_hands[seat])
+                        player_stats.bad_shape_riichi += int(bad_shape)
+                        player_stats.top_riichi += int(has_top_score(current_scores, seat))
 
         elif record_name == ".lq.RecordDealTile":
             seat = getattr(msg, "seat", None)
             if seat is not None:
                 seat = int(seat)
+                tile = getattr(msg, "tile", "")
+                if tile:
+                    current_hands[seat].append(normalize_tile(tile))
                 if seat not in opening_done:
-                    tile = getattr(msg, "tile", "")
                     if tile:
                         opening_hands[seat].append(tile)
 
@@ -677,6 +758,7 @@ def aggregate_game(uuid, stats, yakuman_details):
             seat = getattr(msg, "seat", None)
             if seat is not None:
                 seat = int(seat)
+                remove_one_tile(current_hands[seat], "4z")
                 if seat not in opening_done:
                     remove_one_tile(opening_hands[seat], "4z")
                     opening_kita[seat] += 1
@@ -702,6 +784,8 @@ def aggregate_game(uuid, stats, yakuman_details):
 
             for hule in msg.hules:
                 seat = int(getattr(hule, "seat", -1))
+                if seat in riichi:
+                    riichi_winners.add(seat)
                 player_name = seat_to_name.get(seat)
                 if not player_name:
                     continue
@@ -763,6 +847,9 @@ def write_summary(stats):
             "average_opening_dora",
             "called_rate",
             "riichi_rate",
+            "riichi_miss_rate",
+            "bad_shape_riichi_rate",
+            "top_riichi_rate",
             "max_final_point",
             "min_final_point",
             "yakuman_count",
@@ -789,6 +876,9 @@ def write_summary(stats):
                 average(player_stats.opening_dora_sum, player_stats.opening_samples, 2),
                 percent(player_stats.called, player_stats.rounds),
                 percent(player_stats.riichi, player_stats.rounds),
+                percent(player_stats.riichi_miss, player_stats.riichi),
+                percent(player_stats.bad_shape_riichi, player_stats.riichi),
+                percent(player_stats.top_riichi, player_stats.riichi),
                 max(player_stats.final_points) if player_stats.final_points else "",
                 min(player_stats.final_points) if player_stats.final_points else "",
                 player_stats.yakuman_count,

@@ -39,6 +39,9 @@ LABELS = {
     "average_opening_dora": "平均配牌ドラ",
     "called_rate": "副露率",
     "riichi_rate": "立直率",
+    "riichi_miss_rate": "リーチ空振り率",
+    "bad_shape_riichi_rate": "愚形リーチ率",
+    "top_riichi_rate": "トップ目リーチ率",
     "max_final_point": "最高終了時持ち点",
     "min_final_point": "最低終了時持ち点",
     "yakuman_count": "役満回数",
@@ -69,6 +72,9 @@ MAIN_COLUMNS = [
     "average_opening_dora",
     "called_rate",
     "riichi_rate",
+    "riichi_miss_rate",
+    "bad_shape_riichi_rate",
+    "top_riichi_rate",
     "yakuman_count",
 ]
 
@@ -103,6 +109,9 @@ PLAYER_MAIN_COLUMNS = [
     "tsumo_rate",
     "called_rate",
     "riichi_rate",
+    "riichi_miss_rate",
+    "bad_shape_riichi_rate",
+    "top_riichi_rate",
     "yakuman_count",
 ]
 
@@ -121,6 +130,9 @@ PLAYER_SEASON_COLUMNS = [
     "tsumo_rate",
     "called_rate",
     "riichi_rate",
+    "riichi_miss_rate",
+    "bad_shape_riichi_rate",
+    "top_riichi_rate",
     "yakuman_count",
 ]
 
@@ -138,6 +150,9 @@ PLAYER_RANK_METRICS = [
     ("top_keep_rate", True, "高い方が上位"),
     ("called_rate", True, "高い順"),
     ("riichi_rate", True, "高い順"),
+    ("riichi_miss_rate", False, "低い方が上位"),
+    ("bad_shape_riichi_rate", False, "低い方が上位"),
+    ("top_riichi_rate", True, "高い順"),
     ("yakuman_count", True, "高い方が上位"),
 ]
 
@@ -826,6 +841,9 @@ def aggregate_uuids(uuids: set[str]) -> tuple[list[dict[str, str]], list[dict[st
                 ),
                 "called_rate": percent(player_stats.called, player_stats.rounds),
                 "riichi_rate": percent(player_stats.riichi, player_stats.rounds),
+                "riichi_miss_rate": percent(player_stats.riichi_miss, player_stats.riichi),
+                "bad_shape_riichi_rate": percent(player_stats.bad_shape_riichi, player_stats.riichi),
+                "top_riichi_rate": percent(player_stats.top_riichi, player_stats.riichi),
                 "max_final_point": str(max(player_stats.final_points) if player_stats.final_points else ""),
                 "min_final_point": str(min(player_stats.final_points) if player_stats.final_points else ""),
                 "yakuman_count": str(player_stats.yakuman_count),
