@@ -42,6 +42,8 @@ class PlayerStats:
     hu: int = 0
     tsumo: int = 0
     hu_point_sum: int = 0
+    called_hu: int = 0
+    called_hu_point_sum: int = 0
     open_tanyao_hu: int = 0
     chiitoi_hu: int = 0
     honitsu_hu: int = 0
@@ -801,7 +803,11 @@ def aggregate_game(uuid, stats, yakuman_details):
 
                 player_stats = stats[player_name]
                 player_stats.hu += 1
-                player_stats.hu_point_sum += hule_income(msg, hule)
+                income = hule_income(msg, hule)
+                player_stats.hu_point_sum += income
+                if list(getattr(hule, "ming", [])):
+                    player_stats.called_hu += 1
+                    player_stats.called_hu_point_sum += income
                 fan_ids = hule_fan_ids(hule)
                 player_stats.open_tanyao_hu += int(12 in fan_ids and bool(list(getattr(hule, "ming", []))))
                 player_stats.chiitoi_hu += int(25 in fan_ids)
@@ -852,6 +858,7 @@ def write_summary(stats):
             "average_rank",
             "rounds",
             "average_hu_point",
+            "average_called_hu_point",
             "hu_rate",
             "open_tanyao_hu_rate",
             "chiitoi_hu_rate",
@@ -885,6 +892,7 @@ def write_summary(stats):
                 average(player_stats.rank_sum, player_stats.games),
                 player_stats.rounds,
                 average(player_stats.hu_point_sum, player_stats.hu, 1),
+                average(player_stats.called_hu_point_sum, player_stats.called_hu, 1),
                 percent(player_stats.hu, player_stats.rounds),
                 percent(player_stats.open_tanyao_hu, player_stats.hu),
                 percent(player_stats.chiitoi_hu, player_stats.hu),
