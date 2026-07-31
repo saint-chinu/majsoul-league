@@ -42,6 +42,10 @@ class PlayerStats:
     hu: int = 0
     tsumo: int = 0
     hu_point_sum: int = 0
+    open_tanyao_hu: int = 0
+    chiitoi_hu: int = 0
+    honitsu_hu: int = 0
+    chinitsu_hu: int = 0
     houjuu: int = 0
     houjuu_point_sum: int = 0
     called: int = 0
@@ -567,6 +571,11 @@ def yakuman_names_from_hule(hule):
 
     return names
 
+def hule_fan_ids(hule):
+    if not hasattr(hule, "fans"):
+        return set()
+    return {int(getattr(fan, "id", 0)) for fan in hule.fans}
+
 def game_score(point, rank):
     return round(point / 1000 - RANK_SCORE_OFFSETS.get(rank, 0), 1)
 
@@ -793,6 +802,11 @@ def aggregate_game(uuid, stats, yakuman_details):
                 player_stats = stats[player_name]
                 player_stats.hu += 1
                 player_stats.hu_point_sum += hule_income(msg, hule)
+                fan_ids = hule_fan_ids(hule)
+                player_stats.open_tanyao_hu += int(12 in fan_ids and bool(list(getattr(hule, "ming", []))))
+                player_stats.chiitoi_hu += int(25 in fan_ids)
+                player_stats.honitsu_hu += int(27 in fan_ids)
+                player_stats.chinitsu_hu += int(29 in fan_ids)
 
                 if getattr(hule, "zimo", False):
                     player_stats.tsumo += 1
@@ -839,6 +853,10 @@ def write_summary(stats):
             "rounds",
             "average_hu_point",
             "hu_rate",
+            "open_tanyao_hu_rate",
+            "chiitoi_hu_rate",
+            "honitsu_hu_rate",
+            "chinitsu_hu_rate",
             "tsumo_rate",
             "houjuu_rate",
             "average_houjuu_point",
@@ -868,6 +886,10 @@ def write_summary(stats):
                 player_stats.rounds,
                 average(player_stats.hu_point_sum, player_stats.hu, 1),
                 percent(player_stats.hu, player_stats.rounds),
+                percent(player_stats.open_tanyao_hu, player_stats.hu),
+                percent(player_stats.chiitoi_hu, player_stats.hu),
+                percent(player_stats.honitsu_hu, player_stats.hu),
+                percent(player_stats.chinitsu_hu, player_stats.hu),
                 percent(player_stats.tsumo, player_stats.hu),
                 percent(player_stats.houjuu, player_stats.rounds),
                 average(player_stats.houjuu_point_sum, player_stats.houjuu, 1),
