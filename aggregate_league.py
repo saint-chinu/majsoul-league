@@ -420,6 +420,67 @@ def full_wait_count(tiles, waits):
     counts = Counter(normalize_tile(tile) for tile in tiles)
     return sum(max(0, 4 - counts[wait]) for wait in waits)
 
+def is_yaochu(tile):
+    tile = normalize_tile(tile)
+    return tile.endswith("z") or tile in {"1m", "9m", "1p", "9p", "1s", "9s"}
+
+def seat_wind_tile(seat, dealer):
+    if seat not in {0, 1, 2} or dealer not in {0, 1, 2}:
+        return None
+    return ["1z", "2z", "3z"][(seat - dealer) % 3]
+
+def round_wind_tile(chang):
+    if chang == 0:
+        return "1z"
+    if chang == 1:
+        return "2z"
+    return None
+
+def is_yakuhai(tile, seat, chang, dealer):
+    tile = normalize_tile(tile)
+    if tile in {"5z", "6z", "7z"}:
+        return True
+    return tile in {seat_wind_tile(seat, dealer), round_wind_tile(chang)}
+
+def is_shanpon_wait(tiles, waits):
+    counts = Counter(normalize_tile(tile) for tile in tiles)
+    normalized_waits = [normalize_tile(wait) for wait in waits]
+    return len(normalized_waits) == 2 and all(counts[wait] >= 2 for wait in normalized_waits)
+
+def is_tanki_wait(tiles, waits):
+    counts = Counter(normalize_tile(tile) for tile in tiles)
+    normalized_waits = [normalize_tile(wait) for wait in waits]
+    return len(normalized_waits) == 1 and counts[normalized_waits[0]] == 1
+
+def is_bad_shape_exception(tiles, waits, seat, chang, dealer):
+    normalized_waits = [normalize_tile(wait) for wait in waits if wait]
+    if not normalized_waits:
+        return False
+
+    if is_shanpon_wait(tiles, normalized_waits):
+        return all(is_yaochu(wait) for wait in normalized_waits) or any(
+            is_yakuhai(wait, seat, chang, dealer) for wait in normalized_waits
+        )
+
+    if is_tanki_wait(tiles, normalized_waits):
+        wait = normalized_waits[0]
+        return wait.endswith("z") or wait.endswith("m")
+
+    return False
+
+def should_count_bad_shape_riichi(tiles, waits, seat, chang, dealer):
+    if not waits:
+        waits = winning_waits(tiles)
+    if not waits:
+        return False
+    return full_wait_count(tiles, waits) <= 4 and not is_bad_shape_exception(
+        tiles,
+        waits,
+        seat,
+        chang,
+        dealer,
+    )
+
 def is_bad_shape_riichi(tiles):
     waits = winning_waits(tiles)
     if not waits:
@@ -674,6 +735,8 @@ def aggregate_game(uuid, stats, yakuman_details):
     riichi_winners = set()
     first_tenpai_seat = None
     round_start_scores = [35000, 35000, 35000]
+    current_chang = 0
+    current_dealer = 0
 
     def observe_scores(scores):
         nonlocal current_scores
@@ -770,6 +833,8 @@ def aggregate_game(uuid, stats, yakuman_details):
         if record_name == ".lq.RecordNewRound":
             flush_round()
             round_no += 1
+            current_chang = int(getattr(msg, "chang", 0))
+            current_dealer = int(getattr(msg, "ju", 0))
             riichi = set()
             riichi_winners = set()
             called = set()
@@ -808,10 +873,13 @@ def aggregate_game(uuid, stats, yakuman_details):
                             for info in repeated_field_values(msg, "tingpais")
                             if getattr(info, "tile", "")
                         ]
-                        if waits:
-                            bad_shape = full_wait_count(current_hands[seat], waits) <= 4
-                        else:
-                            bad_shape = is_bad_shape_riichi(current_hands[seat])
+                        bad_shape = should_count_bad_shape_riichi(
+                            current_hands[seat],
+                            waits,
+                            seat,
+                            current_chang,
+                            current_dealer,
+                        )
                         player_stats.bad_shape_riichi += int(bad_shape)
                         player_stats.top_riichi += int(has_top_score(current_scores, seat))
 

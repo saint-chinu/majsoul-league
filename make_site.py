@@ -62,6 +62,43 @@ LABELS = {
 }
 
 
+METRIC_DESCRIPTIONS = {
+    "games": "集計対象になった半荘数。",
+    "earned_score": "最終持ち点と順位点を合わせた獲得スコア。",
+    "average_rank": "半荘終了時順位の平均。低いほど良い。",
+    "rank1_rate": "半荘で1位を取った割合。",
+    "rank2_rate": "半荘で2位を取った割合。",
+    "rank3_rate": "半荘で3位になった割合。",
+    "last_avoid_rate": "1位または2位で終えた割合。",
+    "top_keep_rate": "単独トップになった半荘を、そのまま1位で終えた割合。",
+    "first_tenpai_rate": "各局で最初にテンパイした割合。",
+    "top_stay_rate": "各局開始時にトップ目だった割合。",
+    "second_stay_rate": "各局開始時に2位だった割合。",
+    "last_stay_rate": "各局開始時にラス目だった割合。",
+    "rounds": "集計対象の参加局数。",
+    "hu_rate": "参加局のうち、自分が和了した割合。",
+    "average_hu_point": "自分のツモ・ロンで実際に増えた点数の平均。",
+    "average_called_hu_point": "鳴いた手で和了した時の平均獲得点。",
+    "tsumo_rate": "和了のうち、ツモ和了だった割合。",
+    "houjuu_rate": "参加局のうち、自分が放銃した割合。",
+    "average_houjuu_point": "放銃時に支払った点数の平均。",
+    "called_rate": "参加局のうち、副露した割合。",
+    "riichi_rate": "参加局のうち、リーチした割合。",
+    "riichi_miss_rate": "リーチした局で、自分が和了できなかった割合。",
+    "bad_shape_riichi_rate": "リーチのうち、待ち枚数4枚以下の割合。両ヤオチュウ・役牌シャンポン、字牌・萬子単騎は除外。",
+    "top_riichi_rate": "リーチ時点でトップ目だった割合。",
+    "open_tanyao_hu_rate": "和了のうち、喰いタンだった割合。",
+    "chiitoi_hu_rate": "和了のうち、七対子だった割合。",
+    "honitsu_hu_rate": "和了のうち、ホンイツだった割合。",
+    "chinitsu_hu_rate": "和了のうち、チンイツだった割合。",
+    "average_opening_shanten": "配牌から北を抜き切って1枚打牌した時点の平均シャンテン数。",
+    "average_opening_dora": "配牌時の平均ドラ枚数。北抜きと赤ドラも含む。",
+    "max_final_point": "半荘終了時持ち点の最高値。",
+    "min_final_point": "半荘終了時持ち点の最低値。",
+    "yakuman_count": "役満を和了した回数。ダブル役満は別役扱い。",
+}
+
+
 MAIN_COLUMNS = [
     "player",
     "games",
@@ -481,6 +518,35 @@ def split_tables(
             """
         )
     return f"<div class=\"split-tables\">{''.join(blocks)}</div>"
+
+
+def metric_description_table(columns: list[str]) -> str:
+    seen = set()
+    rows = []
+    for col in columns:
+        if col in seen or col in {"player", "season", "rank"}:
+            continue
+        seen.add(col)
+        description = METRIC_DESCRIPTIONS.get(col)
+        if not description:
+            continue
+        rows.append(
+            "<tr>"
+            f"<td class=\"name\">{esc(LABELS.get(col, col))}</td>"
+            f"<td>{esc(description)}</td>"
+            "</tr>"
+        )
+    if not rows:
+        return ""
+    return (
+        "<section class=\"metric-guide\">"
+        "<h3>集計項目の説明</h3>"
+        "<div class=\"table-wrap\">"
+        "<table><thead><tr><th>項目</th><th>説明</th></tr></thead>"
+        f"<tbody>{''.join(rows)}</tbody></table>"
+        "</div>"
+        "</section>"
+    )
 
 
 def read_team_members() -> dict[int, dict[str, list[str]]]:
@@ -1319,6 +1385,7 @@ def render_player_panel(
           ("和了・放銃・手役", PLAYER_WIN_COLUMNS),
         ],
       )}
+      {metric_description_table(PLAYER_RANK_COLUMNS + PLAYER_WIN_COLUMNS)}
 
       <h2>{esc(player)} シーズン別推移</h2>
       {split_tables(
@@ -1328,6 +1395,7 @@ def render_player_panel(
           ("和了・放銃・手役", PLAYER_SEASON_WIN_COLUMNS),
         ],
       )}
+      {metric_description_table(PLAYER_SEASON_RANK_COLUMNS + PLAYER_SEASON_WIN_COLUMNS)}
 
       <h2>{esc(player)} 項目別順位</h2>
       <div class="table-wrap">
@@ -1399,6 +1467,7 @@ def render_stats_panel(context: dict[str, object]) -> str:
         rank_by="earned_score",
         reverse=True,
       )}
+      {metric_description_table(MAIN_RANK_COLUMNS + MAIN_WIN_COLUMNS)}
 
       <h2>{esc(team_block_title)}</h2>
       {team_block}
@@ -1629,6 +1698,10 @@ def main() -> None:
     .subnote {{ margin: -4px 0 12px; color: var(--muted); }}
     .split-tables {{ display: grid; gap: 14px; }}
     .stat-table-panel h3 {{ margin: 0 0 8px; color: var(--accent); font-size: 15px; }}
+    .metric-guide {{ margin-top: 12px; }}
+    .metric-guide h3 {{ margin: 0 0 8px; color: var(--muted); font-size: 14px; }}
+    .metric-guide table {{ min-width: 680px; }}
+    .metric-guide td:last-child {{ text-align: left; white-space: normal; }}
     .generated-note {{ margin-top: 18px; font-size: 12px; }}
     footer {{ padding: 18px 32px 30px; border-top: 1px solid var(--line); color: var(--muted); font-size: 12px; }}
     @media (max-width: 920px) {{
