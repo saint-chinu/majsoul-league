@@ -207,6 +207,140 @@ PLAYER_RANK_METRICS = [
 ]
 
 
+MAIN_RANK_COLUMNS = [
+    "player",
+    "games",
+    "earned_score",
+    "average_rank",
+    "rank1_rate",
+    "rank2_rate",
+    "rank3_rate",
+    "last_avoid_rate",
+    "top_keep_rate",
+    "first_tenpai_rate",
+    "top_stay_rate",
+    "second_stay_rate",
+    "last_stay_rate",
+]
+
+
+MAIN_WIN_COLUMNS = [
+    "player",
+    "hu_rate",
+    "average_hu_point",
+    "average_called_hu_point",
+    "tsumo_rate",
+    "houjuu_rate",
+    "average_houjuu_point",
+    "called_rate",
+    "riichi_rate",
+    "riichi_miss_rate",
+    "bad_shape_riichi_rate",
+    "top_riichi_rate",
+    "open_tanyao_hu_rate",
+    "chiitoi_hu_rate",
+    "honitsu_hu_rate",
+    "chinitsu_hu_rate",
+    "yakuman_count",
+]
+
+
+DETAIL_RANK_COLUMNS = [
+    "player",
+    "rounds",
+    "top_keep_rate",
+    "first_tenpai_rate",
+    "top_stay_rate",
+    "second_stay_rate",
+    "last_stay_rate",
+    "max_final_point",
+    "min_final_point",
+]
+
+
+DETAIL_WIN_COLUMNS = [
+    "player",
+    "average_hu_point",
+    "average_called_hu_point",
+    "average_houjuu_point",
+    "average_opening_shanten",
+    "average_opening_dora",
+]
+
+
+PLAYER_RANK_COLUMNS = [
+    "player",
+    "games",
+    "earned_score",
+    "average_rank",
+    "rank1_rate",
+    "rank2_rate",
+    "rank3_rate",
+    "last_avoid_rate",
+    "top_keep_rate",
+    "first_tenpai_rate",
+    "top_stay_rate",
+    "second_stay_rate",
+    "last_stay_rate",
+]
+
+
+PLAYER_WIN_COLUMNS = [
+    "player",
+    "hu_rate",
+    "average_hu_point",
+    "average_called_hu_point",
+    "tsumo_rate",
+    "houjuu_rate",
+    "average_houjuu_point",
+    "called_rate",
+    "riichi_rate",
+    "riichi_miss_rate",
+    "bad_shape_riichi_rate",
+    "top_riichi_rate",
+    "open_tanyao_hu_rate",
+    "chiitoi_hu_rate",
+    "honitsu_hu_rate",
+    "chinitsu_hu_rate",
+    "yakuman_count",
+]
+
+
+PLAYER_SEASON_RANK_COLUMNS = [
+    "season",
+    "games",
+    "earned_score",
+    "average_rank",
+    "last_avoid_rate",
+    "top_keep_rate",
+    "first_tenpai_rate",
+    "top_stay_rate",
+    "second_stay_rate",
+    "last_stay_rate",
+]
+
+
+PLAYER_SEASON_WIN_COLUMNS = [
+    "season",
+    "hu_rate",
+    "average_hu_point",
+    "average_called_hu_point",
+    "tsumo_rate",
+    "houjuu_rate",
+    "average_houjuu_point",
+    "called_rate",
+    "riichi_rate",
+    "riichi_miss_rate",
+    "bad_shape_riichi_rate",
+    "top_riichi_rate",
+    "open_tanyao_hu_rate",
+    "chiitoi_hu_rate",
+    "honitsu_hu_rate",
+    "chinitsu_hu_rate",
+    "yakuman_count",
+]
+
+
 MANUAL_PLAYER_ANALYSIS: dict[str, tuple[str, str, str]] = {
     "流れ者金融": (
         "累計トップの支配型。平均順位1.83、1位率42.33%、ラス回避率74.49%で、勝つ半荘を多く作りながら沈む半荘をかなり抑えている。和了率32.56%と副露率35.55%が両方高く、門前だけで待つのではなく、鳴きで局速度を作って相手の手を未完成のまま潰す場面が多い。平均和了点は極端に高いわけではないが、放銃平均打点が最も軽い水準なので、和了と失点の差分でじわじわ勝つ。トップ目リーチ率42.52%も高く、リード後に守り切るだけでなく、さらに局を取りに行く意思が強い。",
@@ -326,6 +460,27 @@ def table(
             cells.append(f"<td class=\"{cls}\">{value}</td>")
         body_rows.append("<tr>" + "".join(cells) + "</tr>")
     return f"<table><thead><tr>{head}</tr></thead><tbody>{''.join(body_rows)}</tbody></table>"
+
+
+def split_tables(
+    rows: list[dict[str, str]],
+    groups: list[tuple[str, list[str]]],
+    rank_by: str | None = None,
+    reverse: bool = False,
+) -> str:
+    blocks = []
+    for title, columns in groups:
+        blocks.append(
+            f"""
+            <section class="stat-table-panel">
+              <h3>{esc(title)}</h3>
+              <div class="table-wrap">
+                {table(rows, columns, rank_by=rank_by, reverse=reverse)}
+              </div>
+            </section>
+            """
+        )
+    return f"<div class=\"split-tables\">{''.join(blocks)}</div>"
 
 
 def read_team_members() -> dict[int, dict[str, list[str]]]:
@@ -1157,14 +1312,22 @@ def render_player_panel(
       </section>
 
       <h2>{esc(player)} 累計成績</h2>
-      <div class="table-wrap">
-        {table([cumulative_row], PLAYER_MAIN_COLUMNS)}
-      </div>
+      {split_tables(
+        [cumulative_row],
+        [
+          ("順位・立ち位置", PLAYER_RANK_COLUMNS),
+          ("和了・放銃・手役", PLAYER_WIN_COLUMNS),
+        ],
+      )}
 
       <h2>{esc(player)} シーズン別推移</h2>
-      <div class="table-wrap">
-        {table(season_rows, PLAYER_SEASON_COLUMNS)}
-      </div>
+      {split_tables(
+        season_rows,
+        [
+          ("順位・立ち位置", PLAYER_SEASON_RANK_COLUMNS),
+          ("和了・放銃・手役", PLAYER_SEASON_WIN_COLUMNS),
+        ],
+      )}
 
       <h2>{esc(player)} 項目別順位</h2>
       <div class="table-wrap">
@@ -1227,9 +1390,15 @@ def render_stats_panel(context: dict[str, object]) -> str:
       </section>
 
       <h2>{esc(context['label'])} 個人成績ランキング</h2>
-      <div class="table-wrap">
-        {table(rows, MAIN_COLUMNS, rank_by="earned_score", reverse=True)}
-      </div>
+      {split_tables(
+        rows,
+        [
+          ("順位・立ち位置", MAIN_RANK_COLUMNS),
+          ("和了・放銃・手役", MAIN_WIN_COLUMNS),
+        ],
+        rank_by="earned_score",
+        reverse=True,
+      )}
 
       <h2>{esc(team_block_title)}</h2>
       {team_block}
@@ -1256,9 +1425,14 @@ def render_stats_panel(context: dict[str, object]) -> str:
       </section>
 
       <h2>詳細スタッツ</h2>
-      <div class="table-wrap">
-        {table(rows, DETAIL_COLUMNS, rank_by="average_rank")}
-      </div>
+      {split_tables(
+        rows,
+        [
+          ("順位・立ち位置", DETAIL_RANK_COLUMNS),
+          ("和了・放銃・その他", DETAIL_WIN_COLUMNS),
+        ],
+        rank_by="average_rank",
+      )}
 
       <h2>許されない相関図</h2>
       <p class="subnote">矢印は「左のプレイヤーが右のプレイヤーへ、同卓時の最終持ち点差でネット献上」。ラベルは 献上点棒 / 直接対戦数。</p>
@@ -1453,6 +1627,8 @@ def main() -> None:
     .victims div {{ font-size: 12px; }}
     .mermaid {{ border: 1px solid var(--line); border-radius: 8px; padding: 14px; overflow: auto; background: #fff; margin: 8px 0 16px; }}
     .subnote {{ margin: -4px 0 12px; color: var(--muted); }}
+    .split-tables {{ display: grid; gap: 14px; }}
+    .stat-table-panel h3 {{ margin: 0 0 8px; color: var(--accent); font-size: 15px; }}
     .generated-note {{ margin-top: 18px; font-size: 12px; }}
     footer {{ padding: 18px 32px 30px; border-top: 1px solid var(--line); color: var(--muted); font-size: 12px; }}
     @media (max-width: 920px) {{
