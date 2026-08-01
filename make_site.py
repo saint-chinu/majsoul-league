@@ -47,10 +47,15 @@ LABELS = {
     "average_opening_shanten": "平均配牌シャンテン",
     "average_opening_dora": "平均配牌ドラ",
     "called_rate": "副露率",
+    "riichi": "リーチ数",
     "riichi_rate": "立直率",
     "riichi_miss_rate": "リーチ空振り率",
     "bad_shape_riichi_rate": "愚形リーチ率",
     "top_riichi_rate": "トップ目リーチ率",
+    "riichi_quality_score": "リーチ質スコア",
+    "riichi_recommended_rate": "リーチ可率",
+    "riichi_not_recommended_rate": "非推奨リーチ率",
+    "riichi_quality_top_category": "最多リーチ分類",
     "max_final_point": "最高終了時持ち点",
     "min_final_point": "最低終了時持ち点",
     "yakuman_count": "役満回数",
@@ -87,6 +92,10 @@ METRIC_DESCRIPTIONS = {
     "riichi_miss_rate": "リーチした局で、自分が和了できなかった割合。",
     "bad_shape_riichi_rate": "リーチのうち、待ち枚数4枚以下の割合。両ヤオチュウ・役牌シャンポン、字牌・萬子単騎は除外。",
     "top_riichi_rate": "リーチ時点でトップ目だった割合。",
+    "riichi_quality_score": "リーチ待ちを良い順に14点から1点で採点した平均値。",
+    "riichi_recommended_rate": "分類上、リーチしてよい待ちに入った割合。",
+    "riichi_not_recommended_rate": "分類上、リーチすべきでない待ちに入った割合。",
+    "riichi_quality_top_category": "そのプレイヤーで最も多かったリーチ待ち分類。",
     "open_tanyao_hu_rate": "和了のうち、喰いタンだった割合。",
     "chiitoi_hu_rate": "和了のうち、七対子だった割合。",
     "honitsu_hu_rate": "和了のうち、ホンイツだった割合。",
@@ -282,6 +291,16 @@ MAIN_WIN_COLUMNS = [
 ]
 
 
+RIICHI_QUALITY_COLUMNS = [
+    "player",
+    "riichi",
+    "riichi_quality_score",
+    "riichi_recommended_rate",
+    "riichi_not_recommended_rate",
+    "riichi_quality_top_category",
+]
+
+
 DETAIL_RANK_COLUMNS = [
     "player",
     "rounds",
@@ -340,6 +359,17 @@ PLAYER_WIN_COLUMNS = [
     "honitsu_hu_rate",
     "chinitsu_hu_rate",
     "yakuman_count",
+]
+
+
+PLAYER_RIICHI_QUALITY_COLUMNS = [
+    "player",
+    "season",
+    "riichi",
+    "riichi_quality_score",
+    "riichi_recommended_rate",
+    "riichi_not_recommended_rate",
+    "riichi_quality_top_category",
 ]
 
 
@@ -453,6 +483,8 @@ def metric_value(row: dict[str, str], col: str) -> float:
 def format_cell_value(col: str, value: str | int | float) -> str:
     if col == "earned_score":
         return number(value, 1)
+    if col == "riichi_quality_score":
+        return number(value, 2)
     if col in {"average_opening_shanten", "average_opening_dora"}:
         return number(value, 2)
     if col in {"average_hu_point", "average_houjuu_point", "max_final_point", "min_final_point"}:
@@ -497,6 +529,43 @@ def table(
             cells.append(f"<td class=\"{cls}\">{value}</td>")
         body_rows.append("<tr>" + "".join(cells) + "</tr>")
     return f"<table><thead><tr>{head}</tr></thead><tbody>{''.join(body_rows)}</tbody></table>"
+
+
+def riichi_quality_table(rows: list[dict[str, str]]) -> str:
+    ordered = sorted(
+        rows,
+        key=lambda row: metric_value(row, "riichi_quality_score"),
+        reverse=True,
+    )
+    return table(ordered, RIICHI_QUALITY_COLUMNS, rank_by="riichi_quality_score", reverse=True)
+
+
+def riichi_quality_definition_table() -> str:
+    try:
+        from aggregate_league import RIICHI_QUALITY_CATEGORIES, RIICHI_QUALITY_SCORE
+    except Exception:
+        return ""
+
+    rows = []
+    for key, label, recommended in RIICHI_QUALITY_CATEGORIES:
+        rows.append(
+            {
+                "score": str(RIICHI_QUALITY_SCORE[key]),
+                "category": label,
+                "judgement": "リーチ可" if recommended else "非推奨",
+            }
+        )
+
+    head = "<th>スコア</th><th>分類</th><th>判定</th>"
+    body = "".join(
+        "<tr>"
+        f"<td>{esc(row['score'])}</td>"
+        f"<td class=\"name\">{esc(row['category'])}</td>"
+        f"<td>{esc(row['judgement'])}</td>"
+        "</tr>"
+        for row in rows
+    )
+    return f"<div class=\"table-wrap quality-def\"><table><thead><tr>{head}</tr></thead><tbody>{body}</tbody></table></div>"
 
 
 def split_tables(
@@ -1065,7 +1134,14 @@ def read_season_paifu_rows() -> list[dict[str, str]]:
 
 def aggregate_uuids(uuids: set[str]) -> tuple[list[dict[str, str]], list[dict[str, str]], list[dict[str, str]]]:
     try:
-        from aggregate_league import PlayerStats, aggregate_game, average, percent
+        from aggregate_league import (
+            PlayerStats,
+            aggregate_game,
+            average,
+            percent,
+            riichi_quality_recommended_count,
+            riichi_quality_top_label,
+        )
     except Exception as exc:
         raise SystemExit(f"aggregate_league.py を読み込めません: {exc}") from exc
 
@@ -1120,10 +1196,23 @@ def aggregate_uuids(uuids: set[str]) -> tuple[list[dict[str, str]], list[dict[st
                     average(player_stats.opening_dora_sum, player_stats.opening_samples, 2)
                 ),
                 "called_rate": percent(player_stats.called, player_stats.rounds),
+                "riichi": str(player_stats.riichi),
                 "riichi_rate": percent(player_stats.riichi, player_stats.rounds),
                 "riichi_miss_rate": percent(player_stats.riichi_miss, player_stats.riichi),
                 "bad_shape_riichi_rate": percent(player_stats.bad_shape_riichi, player_stats.riichi),
                 "top_riichi_rate": percent(player_stats.top_riichi, player_stats.riichi),
+                "riichi_quality_score": str(
+                    average(player_stats.riichi_quality_score_sum, player_stats.riichi, 2)
+                ),
+                "riichi_recommended_rate": percent(
+                    riichi_quality_recommended_count(player_stats),
+                    player_stats.riichi,
+                ),
+                "riichi_not_recommended_rate": percent(
+                    player_stats.riichi - riichi_quality_recommended_count(player_stats),
+                    player_stats.riichi,
+                ),
+                "riichi_quality_top_category": riichi_quality_top_label(player_stats),
                 "max_final_point": str(max(player_stats.final_points) if player_stats.final_points else ""),
                 "min_final_point": str(min(player_stats.final_points) if player_stats.final_points else ""),
                 "yakuman_count": str(player_stats.yakuman_count),
@@ -1387,6 +1476,11 @@ def render_player_panel(
       )}
       {metric_description_table(PLAYER_RANK_COLUMNS + PLAYER_WIN_COLUMNS)}
 
+      <h2>{esc(player)} リーチの質</h2>
+      <div class="table-wrap">
+        {table([cumulative_row], RIICHI_QUALITY_COLUMNS)}
+      </div>
+
       <h2>{esc(player)} シーズン別推移</h2>
       {split_tables(
         season_rows,
@@ -1396,6 +1490,9 @@ def render_player_panel(
         ],
       )}
       {metric_description_table(PLAYER_SEASON_RANK_COLUMNS + PLAYER_SEASON_WIN_COLUMNS)}
+      <div class="table-wrap">
+        {table(season_rows, PLAYER_RIICHI_QUALITY_COLUMNS)}
+      </div>
 
       <h2>{esc(player)} 項目別順位</h2>
       <div class="table-wrap">
@@ -1468,6 +1565,12 @@ def render_stats_panel(context: dict[str, object]) -> str:
         reverse=True,
       )}
       {metric_description_table(MAIN_RANK_COLUMNS + MAIN_WIN_COLUMNS)}
+
+      <h2>{esc(context['label'])} リーチの質</h2>
+      <div class="table-wrap">
+        {riichi_quality_table(rows)}
+      </div>
+      {riichi_quality_definition_table()}
 
       <h2>{esc(team_block_title)}</h2>
       {team_block}

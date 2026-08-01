@@ -32,6 +32,35 @@ YAKUMAN_NAMES = {
     51: "地和",
 }
 
+RIICHI_QUALITY_CATEGORIES = [
+    ("ryanmen_5plus", "リャンメン以上・見た目5枚以上", True),
+    ("tanki_1_cut_honor_manzu", "1枚切れ非役牌字牌・萬子単騎", True),
+    ("tanki_2_cut_honor_manzu", "2枚切れ字牌・萬子単騎", True),
+    ("tanki_0_cut_honor_manzu", "0枚切れ非役牌字牌・萬子単騎", True),
+    ("yaochu_shanpon", "ヤオチュウ牌シャンポン", True),
+    ("yakuhai_simple_shanpon", "役牌＋3～7数牌シャンポン", True),
+    ("kanchan_2_8", "2・8待ちカンチャン", True),
+    ("dora_bad_shape", "ドラ絡み愚形", True),
+    ("bad_kanchan_penchan_3_7", "3～7カンチャン・ペンチャン", False),
+    ("bad_simple_shanpon", "3～7シャンポン", False),
+    ("bad_bulge_shanpon", "中ぶくれ・外ぶくれシャンポン", False),
+    ("bad_simple_tanki", "3～7単騎（ドラなし）", False),
+    ("bad_two_or_less", "残り2枚以下の待ち", False),
+    ("bad_bulge_tanki", "中ぶくれ単騎", False),
+    ("worst_double_bulge_shanpon", "ダブル中ぶくれ・外ぶくれシャンポン", False),
+]
+RIICHI_QUALITY_SCORE = {
+    key: len(RIICHI_QUALITY_CATEGORIES) - index
+    for index, (key, _label, _recommended) in enumerate(RIICHI_QUALITY_CATEGORIES)
+}
+RIICHI_QUALITY_LABELS = {
+    key: label for key, label, _recommended in RIICHI_QUALITY_CATEGORIES
+}
+RIICHI_QUALITY_RECOMMENDED = {
+    key: recommended for key, _label, recommended in RIICHI_QUALITY_CATEGORIES
+}
+RIICHI_QUALITY_DEFAULT = "bad_two_or_less"
+
 @dataclass
 class PlayerStats:
     games: int = 0
@@ -55,6 +84,8 @@ class PlayerStats:
     riichi_miss: int = 0
     bad_shape_riichi: int = 0
     top_riichi: int = 0
+    riichi_quality_score_sum: int = 0
+    riichi_quality_counts: Counter = field(default_factory=Counter)
     final_points: list = field(default_factory=list)
     yakuman_count: int = 0
     yakuman_names: Counter = field(default_factory=Counter)
@@ -420,6 +451,24 @@ def full_wait_count(tiles, waits):
     counts = Counter(normalize_tile(tile) for tile in tiles)
     return sum(max(0, 4 - counts[wait]) for wait in waits)
 
+def visible_wait_count(tiles, waits, visible_counts):
+    counts = Counter(normalize_tile(tile) for tile in tiles)
+    return sum(max(0, 4 - counts[wait] - visible_counts[wait]) for wait in waits)
+
+def tile_number(tile):
+    tile = normalize_tile(tile)
+    if len(tile) != 2 or tile[1] not in {"m", "p", "s"}:
+        return None
+    return int(tile[0])
+
+def is_suited(tile):
+    tile = normalize_tile(tile)
+    return len(tile) == 2 and tile[1] in {"m", "p", "s"}
+
+def is_simple_number(tile):
+    number = tile_number(tile)
+    return number is not None and 3 <= number <= 7
+
 def is_yaochu(tile):
     tile = normalize_tile(tile)
     return tile.endswith("z") or tile in {"1m", "9m", "1p", "9p", "1s", "9s"}
@@ -451,6 +500,137 @@ def is_tanki_wait(tiles, waits):
     counts = Counter(normalize_tile(tile) for tile in tiles)
     normalized_waits = [normalize_tile(wait) for wait in waits]
     return len(normalized_waits) == 1 and counts[normalized_waits[0]] == 1
+
+def is_penchan_wait(tiles, waits):
+    if len(waits) != 1:
+        return False
+    wait = normalize_tile(waits[0])
+    number = tile_number(wait)
+    if number not in {3, 7}:
+        return False
+    counts = Counter(normalize_tile(tile) for tile in tiles)
+    suit = wait[1]
+    if number == 3:
+        return counts[f"1{suit}"] > 0 and counts[f"2{suit}"] > 0
+    return counts[f"8{suit}"] > 0 and counts[f"9{suit}"] > 0
+
+def is_kanchan_wait(tiles, waits):
+    if len(waits) != 1:
+        return False
+    wait = normalize_tile(waits[0])
+    number = tile_number(wait)
+    if number is None or number <= 1 or number >= 9:
+        return False
+    counts = Counter(normalize_tile(tile) for tile in tiles)
+    return counts[f"{number - 1}{wait[1]}"] > 0 and counts[f"{number + 1}{wait[1]}"] > 0
+
+def has_bulge_shape(tiles, wait):
+    wait = normalize_tile(wait)
+    number = tile_number(wait)
+    if number is None:
+        return False
+    counts = Counter(normalize_tile(tile) for tile in tiles)
+    suit = wait[1]
+    left = f"{number - 1}{suit}" if number > 1 else None
+    right = f"{number + 1}{suit}" if number < 9 else None
+    return (
+        counts[wait] >= 1
+        and left is not None
+        and right is not None
+        and counts[left] > 0
+        and counts[right] > 0
+    )
+
+def is_bulge_shanpon(tiles, waits):
+    if not is_shanpon_wait(tiles, waits):
+        return False
+    return any(has_bulge_shape(tiles, wait) for wait in waits)
+
+def is_double_bulge_shanpon(tiles, waits):
+    if not is_shanpon_wait(tiles, waits):
+        return False
+    return all(has_bulge_shape(tiles, wait) for wait in waits)
+
+def riichi_dora_tiles(dora_indicators):
+    return Counter(next_dora(tile) for tile in dora_indicators)
+
+def tile_is_dora(tile, dora_tiles):
+    if not tile:
+        return False
+    return tile.startswith("0") or dora_tiles[normalize_tile(tile)] > 0
+
+def riichi_has_dora_bad_shape(tiles, waits, dora_indicators):
+    if len(waits) > 2 or is_double_bulge_shanpon(tiles, waits) or any(
+        has_bulge_shape(tiles, wait) for wait in waits
+    ):
+        return False
+    dora_tiles = riichi_dora_tiles(dora_indicators)
+    return any(tile_is_dora(tile, dora_tiles) for tile in list(tiles) + list(waits))
+
+def classify_riichi_quality(tiles, waits, visible_counts, seat, chang, dealer, dora_indicators):
+    if not waits:
+        waits = winning_waits(tiles)
+    waits = [normalize_tile(wait) for wait in waits if wait]
+    if not waits:
+        return RIICHI_QUALITY_DEFAULT
+
+    visible_remaining = visible_wait_count(tiles, waits, visible_counts)
+    counts = Counter(normalize_tile(tile) for tile in tiles)
+    is_shanpon = is_shanpon_wait(tiles, waits)
+    is_tanki = is_tanki_wait(tiles, waits)
+    wait = waits[0] if len(waits) == 1 else None
+    dora_tiles = riichi_dora_tiles(dora_indicators)
+
+    if len(waits) >= 2 and visible_remaining >= 5 and not is_shanpon:
+        return "ryanmen_5plus"
+
+    if is_tanki and wait:
+        visible_cut = visible_counts[wait]
+        honor_or_manzu = wait.endswith("z") or wait.endswith("m")
+        non_yakuhai = not is_yakuhai(wait, seat, chang, dealer)
+        if honor_or_manzu and non_yakuhai and visible_cut == 1:
+            return "tanki_1_cut_honor_manzu"
+        if honor_or_manzu and visible_cut == 2:
+            return "tanki_2_cut_honor_manzu"
+        if honor_or_manzu and non_yakuhai and visible_cut == 0:
+            return "tanki_0_cut_honor_manzu"
+
+    if is_shanpon:
+        if is_double_bulge_shanpon(tiles, waits):
+            return "worst_double_bulge_shanpon"
+        if all(is_yaochu(wait_tile) for wait_tile in waits):
+            return "yaochu_shanpon"
+        if any(is_yakuhai(wait_tile, seat, chang, dealer) for wait_tile in waits) and any(
+            is_simple_number(wait_tile) for wait_tile in waits
+        ):
+            return "yakuhai_simple_shanpon"
+
+    if wait and is_kanchan_wait(tiles, waits) and tile_number(wait) in {2, 8}:
+        return "kanchan_2_8"
+
+    if riichi_has_dora_bad_shape(tiles, waits, dora_indicators):
+        return "dora_bad_shape"
+
+    if wait and (is_kanchan_wait(tiles, waits) or is_penchan_wait(tiles, waits)) and is_simple_number(wait):
+        return "bad_kanchan_penchan_3_7"
+
+    if is_bulge_shanpon(tiles, waits):
+        return "bad_bulge_shanpon"
+
+    if is_shanpon and any(is_simple_number(wait_tile) for wait_tile in waits):
+        return "bad_simple_shanpon"
+
+    if is_tanki and wait and has_bulge_shape(tiles, wait):
+        return "bad_bulge_tanki"
+
+    if is_tanki and wait and is_simple_number(wait) and not tile_is_dora(wait, dora_tiles):
+        return "bad_simple_tanki"
+
+    if visible_remaining <= 2:
+        return "bad_two_or_less"
+
+    return RIICHI_QUALITY_DEFAULT
+
 
 def is_bad_shape_exception(tiles, waits, seat, chang, dealer):
     normalized_waits = [normalize_tile(wait) for wait in waits if wait]
@@ -486,6 +666,22 @@ def is_bad_shape_riichi(tiles):
     if not waits:
         return False
     return full_wait_count(tiles, waits) <= 4
+
+def riichi_quality_recommended_count(player_stats):
+    return sum(
+        count
+        for key, count in player_stats.riichi_quality_counts.items()
+        if RIICHI_QUALITY_RECOMMENDED.get(key, False)
+    )
+
+def riichi_quality_top_label(player_stats):
+    if not player_stats.riichi_quality_counts:
+        return ""
+    key, _count = max(
+        player_stats.riichi_quality_counts.items(),
+        key=lambda item: (item[1], RIICHI_QUALITY_SCORE.get(item[0], 0)),
+    )
+    return RIICHI_QUALITY_LABELS.get(key, key)
 
 def has_top_score(scores, seat):
     if len(scores) < 3 or seat not in {0, 1, 2}:
@@ -727,11 +923,13 @@ def aggregate_game(uuid, stats, yakuman_details):
     opening_kita = {0: 0, 1: 0, 2: 0}
     opening_done = set()
     opening_dora_indicators = []
+    current_dora_indicators = []
     had_single_top = {0: False, 1: False, 2: False}
     kept_single_top = {0: False, 1: False, 2: False}
     current_hands = {0: [], 1: [], 2: []}
     current_open_melds = {0: 0, 1: 0, 2: 0}
     current_scores = [35000, 35000, 35000]
+    visible_counts = Counter()
     riichi_winners = set()
     first_tenpai_seat = None
     round_start_scores = [35000, 35000, 35000]
@@ -846,9 +1044,11 @@ def aggregate_game(uuid, stats, yakuman_details):
                 for seat in [0, 1, 2]
             }
             current_open_melds = {0: 0, 1: 0, 2: 0}
+            visible_counts = Counter()
             opening_kita = {0: 0, 1: 0, 2: 0}
             opening_done = set()
             opening_dora_indicators = new_round_dora_indicators(msg)
+            current_dora_indicators = list(opening_dora_indicators)
             if msg is not None and hasattr(msg, "scores"):
                 round_start_scores = [int(score) for score in list(msg.scores)[:3]]
                 observe_scores(list(msg.scores))
@@ -859,6 +1059,8 @@ def aggregate_game(uuid, stats, yakuman_details):
                 seat = int(seat)
                 discard_tile = getattr(msg, "tile", "")
                 remove_one_tile(current_hands[seat], discard_tile)
+                if discard_tile:
+                    visible_counts[normalize_tile(discard_tile)] += 1
                 if seat not in opening_done:
                     remove_one_tile(opening_hands[seat], discard_tile)
                     record_opening_sample(seat)
@@ -882,6 +1084,17 @@ def aggregate_game(uuid, stats, yakuman_details):
                         )
                         player_stats.bad_shape_riichi += int(bad_shape)
                         player_stats.top_riichi += int(has_top_score(current_scores, seat))
+                        quality = classify_riichi_quality(
+                            current_hands[seat],
+                            waits,
+                            visible_counts,
+                            seat,
+                            current_chang,
+                            current_dealer,
+                            current_dora_indicators,
+                        )
+                        player_stats.riichi_quality_counts[quality] += 1
+                        player_stats.riichi_quality_score_sum += RIICHI_QUALITY_SCORE[quality]
 
         elif record_name == ".lq.RecordDealTile":
             seat = getattr(msg, "seat", None)
@@ -899,6 +1112,7 @@ def aggregate_game(uuid, stats, yakuman_details):
             if seat is not None:
                 seat = int(seat)
                 remove_one_tile(current_hands[seat], "4z")
+                visible_counts["4z"] += 1
                 if seat not in opening_done:
                     remove_one_tile(opening_hands[seat], "4z")
                     opening_kita[seat] += 1
@@ -908,6 +1122,15 @@ def aggregate_game(uuid, stats, yakuman_details):
             if seat is not None:
                 seat = int(seat)
                 called.add(seat)
+                call_tiles = [normalize_tile(tile) for tile in repeated_field_values(msg, "tiles")]
+                call_froms = [int(value) for value in repeated_field_values(msg, "froms")]
+                if call_froms and len(call_froms) == len(call_tiles):
+                    for tile, from_seat in zip(call_tiles, call_froms):
+                        if from_seat == seat:
+                            visible_counts[tile] += 1
+                else:
+                    for tile in call_tiles:
+                        visible_counts[tile] += 1
                 removed = apply_call_tiles(msg, seat)
                 if record_name == ".lq.RecordChiPengGang" or removed >= 3:
                     current_open_melds[seat] += 1
@@ -1008,6 +1231,7 @@ def write_summary(stats):
             "average_opening_shanten",
             "average_opening_dora",
             "called_rate",
+            "riichi",
             "riichi_rate",
             "riichi_miss_rate",
             "bad_shape_riichi_rate",
@@ -1015,6 +1239,10 @@ def write_summary(stats):
             "max_final_point",
             "min_final_point",
             "yakuman_count",
+            "riichi_quality_score",
+            "riichi_recommended_rate",
+            "riichi_not_recommended_rate",
+            "riichi_quality_top_category",
         ])
 
         for player_name, player_stats in sorted(stats.items(), key=lambda item: item[0]):
@@ -1046,6 +1274,7 @@ def write_summary(stats):
                 average(player_stats.opening_shanten_sum, player_stats.opening_samples, 2),
                 average(player_stats.opening_dora_sum, player_stats.opening_samples, 2),
                 percent(player_stats.called, player_stats.rounds),
+                player_stats.riichi,
                 percent(player_stats.riichi, player_stats.rounds),
                 percent(player_stats.riichi_miss, player_stats.riichi),
                 percent(player_stats.bad_shape_riichi, player_stats.riichi),
@@ -1053,6 +1282,13 @@ def write_summary(stats):
                 max(player_stats.final_points) if player_stats.final_points else "",
                 min(player_stats.final_points) if player_stats.final_points else "",
                 player_stats.yakuman_count,
+                average(player_stats.riichi_quality_score_sum, player_stats.riichi, 2),
+                percent(riichi_quality_recommended_count(player_stats), player_stats.riichi),
+                percent(
+                    player_stats.riichi - riichi_quality_recommended_count(player_stats),
+                    player_stats.riichi,
+                ),
+                riichi_quality_top_label(player_stats),
             ])
 
 def write_yakuman_summary(stats):
