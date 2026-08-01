@@ -60,6 +60,10 @@ class PlayerStats:
     yakuman_names: Counter = field(default_factory=Counter)
     top_keep_chances: int = 0
     top_keep_successes: int = 0
+    first_tenpai: int = 0
+    top_stay_rounds: int = 0
+    second_stay_rounds: int = 0
+    last_stay_rounds: int = 0
     opening_shanten_sum: int = 0
     opening_dora_sum: int = 0
     opening_samples: int = 0
@@ -300,7 +304,7 @@ def shanten_chiitoi(counts):
     unique = sum(1 for count in counts if count > 0)
     return 6 - pairs + max(0, 7 - unique)
 
-def shanten_normal(counts):
+def shanten_normal(counts, fixed_melds=0):
     best = 8
 
     def walk(local_counts, index, melds, taatsu, pair):
@@ -359,7 +363,7 @@ def shanten_normal(counts):
         walk(local_counts, index, melds, taatsu, pair)
         local_counts[index] += 1
 
-    walk(counts[:], 0, 0, 0, 0)
+    walk(counts[:], 0, fixed_melds, 0, 0)
     return best
 
 @lru_cache(maxsize=None)
@@ -373,6 +377,17 @@ def shanten_from_counts(counts_key):
 
 def shanten(tiles):
     return shanten_from_counts(tuple(tile_counts(tiles)))
+
+@lru_cache(maxsize=None)
+def shanten_with_fixed_melds_from_counts(counts_key, fixed_melds):
+    counts = list(counts_key)
+    normal = shanten_normal(counts, fixed_melds)
+    if fixed_melds:
+        return normal
+    return min(normal, shanten_chiitoi(counts), shanten_kokushi(counts))
+
+def shanten_with_fixed_melds(tiles, fixed_melds):
+    return shanten_with_fixed_melds_from_counts(tuple(tile_counts(tiles)), fixed_melds)
 
 ALL_TILES = [
     *(f"{number}m" for number in range(1, 10)),
@@ -417,6 +432,12 @@ def has_top_score(scores, seat):
     score_list = [int(score) for score in scores[:3]]
     return score_list[seat] == max(score_list)
 
+def score_rank(scores, seat):
+    if len(scores) < 3 or seat not in {0, 1, 2}:
+        return None
+    score = int(scores[seat])
+    return 1 + sum(1 for other in scores[:3] if int(other) > score)
+
 def next_dora(indicator):
     tile = normalize_tile(indicator)
     if len(tile) != 2:
@@ -448,7 +469,8 @@ def remove_one_tile(tiles, tile):
     for index, hand_tile in enumerate(tiles):
         if normalize_tile(hand_tile) == normalized:
             del tiles[index]
-            return
+            return True
+    return False
 
 def repeated_field_values(msg, field_name):
     if msg is None or not hasattr(msg, field_name):
@@ -647,8 +669,11 @@ def aggregate_game(uuid, stats, yakuman_details):
     had_single_top = {0: False, 1: False, 2: False}
     kept_single_top = {0: False, 1: False, 2: False}
     current_hands = {0: [], 1: [], 2: []}
+    current_open_melds = {0: 0, 1: 0, 2: 0}
     current_scores = [35000, 35000, 35000]
     riichi_winners = set()
+    first_tenpai_seat = None
+    round_start_scores = [35000, 35000, 35000]
 
     def observe_scores(scores):
         nonlocal current_scores
@@ -672,6 +697,8 @@ def aggregate_game(uuid, stats, yakuman_details):
                 kept_single_top[seat] = False
 
     def flush_round():
+        nonlocal first_tenpai_seat
+
         if round_no == 0:
             return
 
@@ -686,6 +713,12 @@ def aggregate_game(uuid, stats, yakuman_details):
             player_stats.riichi_miss += int(seat in riichi and seat not in riichi_winners)
             player_stats.called += int(seat in called)
             player_stats.houjuu += int(seat in houjuu)
+            player_stats.first_tenpai += int(first_tenpai_seat == seat)
+
+            rank = score_rank(round_start_scores, seat)
+            player_stats.top_stay_rounds += int(rank == 1)
+            player_stats.second_stay_rounds += int(rank == 2)
+            player_stats.last_stay_rounds += int(rank == 3)
 
     def record_opening_sample(seat):
         player_name = seat_to_name.get(seat)
@@ -706,6 +739,30 @@ def aggregate_game(uuid, stats, yakuman_details):
         player_stats.opening_samples += 1
         opening_done.add(seat)
 
+    def observe_tenpai(seat, msg):
+        nonlocal first_tenpai_seat
+
+        if first_tenpai_seat is not None or seat not in {0, 1, 2}:
+            return
+        if repeated_field_values(msg, "tingpais"):
+            first_tenpai_seat = seat
+
+    def apply_call_tiles(msg, seat):
+        tiles = [normalize_tile(tile) for tile in repeated_field_values(msg, "tiles")]
+        froms = [int(value) for value in repeated_field_values(msg, "froms")]
+        removed = 0
+
+        if froms and len(froms) == len(tiles):
+            for tile, from_seat in zip(tiles, froms):
+                if from_seat == seat and remove_one_tile(current_hands[seat], tile):
+                    removed += 1
+        else:
+            for tile in tiles:
+                if remove_one_tile(current_hands[seat], tile):
+                    removed += 1
+
+        return removed
+
     for wrapper in wrappers:
         record_name = wrapper["name"]
         msg = decode_record(record_name, wrapper["body"])
@@ -717,15 +774,18 @@ def aggregate_game(uuid, stats, yakuman_details):
             riichi_winners = set()
             called = set()
             houjuu = set()
+            first_tenpai_seat = None
             opening_hands = {seat: new_round_tiles(msg, seat) for seat in [0, 1, 2]}
             current_hands = {
                 seat: [normalize_tile(tile) for tile in new_round_tiles(msg, seat)]
                 for seat in [0, 1, 2]
             }
+            current_open_melds = {0: 0, 1: 0, 2: 0}
             opening_kita = {0: 0, 1: 0, 2: 0}
             opening_done = set()
             opening_dora_indicators = new_round_dora_indicators(msg)
             if msg is not None and hasattr(msg, "scores"):
+                round_start_scores = [int(score) for score in list(msg.scores)[:3]]
                 observe_scores(list(msg.scores))
 
         elif record_name == ".lq.RecordDiscardTile":
@@ -737,6 +797,7 @@ def aggregate_game(uuid, stats, yakuman_details):
                 if seat not in opening_done:
                     remove_one_tile(opening_hands[seat], discard_tile)
                     record_opening_sample(seat)
+                observe_tenpai(seat, msg)
                 if is_riichi_discard(msg) and seat not in riichi:
                     riichi.add(seat)
                     player_name = seat_to_name.get(seat)
@@ -777,7 +838,11 @@ def aggregate_game(uuid, stats, yakuman_details):
         elif record_name in [".lq.RecordChiPengGang", ".lq.RecordAnGangAddGang"]:
             seat = getattr(msg, "seat", None)
             if seat is not None:
-                called.add(int(seat))
+                seat = int(seat)
+                called.add(seat)
+                removed = apply_call_tiles(msg, seat)
+                if record_name == ".lq.RecordChiPengGang" or removed >= 3:
+                    current_open_melds[seat] += 1
 
         elif record_name == ".lq.RecordHule":
             if msg is None or not hasattr(msg, "hules"):
@@ -868,6 +933,10 @@ def write_summary(stats):
             "houjuu_rate",
             "average_houjuu_point",
             "top_keep_rate",
+            "first_tenpai_rate",
+            "top_stay_rate",
+            "second_stay_rate",
+            "last_stay_rate",
             "average_opening_shanten",
             "average_opening_dora",
             "called_rate",
@@ -902,6 +971,10 @@ def write_summary(stats):
                 percent(player_stats.houjuu, player_stats.rounds),
                 average(player_stats.houjuu_point_sum, player_stats.houjuu, 1),
                 percent(player_stats.top_keep_successes, player_stats.top_keep_chances),
+                percent(player_stats.first_tenpai, player_stats.rounds),
+                percent(player_stats.top_stay_rounds, player_stats.rounds),
+                percent(player_stats.second_stay_rounds, player_stats.rounds),
+                percent(player_stats.last_stay_rounds, player_stats.rounds),
                 average(player_stats.opening_shanten_sum, player_stats.opening_samples, 2),
                 average(player_stats.opening_dora_sum, player_stats.opening_samples, 2),
                 percent(player_stats.called, player_stats.rounds),
