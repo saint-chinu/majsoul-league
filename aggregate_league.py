@@ -96,6 +96,9 @@ class PlayerStats:
     chinitsu_hu: int = 0
     houjuu: int = 0
     houjuu_point_sum: int = 0
+    called_houjuu: int = 0
+    two_called_houjuu: int = 0
+    called_haneman_houjuu: int = 0
     called: int = 0
     riichi: int = 0
     riichi_miss: int = 0
@@ -817,6 +820,9 @@ def ron_payment_point(hule):
                 return value
     return hule_point(hule)
 
+def hule_meld_count(hule):
+    return len(list(getattr(hule, "ming", [])))
+
 def single_top_seat(scores):
     if not scores:
         return None
@@ -1229,7 +1235,14 @@ def aggregate_game(uuid, stats, yakuman_details):
                             stats[loser_name].late_noten_houjuu += 1
                         for hule in msg.hules:
                             if not getattr(hule, "zimo", False):
-                                stats[loser_name].houjuu_point_sum += ron_payment_point(hule)
+                                payment = ron_payment_point(hule)
+                                winner_melds = hule_meld_count(hule)
+                                stats[loser_name].houjuu_point_sum += payment
+                                stats[loser_name].called_houjuu += int(winner_melds >= 1)
+                                stats[loser_name].two_called_houjuu += int(winner_melds >= 2)
+                                stats[loser_name].called_haneman_houjuu += int(
+                                    winner_melds >= 1 and payment >= 12000
+                                )
 
             for hule in msg.hules:
                 seat = int(getattr(hule, "seat", -1))
@@ -1313,6 +1326,9 @@ def write_summary(stats):
             "tsumo_rate",
             "houjuu_rate",
             "average_houjuu_point",
+            "called_houjuu_rate",
+            "two_called_houjuu_rate",
+            "called_haneman_houjuu_rate",
             "top_keep_rate",
             "first_tenpai_rate",
             "tenpai_keep_rate",
@@ -1360,6 +1376,9 @@ def write_summary(stats):
                 percent(player_stats.tsumo, player_stats.hu),
                 percent(player_stats.houjuu, player_stats.rounds),
                 average(player_stats.houjuu_point_sum, player_stats.houjuu, 1),
+                percent(player_stats.called_houjuu, player_stats.rounds),
+                percent(player_stats.two_called_houjuu, player_stats.rounds),
+                percent(player_stats.called_haneman_houjuu, player_stats.rounds),
                 percent(player_stats.top_keep_successes, player_stats.top_keep_chances),
                 percent(player_stats.first_tenpai, player_stats.rounds),
                 percent(player_stats.tenpai_discards, player_stats.discards),
