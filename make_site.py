@@ -98,7 +98,7 @@ METRIC_DESCRIPTIONS = {
     "riichi_miss_rate": "リーチした局で、自分が和了できなかった割合。",
     "bad_shape_riichi_rate": "リーチのうち、待ち枚数4枚以下の割合。両ヤオチュウ・役牌シャンポン、字牌・萬子単騎は除外。",
     "top_riichi_rate": "リーチ時点でトップ目だった割合。",
-    "riichi_quality_score": "リーチ待ちを良い順に14点から1点で採点した平均値。",
+    "riichi_quality_score": "リーチ待ちを-5点から10点で採点した平均値。クリックで配点表を表示。",
     "riichi_recommended_rate": "分類上、リーチしてよい待ちに入った割合。",
     "riichi_not_recommended_rate": "分類上、リーチすべきでない待ちに入った割合。",
     "riichi_quality_top_category": "そのプレイヤーで最も多かったリーチ待ち分類。",
@@ -541,16 +541,32 @@ def metric_rank(rows: list[dict[str, str]], player: str, col: str, reverse: bool
     return rank, len(rows)
 
 
+def metric_popup_html(col: str) -> str:
+    if col != "riichi_quality_score":
+        return ""
+    description = METRIC_DESCRIPTIONS.get(col, "")
+    table_html = riichi_quality_definition_table()
+    if not table_html:
+        return ""
+    return f"<p>{esc(description)}</p>{table_html}"
+
+
 def header_cell(col: str) -> str:
     label = esc(LABELS.get(col, col))
     description = METRIC_DESCRIPTIONS.get(col)
     th_class = ' class="sticky-name"' if col == "player" else ""
     if not description:
         return f"<th{th_class}>{label}</th>"
+    popup_html = metric_popup_html(col)
+    body_attr = (
+        f"data-metric-html=\"{esc(popup_html)}\""
+        if popup_html
+        else f"data-metric-body=\"{esc(description)}\""
+    )
     return (
         f"<th{th_class}>"
         f"<button class=\"metric-help\" type=\"button\" data-metric-title=\"{label}\" "
-        f"data-metric-body=\"{esc(description)}\" aria-label=\"{label}の説明を開く\">"
+        f"{body_attr} aria-label=\"{label}の説明を開く\">"
         f"{label}<span aria-hidden=\"true\">?</span>"
         "</button>"
         "</th>"
@@ -1599,7 +1615,6 @@ def render_stats_panel(context: dict[str, object]) -> str:
       <div class="table-wrap">
         {riichi_quality_table(rows)}
       </div>
-      {riichi_quality_definition_table()}
 
       <h2>{esc(team_block_title)}</h2>
       {team_block}
@@ -1760,7 +1775,11 @@ def main() -> None:
         button.addEventListener("click", () => {{
           if (!metricModal || !metricTitle || !metricBody) return;
           metricTitle.textContent = button.dataset.metricTitle || "項目説明";
-          metricBody.textContent = button.dataset.metricBody || "";
+          if (button.dataset.metricHtml) {{
+            metricBody.innerHTML = button.dataset.metricHtml;
+          }} else {{
+            metricBody.textContent = button.dataset.metricBody || "";
+          }}
           metricModal.hidden = false;
           const closeButton = metricModal.querySelector(".metric-modal-close");
           if (closeButton) closeButton.focus();
@@ -1855,9 +1874,12 @@ def main() -> None:
     .metric-modal[hidden] {{ display: none; }}
     .metric-modal {{ position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; padding: 18px; }}
     .metric-modal-backdrop {{ position: absolute; inset: 0; background: rgba(23, 32, 42, .38); }}
-    .metric-modal-panel {{ position: relative; z-index: 1; width: min(460px, 100%); border: 1px solid var(--line); border-radius: 8px; padding: 20px; background: #fff; box-shadow: 0 18px 50px rgba(23, 32, 42, .22); }}
+    .metric-modal-panel {{ position: relative; z-index: 1; width: min(760px, 100%); max-height: min(84vh, 720px); overflow: auto; border: 1px solid var(--line); border-radius: 8px; padding: 20px; background: #fff; box-shadow: 0 18px 50px rgba(23, 32, 42, .22); }}
     .metric-modal-panel h2 {{ margin: 0 0 10px; font-size: 18px; }}
-    .metric-modal-panel p {{ color: var(--ink); line-height: 1.8; white-space: normal; }}
+    .metric-modal-body {{ color: var(--ink); line-height: 1.8; white-space: normal; }}
+    .metric-modal-body p {{ margin: 0 0 12px; color: var(--ink); }}
+    .metric-modal-body .table-wrap {{ margin-top: 10px; }}
+    .metric-modal-body table {{ min-width: 560px; }}
     .metric-modal-close {{ appearance: none; margin-top: 18px; border: 1px solid var(--accent); border-radius: 8px; padding: 8px 14px; background: var(--accent); color: #fff; font: inherit; font-weight: 800; cursor: pointer; }}
     .metric-modal-close:hover {{ filter: brightness(.94); }}
     .yakuman-grid {{ display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }}
@@ -1910,7 +1932,7 @@ def main() -> None:
     <div class="metric-modal-backdrop" data-metric-close></div>
     <section class="metric-modal-panel" role="dialog" aria-modal="true" aria-labelledby="metric-modal-title">
       <h2 id="metric-modal-title">項目説明</h2>
-      <p data-metric-body></p>
+      <div class="metric-modal-body" data-metric-body></div>
       <button class="metric-modal-close" type="button" data-metric-close>閉じる</button>
     </section>
   </div>

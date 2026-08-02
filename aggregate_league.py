@@ -33,7 +33,9 @@ YAKUMAN_NAMES = {
 }
 
 RIICHI_QUALITY_CATEGORIES = [
-    ("ryanmen_5plus", "リャンメン以上・見た目5枚以上", True),
+    ("ryanmen_many", "リャンメン以上・4面張以上", True),
+    ("ryanmen_3men", "リャンメン以上・3面張", True),
+    ("ryanmen_5plus", "リャンメン・見た目5枚以上", True),
     ("tanki_1_cut_honor_manzu", "1枚切れ非役牌字牌・萬子単騎", True),
     ("tanki_2_cut_honor_manzu", "2枚切れ字牌・萬子単騎", True),
     ("tanki_0_cut_honor_manzu", "0枚切れ非役牌字牌・萬子単騎", True),
@@ -50,8 +52,23 @@ RIICHI_QUALITY_CATEGORIES = [
     ("worst_double_bulge_shanpon", "ダブル中ぶくれ・外ぶくれシャンポン", False),
 ]
 RIICHI_QUALITY_SCORE = {
-    key: len(RIICHI_QUALITY_CATEGORIES) - index
-    for index, (key, _label, _recommended) in enumerate(RIICHI_QUALITY_CATEGORIES)
+    "ryanmen_many": 10,
+    "ryanmen_3men": 7,
+    "ryanmen_5plus": 5,
+    "tanki_1_cut_honor_manzu": 5,
+    "tanki_2_cut_honor_manzu": 4,
+    "tanki_0_cut_honor_manzu": 3,
+    "yaochu_shanpon": 3,
+    "yakuhai_simple_shanpon": 2,
+    "kanchan_2_8": 1,
+    "dora_bad_shape": 0,
+    "bad_kanchan_penchan_3_7": -2,
+    "bad_simple_shanpon": -2,
+    "bad_bulge_shanpon": -4,
+    "bad_simple_tanki": -4,
+    "bad_two_or_less": -4,
+    "bad_bulge_tanki": -5,
+    "worst_double_bulge_shanpon": -5,
 }
 RIICHI_QUALITY_LABELS = {
     key: label for key, label, _recommended in RIICHI_QUALITY_CATEGORIES
@@ -587,6 +604,10 @@ def classify_riichi_quality(tiles, waits, visible_counts, seat, chang, dealer, d
     dora_tiles = riichi_dora_tiles(dora_indicators)
 
     if len(waits) >= 2 and visible_remaining >= 5 and not is_shanpon:
+        if len(waits) >= 4:
+            return "ryanmen_many"
+        if len(waits) == 3:
+            return "ryanmen_3men"
         return "ryanmen_5plus"
 
     if is_tanki and wait:
