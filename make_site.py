@@ -544,10 +544,11 @@ def metric_rank(rows: list[dict[str, str]], player: str, col: str, reverse: bool
 def header_cell(col: str) -> str:
     label = esc(LABELS.get(col, col))
     description = METRIC_DESCRIPTIONS.get(col)
+    th_class = ' class="sticky-name"' if col == "player" else ""
     if not description:
-        return f"<th>{label}</th>"
+        return f"<th{th_class}>{label}</th>"
     return (
-        "<th>"
+        f"<th{th_class}>"
         f"<button class=\"metric-help\" type=\"button\" data-metric-title=\"{label}\" "
         f"data-metric-body=\"{esc(description)}\" aria-label=\"{label}の説明を開く\">"
         f"{label}<span aria-hidden=\"true\">?</span>"
@@ -575,7 +576,7 @@ def table(
             cells.append(f"<td>{i}</td>")
         for col in columns:
             value = row.get(col, "")
-            cls = "name" if col == "player" else ""
+            cls = "name sticky-name" if col == "player" else ""
             value = format_cell_value(col, value)
             cells.append(f"<td class=\"{cls}\">{value}</td>")
         body_rows.append("<tr>" + "".join(cells) + "</tr>")
@@ -1837,12 +1838,16 @@ def main() -> None:
     .mini-stats div {{ background: var(--fill); border-radius: 6px; padding: 8px; }}
     .mini-stats span {{ display: block; font-size: 11px; color: var(--muted); }}
     .mini-stats strong {{ font-size: 17px; }}
-    .table-wrap {{ overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; }}
+    .table-wrap {{ position: relative; overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; }}
     table {{ border-collapse: collapse; width: 100%; min-width: 920px; font-size: 14px; }}
     th, td {{ border-bottom: 1px solid var(--line); padding: 8px 9px; text-align: right; white-space: nowrap; }}
     th {{ background: var(--fill); font-weight: 700; color: #30363d; }}
     tr:last-child td {{ border-bottom: 0; }}
-    td.name, th:nth-child(2) {{ text-align: left; font-weight: 700; }}
+    td.name, th:nth-child(2), th.sticky-name {{ text-align: left; font-weight: 700; }}
+    .sticky-name {{ position: sticky; left: 0; z-index: 2; min-width: 128px; max-width: 180px; background: #fff; box-shadow: 1px 0 0 var(--line); }}
+    th.sticky-name {{ z-index: 3; background: var(--fill); }}
+    .metric-best td.sticky-name {{ background: #fff7df; }}
+    .metric-worst td.sticky-name {{ background: #f1f3f5; }}
     td.roles {{ text-align: left; white-space: normal; min-width: 240px; }}
     .metric-help {{ appearance: none; display: inline-flex; align-items: center; justify-content: flex-end; gap: 5px; border: 0; padding: 0; background: transparent; color: inherit; font: inherit; font-weight: 800; cursor: pointer; }}
     .metric-help:hover {{ color: var(--accent); }}
