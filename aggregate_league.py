@@ -86,6 +86,11 @@ class PlayerStats:
     top_riichi: int = 0
     riichi_quality_score_sum: int = 0
     riichi_quality_counts: Counter = field(default_factory=Counter)
+    late_noten_discards: int = 0
+    late_noten_houjuu: int = 0
+    late_noten_fresh_discards: int = 0
+    winning_run_chances: int = 0
+    winning_run_point_sum: int = 0
     final_points: list = field(default_factory=list)
     yakuman_count: int = 0
     yakuman_names: Counter = field(default_factory=Counter)
@@ -695,6 +700,26 @@ def score_rank(scores, seat):
     score = int(scores[seat])
     return 1 + sum(1 for other in scores[:3] if int(other) > score)
 
+def top_margin(scores, seat):
+    if len(scores) < 3 or seat not in {0, 1, 2}:
+        return None
+    score_list = [int(score) for score in scores[:3]]
+    score = score_list[seat]
+    others = [value for index, value in enumerate(score_list) if index != seat]
+    return score - max(others)
+
+def is_oorasu(chang, dealer):
+    return int(chang) == 1 and int(dealer) == 2
+
+def is_late_noten_discard(msg, seat, turn_counts, riichi_seats):
+    if seat not in {0, 1, 2}:
+        return False
+    if turn_counts[seat] < 12:
+        return False
+    if seat in riichi_seats:
+        return False
+    return not repeated_field_values(msg, "tingpais")
+
 def next_dora(indicator):
     tile = normalize_tile(indicator)
     if len(tile) != 2:
@@ -930,11 +955,15 @@ def aggregate_game(uuid, stats, yakuman_details):
     current_open_melds = {0: 0, 1: 0, 2: 0}
     current_scores = [35000, 35000, 35000]
     visible_counts = Counter()
+    turn_counts = {0: 0, 1: 0, 2: 0}
+    last_discard_late_noten = {0: False, 1: False, 2: False}
     riichi_winners = set()
     first_tenpai_seat = None
     round_start_scores = [35000, 35000, 35000]
     current_chang = 0
     current_dealer = 0
+    winning_run_seat = None
+    winning_run_start_score = None
 
     def observe_scores(scores):
         nonlocal current_scores
@@ -1045,12 +1074,22 @@ def aggregate_game(uuid, stats, yakuman_details):
             }
             current_open_melds = {0: 0, 1: 0, 2: 0}
             visible_counts = Counter()
+            turn_counts = {0: 0, 1: 0, 2: 0}
+            last_discard_late_noten = {0: False, 1: False, 2: False}
             opening_kita = {0: 0, 1: 0, 2: 0}
             opening_done = set()
             opening_dora_indicators = new_round_dora_indicators(msg)
             current_dora_indicators = list(opening_dora_indicators)
             if msg is not None and hasattr(msg, "scores"):
                 round_start_scores = [int(score) for score in list(msg.scores)[:3]]
+                if (
+                    winning_run_seat is None
+                    and is_oorasu(current_chang, current_dealer)
+                    and score_rank(round_start_scores, current_dealer) == 1
+                    and (top_margin(round_start_scores, current_dealer) or 0) >= 30000
+                ):
+                    winning_run_seat = current_dealer
+                    winning_run_start_score = round_start_scores[current_dealer]
                 observe_scores(list(msg.scores))
 
         elif record_name == ".lq.RecordDiscardTile":
@@ -1059,6 +1098,15 @@ def aggregate_game(uuid, stats, yakuman_details):
                 seat = int(seat)
                 discard_tile = getattr(msg, "tile", "")
                 remove_one_tile(current_hands[seat], discard_tile)
+                turn_counts[seat] += 1
+                late_noten = is_late_noten_discard(msg, seat, turn_counts, riichi)
+                last_discard_late_noten[seat] = late_noten
+                if late_noten:
+                    player_name = seat_to_name.get(seat)
+                    if player_name:
+                        stats[player_name].late_noten_discards += 1
+                        if discard_tile and visible_counts[normalize_tile(discard_tile)] == 0:
+                            stats[player_name].late_noten_fresh_discards += 1
                 if discard_tile:
                     visible_counts[normalize_tile(discard_tile)] += 1
                 if seat not in opening_done:
@@ -1145,6 +1193,8 @@ def aggregate_game(uuid, stats, yakuman_details):
                     houjuu.add(loser)
                     loser_name = seat_to_name.get(loser)
                     if loser_name:
+                        if last_discard_late_noten.get(loser, False):
+                            stats[loser_name].late_noten_houjuu += 1
                         for hule in msg.hules:
                             if not getattr(hule, "zimo", False):
                                 stats[loser_name].houjuu_point_sum += ron_payment_point(hule)
@@ -1200,6 +1250,14 @@ def aggregate_game(uuid, stats, yakuman_details):
         if kept_single_top[seat] and detail["rank"] == 1:
             player_stats.top_keep_successes += 1
 
+    if winning_run_seat is not None and winning_run_start_score is not None:
+        player_name = seat_to_name.get(winning_run_seat)
+        detail = player_details.get(winning_run_seat)
+        if player_name and detail:
+            player_stats = stats[player_name]
+            player_stats.winning_run_chances += 1
+            player_stats.winning_run_point_sum += int(detail["point"]) - int(winning_run_start_score)
+
 def write_summary(stats):
     with SUMMARY_OUT.open("w", encoding="utf-8-sig", newline="") as f:
         writer = csv.writer(f)
@@ -1228,6 +1286,9 @@ def write_summary(stats):
             "top_stay_rate",
             "second_stay_rate",
             "last_stay_rate",
+            "late_noten_houjuu_rate",
+            "late_noten_fresh_discard_rate",
+            "winning_run_points",
             "average_opening_shanten",
             "average_opening_dora",
             "called_rate",
@@ -1271,6 +1332,9 @@ def write_summary(stats):
                 percent(player_stats.top_stay_rounds, player_stats.rounds),
                 percent(player_stats.second_stay_rounds, player_stats.rounds),
                 percent(player_stats.last_stay_rounds, player_stats.rounds),
+                percent(player_stats.late_noten_houjuu, player_stats.late_noten_discards),
+                percent(player_stats.late_noten_fresh_discards, player_stats.late_noten_discards),
+                player_stats.winning_run_point_sum,
                 average(player_stats.opening_shanten_sum, player_stats.opening_samples, 2),
                 average(player_stats.opening_dora_sum, player_stats.opening_samples, 2),
                 percent(player_stats.called, player_stats.rounds),

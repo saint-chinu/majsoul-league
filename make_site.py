@@ -44,6 +44,9 @@ LABELS = {
     "top_stay_rate": "トップ滞在率",
     "second_stay_rate": "2位滞在率",
     "last_stay_rate": "ラス滞在率",
+    "late_noten_houjuu_rate": "後半非聴放銃率",
+    "late_noten_fresh_discard_rate": "後半非聴生牌率",
+    "winning_run_points": "ウイニングラン加点",
     "average_opening_shanten": "平均配牌シャンテン",
     "average_opening_dora": "平均配牌ドラ",
     "called_rate": "副露率",
@@ -80,6 +83,9 @@ METRIC_DESCRIPTIONS = {
     "top_stay_rate": "各局開始時にトップ目だった割合。",
     "second_stay_rate": "各局開始時に2位だった割合。",
     "last_stay_rate": "各局開始時にラス目だった割合。",
+    "late_noten_houjuu_rate": "12巡目以降、非テンパイ打牌で放銃した割合。",
+    "late_noten_fresh_discard_rate": "12巡目以降、非テンパイ打牌で生牌を切った割合。",
+    "winning_run_points": "オーラス親の大トップ状態から半荘終了までに増減した持ち点。",
     "rounds": "集計対象の参加局数。",
     "hu_rate": "参加局のうち、自分が和了した割合。",
     "average_hu_point": "自分のツモ・ロンで実際に増えた点数の平均。",
@@ -131,6 +137,9 @@ MAIN_COLUMNS = [
     "top_stay_rate",
     "second_stay_rate",
     "last_stay_rate",
+    "late_noten_houjuu_rate",
+    "late_noten_fresh_discard_rate",
+    "winning_run_points",
     "tsumo_rate",
     "average_opening_shanten",
     "average_opening_dora",
@@ -154,6 +163,9 @@ DETAIL_COLUMNS = [
     "top_stay_rate",
     "second_stay_rate",
     "last_stay_rate",
+    "late_noten_houjuu_rate",
+    "late_noten_fresh_discard_rate",
+    "winning_run_points",
     "average_opening_shanten",
     "average_opening_dora",
     "max_final_point",
@@ -184,6 +196,9 @@ PLAYER_MAIN_COLUMNS = [
     "top_stay_rate",
     "second_stay_rate",
     "last_stay_rate",
+    "late_noten_houjuu_rate",
+    "late_noten_fresh_discard_rate",
+    "winning_run_points",
     "tsumo_rate",
     "called_rate",
     "riichi_rate",
@@ -244,6 +259,9 @@ PLAYER_RANK_METRICS = [
     ("top_stay_rate", True, "高い方が上位"),
     ("second_stay_rate", True, "高い順"),
     ("last_stay_rate", False, "低い方が上位"),
+    ("late_noten_houjuu_rate", False, "低い方が上位"),
+    ("late_noten_fresh_discard_rate", False, "低い方が上位"),
+    ("winning_run_points", True, "高い方が上位"),
     ("called_rate", True, "高い順"),
     ("riichi_rate", True, "高い順"),
     ("riichi_miss_rate", False, "低い方が上位"),
@@ -267,6 +285,9 @@ MAIN_RANK_COLUMNS = [
     "top_stay_rate",
     "second_stay_rate",
     "last_stay_rate",
+    "late_noten_houjuu_rate",
+    "late_noten_fresh_discard_rate",
+    "winning_run_points",
 ]
 
 
@@ -309,6 +330,9 @@ DETAIL_RANK_COLUMNS = [
     "top_stay_rate",
     "second_stay_rate",
     "last_stay_rate",
+    "late_noten_houjuu_rate",
+    "late_noten_fresh_discard_rate",
+    "winning_run_points",
     "max_final_point",
     "min_final_point",
 ]
@@ -338,6 +362,9 @@ PLAYER_RANK_COLUMNS = [
     "top_stay_rate",
     "second_stay_rate",
     "last_stay_rate",
+    "late_noten_houjuu_rate",
+    "late_noten_fresh_discard_rate",
+    "winning_run_points",
 ]
 
 
@@ -384,6 +411,9 @@ PLAYER_SEASON_RANK_COLUMNS = [
     "top_stay_rate",
     "second_stay_rate",
     "last_stay_rate",
+    "late_noten_houjuu_rate",
+    "late_noten_fresh_discard_rate",
+    "winning_run_points",
 ]
 
 
@@ -487,7 +517,13 @@ def format_cell_value(col: str, value: str | int | float) -> str:
         return number(value, 2)
     if col in {"average_opening_shanten", "average_opening_dora"}:
         return number(value, 2)
-    if col in {"average_hu_point", "average_houjuu_point", "max_final_point", "min_final_point"}:
+    if col in {
+        "average_hu_point",
+        "average_houjuu_point",
+        "max_final_point",
+        "min_final_point",
+        "winning_run_points",
+    }:
         return number(value)
     return esc(value)
 
@@ -1189,6 +1225,15 @@ def aggregate_uuids(uuids: set[str]) -> tuple[list[dict[str, str]], list[dict[st
                 "top_stay_rate": percent(player_stats.top_stay_rounds, player_stats.rounds),
                 "second_stay_rate": percent(player_stats.second_stay_rounds, player_stats.rounds),
                 "last_stay_rate": percent(player_stats.last_stay_rounds, player_stats.rounds),
+                "late_noten_houjuu_rate": percent(
+                    player_stats.late_noten_houjuu,
+                    player_stats.late_noten_discards,
+                ),
+                "late_noten_fresh_discard_rate": percent(
+                    player_stats.late_noten_fresh_discards,
+                    player_stats.late_noten_discards,
+                ),
+                "winning_run_points": str(player_stats.winning_run_point_sum),
                 "average_opening_shanten": str(
                     average(player_stats.opening_shanten_sum, player_stats.opening_samples, 2)
                 ),
