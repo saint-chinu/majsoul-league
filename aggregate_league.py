@@ -114,6 +114,8 @@ class PlayerStats:
     top_keep_chances: int = 0
     top_keep_successes: int = 0
     first_tenpai: int = 0
+    discards: int = 0
+    tenpai_discards: int = 0
     top_stay_rounds: int = 0
     second_stay_rounds: int = 0
     last_stay_rounds: int = 0
@@ -1133,6 +1135,15 @@ def aggregate_game(uuid, stats, yakuman_details):
                 if seat not in opening_done:
                     remove_one_tile(opening_hands[seat], discard_tile)
                     record_opening_sample(seat)
+                player_name = seat_to_name.get(seat)
+                if player_name:
+                    player_stats = stats[player_name]
+                    player_stats.discards += 1
+                    player_stats.tenpai_discards += int(
+                        bool(repeated_field_values(msg, "tingpais"))
+                        or seat in riichi
+                        or is_riichi_discard(msg)
+                    )
                 observe_tenpai(seat, msg)
                 if is_riichi_discard(msg) and seat not in riichi:
                     riichi.add(seat)
@@ -1304,6 +1315,7 @@ def write_summary(stats):
             "average_houjuu_point",
             "top_keep_rate",
             "first_tenpai_rate",
+            "tenpai_keep_rate",
             "top_stay_rate",
             "second_stay_rate",
             "last_stay_rate",
@@ -1350,6 +1362,7 @@ def write_summary(stats):
                 average(player_stats.houjuu_point_sum, player_stats.houjuu, 1),
                 percent(player_stats.top_keep_successes, player_stats.top_keep_chances),
                 percent(player_stats.first_tenpai, player_stats.rounds),
+                percent(player_stats.tenpai_discards, player_stats.discards),
                 percent(player_stats.top_stay_rounds, player_stats.rounds),
                 percent(player_stats.second_stay_rounds, player_stats.rounds),
                 percent(player_stats.last_stay_rounds, player_stats.rounds),
