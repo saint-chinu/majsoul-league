@@ -541,6 +541,21 @@ def metric_rank(rows: list[dict[str, str]], player: str, col: str, reverse: bool
     return rank, len(rows)
 
 
+def header_cell(col: str) -> str:
+    label = esc(LABELS.get(col, col))
+    description = METRIC_DESCRIPTIONS.get(col)
+    if not description:
+        return f"<th>{label}</th>"
+    return (
+        "<th>"
+        f"<button class=\"metric-help\" type=\"button\" data-metric-title=\"{label}\" "
+        f"data-metric-body=\"{esc(description)}\" aria-label=\"{label}の説明を開く\">"
+        f"{label}<span aria-hidden=\"true\">?</span>"
+        "</button>"
+        "</th>"
+    )
+
+
 def table(
     rows: list[dict[str, str]],
     columns: list[str],
@@ -552,7 +567,7 @@ def table(
     else:
         ranked = rows
 
-    head = "".join(f"<th>{esc(LABELS[c])}</th>" for c in (["rank"] + columns if rank_by else columns))
+    head = "".join(header_cell(c) for c in (["rank"] + columns if rank_by else columns))
     body_rows = []
     for i, row in enumerate(ranked, 1):
         cells = []
@@ -623,35 +638,6 @@ def split_tables(
             """
         )
     return f"<div class=\"split-tables\">{''.join(blocks)}</div>"
-
-
-def metric_description_table(columns: list[str]) -> str:
-    seen = set()
-    rows = []
-    for col in columns:
-        if col in seen or col in {"player", "season", "rank"}:
-            continue
-        seen.add(col)
-        description = METRIC_DESCRIPTIONS.get(col)
-        if not description:
-            continue
-        rows.append(
-            "<tr>"
-            f"<td class=\"name\">{esc(LABELS.get(col, col))}</td>"
-            f"<td>{esc(description)}</td>"
-            "</tr>"
-        )
-    if not rows:
-        return ""
-    return (
-        "<section class=\"metric-guide\">"
-        "<h3>集計項目の説明</h3>"
-        "<div class=\"table-wrap\">"
-        "<table><thead><tr><th>項目</th><th>説明</th></tr></thead>"
-        f"<tbody>{''.join(rows)}</tbody></table>"
-        "</div>"
-        "</section>"
-    )
 
 
 def read_team_members() -> dict[int, dict[str, list[str]]]:
@@ -1519,7 +1505,6 @@ def render_player_panel(
           ("和了・放銃・手役", PLAYER_WIN_COLUMNS),
         ],
       )}
-      {metric_description_table(PLAYER_RANK_COLUMNS + PLAYER_WIN_COLUMNS)}
 
       <h2>{esc(player)} リーチの質</h2>
       <div class="table-wrap">
@@ -1534,7 +1519,6 @@ def render_player_panel(
           ("和了・放銃・手役", PLAYER_SEASON_WIN_COLUMNS),
         ],
       )}
-      {metric_description_table(PLAYER_SEASON_RANK_COLUMNS + PLAYER_SEASON_WIN_COLUMNS)}
       <div class="table-wrap">
         {table(season_rows, PLAYER_RIICHI_QUALITY_COLUMNS)}
       </div>
@@ -1609,7 +1593,6 @@ def render_stats_panel(context: dict[str, object]) -> str:
         rank_by="earned_score",
         reverse=True,
       )}
-      {metric_description_table(MAIN_RANK_COLUMNS + MAIN_WIN_COLUMNS)}
 
       <h2>{esc(context['label'])} リーチの質</h2>
       <div class="table-wrap">
@@ -1763,6 +1746,34 @@ def main() -> None:
         button.addEventListener("click", () => activate(button.dataset.tab));
       }});
 
+      const metricModal = document.querySelector("[data-metric-modal]");
+      const metricTitle = metricModal ? metricModal.querySelector("#metric-modal-title") : null;
+      const metricBody = metricModal ? metricModal.querySelector("[data-metric-body]") : null;
+
+      function closeMetricModal() {{
+        if (!metricModal) return;
+        metricModal.hidden = true;
+      }}
+
+      document.querySelectorAll("[data-metric-title]").forEach((button) => {{
+        button.addEventListener("click", () => {{
+          if (!metricModal || !metricTitle || !metricBody) return;
+          metricTitle.textContent = button.dataset.metricTitle || "項目説明";
+          metricBody.textContent = button.dataset.metricBody || "";
+          metricModal.hidden = false;
+          const closeButton = metricModal.querySelector(".metric-modal-close");
+          if (closeButton) closeButton.focus();
+        }});
+      }});
+
+      document.querySelectorAll("[data-metric-close]").forEach((button) => {{
+        button.addEventListener("click", closeMetricModal);
+      }});
+
+      document.addEventListener("keydown", (event) => {{
+        if (event.key === "Escape") closeMetricModal();
+      }});
+
       if (buttons[0]) activate(buttons[0].dataset.tab);
     }});
   </script>
@@ -1833,6 +1844,17 @@ def main() -> None:
     tr:last-child td {{ border-bottom: 0; }}
     td.name, th:nth-child(2) {{ text-align: left; font-weight: 700; }}
     td.roles {{ text-align: left; white-space: normal; min-width: 240px; }}
+    .metric-help {{ appearance: none; display: inline-flex; align-items: center; justify-content: flex-end; gap: 5px; border: 0; padding: 0; background: transparent; color: inherit; font: inherit; font-weight: 800; cursor: pointer; }}
+    .metric-help:hover {{ color: var(--accent); }}
+    .metric-help span {{ display: inline-grid; place-items: center; width: 16px; height: 16px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); font-size: 11px; line-height: 1; }}
+    .metric-modal[hidden] {{ display: none; }}
+    .metric-modal {{ position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; padding: 18px; }}
+    .metric-modal-backdrop {{ position: absolute; inset: 0; background: rgba(23, 32, 42, .38); }}
+    .metric-modal-panel {{ position: relative; z-index: 1; width: min(460px, 100%); border: 1px solid var(--line); border-radius: 8px; padding: 20px; background: #fff; box-shadow: 0 18px 50px rgba(23, 32, 42, .22); }}
+    .metric-modal-panel h2 {{ margin: 0 0 10px; font-size: 18px; }}
+    .metric-modal-panel p {{ color: var(--ink); line-height: 1.8; white-space: normal; }}
+    .metric-modal-close {{ appearance: none; margin-top: 18px; border: 1px solid var(--accent); border-radius: 8px; padding: 8px 14px; background: var(--accent); color: #fff; font: inherit; font-weight: 800; cursor: pointer; }}
+    .metric-modal-close:hover {{ filter: brightness(.94); }}
     .yakuman-grid {{ display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }}
     .yakuman-card h3 {{ margin-bottom: 8px; }}
     .yakuman-card ul {{ list-style: none; padding: 0; margin: 0; display: grid; gap: 6px; }}
@@ -1846,10 +1868,6 @@ def main() -> None:
     .subnote {{ margin: -4px 0 12px; color: var(--muted); }}
     .split-tables {{ display: grid; gap: 14px; }}
     .stat-table-panel h3 {{ margin: 0 0 8px; color: var(--accent); font-size: 15px; }}
-    .metric-guide {{ margin-top: 12px; }}
-    .metric-guide h3 {{ margin: 0 0 8px; color: var(--muted); font-size: 14px; }}
-    .metric-guide table {{ min-width: 680px; }}
-    .metric-guide td:last-child {{ text-align: left; white-space: normal; }}
     .generated-note {{ margin-top: 18px; font-size: 12px; }}
     footer {{ padding: 18px 32px 30px; border-top: 1px solid var(--line); color: var(--muted); font-size: 12px; }}
     @media (max-width: 920px) {{
@@ -1883,6 +1901,14 @@ def main() -> None:
     </section>
     {panels}
   </main>
+  <div class="metric-modal" data-metric-modal hidden>
+    <div class="metric-modal-backdrop" data-metric-close></div>
+    <section class="metric-modal-panel" role="dialog" aria-modal="true" aria-labelledby="metric-modal-title">
+      <h2 id="metric-modal-title">項目説明</h2>
+      <p data-metric-body></p>
+      <button class="metric-modal-close" type="button" data-metric-close>閉じる</button>
+    </section>
+  </div>
   <footer>
     Generated from collected Mahjong Soul records.
   </footer>
