@@ -354,6 +354,16 @@ RIICHI_QUALITY_COLUMNS = [
 ]
 
 
+DIGEST_METRICS = [
+    ("earned_score", True),
+    ("average_rank", False),
+    ("hu_rate", True),
+    ("houjuu_rate", False),
+    ("max_final_point", True),
+    ("min_final_point", True),
+]
+
+
 DETAIL_RANK_COLUMNS = [
     "player",
     "rounds",
@@ -972,27 +982,29 @@ def season_mvp_section(rows: list[dict[str, object]]) -> str:
     )
 
 
-def rate_cards(rows: list[dict[str, str]]) -> str:
+def digest_cards(rows: list[dict[str, str]]) -> str:
     cards = []
-    for row in sorted(rows, key=lambda r: float(r.get("average_rank", "999") or 999)):
-        name = row["player"]
-        top = row.get("rank1_rate", "0%")
-        hu = row.get("hu_rate", "0%")
-        deal_in = row.get("houjuu_rate", "0%")
-        yakuman = row.get("yakuman_count", "0")
+    for row in sorted(rows, key=lambda r: metric_value(r, "earned_score"), reverse=True):
+        name = row.get("player", "")
+        metric_rows = []
+        for col, reverse in DIGEST_METRICS:
+            rank, total = metric_rank(rows, name, col, reverse)
+            metric_rows.append(
+                "<div class=\"digest-metric\">"
+                f"<span>{esc(LABELS[col])}</span>"
+                f"<strong>{format_cell_value(col, row.get(col, ''))}</strong>"
+                f"<em>{total}人中{rank}位</em>"
+                "</div>"
+            )
         cards.append(
             f"""
             <article class="player-card">
               <div class="player-card-head">
                 <h3>{esc(name)}</h3>
-                <span>平均順位 {esc(row.get("average_rank", ""))}</span>
+                <span>{esc(row.get("games", ""))}半荘</span>
               </div>
-              <div class="meter-row"><span>1位率</span><b>{esc(top)}</b><i style="--w:{pct_number(top)}%"></i></div>
-              <div class="meter-row"><span>和了率</span><b>{esc(hu)}</b><i style="--w:{pct_number(hu)}%"></i></div>
-              <div class="meter-row danger"><span>放銃率</span><b>{esc(deal_in)}</b><i style="--w:{pct_number(deal_in)}%"></i></div>
-              <div class="mini-stats">
-                <div><span>対戦数</span><strong>{esc(row.get("games", ""))}</strong></div>
-                <div><span>役満</span><strong>{esc(yakuman)}</strong></div>
+              <div class="digest-metrics">
+                {''.join(metric_rows)}
               </div>
             </article>
             """
@@ -1729,6 +1741,11 @@ def render_stats_panel(context: dict[str, object]) -> str:
 
     return f"""
     <section class="tab-panel" id="panel-{esc(context['key'])}" data-panel="{esc(context['key'])}">
+      <h2>{esc(context['label'])} ダイジェスト</h2>
+      <section class="cards digest-cards">
+        {digest_cards(rows)}
+      </section>
+
       <section class="summary" aria-label="集計概要">
         <div><span>対象半荘</span><strong>{int(context['total_games']):,}</strong></div>
         <div><span>対象局数</span><strong>{int(context['total_rounds']):,}</strong></div>
@@ -1770,11 +1787,6 @@ def render_stats_panel(context: dict[str, object]) -> str:
           </div>
         </section>
       </div>
-
-      <h2>個人成績ダイジェスト</h2>
-      <section class="cards">
-        {rate_cards(rows)}
-      </section>
 
       <h2>詳細スタッツ</h2>
       {split_tables(
@@ -1993,6 +2005,12 @@ def main() -> None:
     .mini-stats div {{ background: var(--fill); border-radius: 6px; padding: 8px; }}
     .mini-stats span {{ display: block; font-size: 11px; color: var(--muted); }}
     .mini-stats strong {{ font-size: 17px; }}
+    .digest-cards {{ margin-bottom: 18px; }}
+    .digest-metrics {{ display: grid; gap: 7px; }}
+    .digest-metric {{ display: grid; grid-template-columns: minmax(86px, 1fr) auto auto; align-items: baseline; gap: 8px; padding: 7px 8px; border-radius: 6px; background: var(--fill); }}
+    .digest-metric span {{ color: var(--muted); font-size: 12px; }}
+    .digest-metric strong {{ font-size: 15px; }}
+    .digest-metric em {{ font-style: normal; color: var(--accent); font-size: 12px; font-weight: 800; white-space: nowrap; }}
     .table-wrap {{ position: relative; max-width: 100%; overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; -webkit-overflow-scrolling: touch; isolation: isolate; }}
     table {{ border-collapse: separate; border-spacing: 0; width: 100%; min-width: 920px; font-size: 14px; }}
     th, td {{ border-bottom: 1px solid var(--line); padding: 8px 9px; text-align: right; white-space: nowrap; background: #fff; }}
@@ -2044,6 +2062,7 @@ def main() -> None:
       .ranking-grid {{ grid-template-columns: 1fr; }}
       .analysis-grid {{ grid-template-columns: 1fr; }}
       .cards, .yakuman-grid {{ grid-template-columns: 1fr; }}
+      .digest-metric {{ grid-template-columns: minmax(82px, 1fr) auto auto; }}
       td.sticky-name, th.sticky-name {{ width: 112px; min-width: 112px; max-width: 112px; overflow: hidden; text-overflow: ellipsis; }}
       h1 {{ font-size: 26px; }}
     }}

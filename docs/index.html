@@ -123,6 +123,12 @@
     .mini-stats div { background: var(--fill); border-radius: 6px; padding: 8px; }
     .mini-stats span { display: block; font-size: 11px; color: var(--muted); }
     .mini-stats strong { font-size: 17px; }
+    .digest-cards { margin-bottom: 18px; }
+    .digest-metrics { display: grid; gap: 7px; }
+    .digest-metric { display: grid; grid-template-columns: minmax(86px, 1fr) auto auto; align-items: baseline; gap: 8px; padding: 7px 8px; border-radius: 6px; background: var(--fill); }
+    .digest-metric span { color: var(--muted); font-size: 12px; }
+    .digest-metric strong { font-size: 15px; }
+    .digest-metric em { font-style: normal; color: var(--accent); font-size: 12px; font-weight: 800; white-space: nowrap; }
     .table-wrap { position: relative; max-width: 100%; overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; -webkit-overflow-scrolling: touch; isolation: isolate; }
     table { border-collapse: separate; border-spacing: 0; width: 100%; min-width: 920px; font-size: 14px; }
     th, td { border-bottom: 1px solid var(--line); padding: 8px 9px; text-align: right; white-space: nowrap; background: #fff; }
@@ -174,6 +180,7 @@
       .ranking-grid { grid-template-columns: 1fr; }
       .analysis-grid { grid-template-columns: 1fr; }
       .cards, .yakuman-grid { grid-template-columns: 1fr; }
+      .digest-metric { grid-template-columns: minmax(82px, 1fr) auto auto; }
       td.sticky-name, th.sticky-name { width: 112px; min-width: 112px; max-width: 112px; overflow: hidden; text-overflow: ellipsis; }
       h1 { font-size: 26px; }
     }
@@ -214,6 +221,76 @@
     </section>
     
     <section class="tab-panel" id="panel-all" data-panel="all">
+      <h2>累計 ダイジェスト</h2>
+      <section class="cards digest-cards">
+        
+            <article class="player-card">
+              <div class="player-card-head">
+                <h3>流れ者金融</h3>
+                <span>541半荘</span>
+              </div>
+              <div class="digest-metrics">
+                <div class="digest-metric"><span>獲得スコア</span><strong>4,834.3</strong><em>6人中1位</em></div><div class="digest-metric"><span>平均順位</span><strong>1.83</strong><em>6人中1位</em></div><div class="digest-metric"><span>和了率</span><strong>32.56%</strong><em>6人中1位</em></div><div class="digest-metric"><span>放銃率</span><strong>15.02%</strong><em>6人中2位</em></div><div class="digest-metric"><span>最高終了時持ち点</span><strong>187,700</strong><em>6人中1位</em></div><div class="digest-metric"><span>最低終了時持ち点</span><strong>-49,200</strong><em>6人中1位</em></div>
+              </div>
+            </article>
+            
+
+            <article class="player-card">
+              <div class="player-card-head">
+                <h3>ひなんじょ</h3>
+                <span>524半荘</span>
+              </div>
+              <div class="digest-metrics">
+                <div class="digest-metric"><span>獲得スコア</span><strong>983.7</strong><em>6人中2位</em></div><div class="digest-metric"><span>平均順位</span><strong>1.98</strong><em>6人中2位</em></div><div class="digest-metric"><span>和了率</span><strong>30.95%</strong><em>6人中3位</em></div><div class="digest-metric"><span>放銃率</span><strong>16.88%</strong><em>6人中4位</em></div><div class="digest-metric"><span>最高終了時持ち点</span><strong>152,200</strong><em>6人中3位</em></div><div class="digest-metric"><span>最低終了時持ち点</span><strong>-55,500</strong><em>6人中4位</em></div>
+              </div>
+            </article>
+            
+
+            <article class="player-card">
+              <div class="player-card-head">
+                <h3>鯛ofカルピス</h3>
+                <span>500半荘</span>
+              </div>
+              <div class="digest-metrics">
+                <div class="digest-metric"><span>獲得スコア</span><strong>619.7</strong><em>6人中3位</em></div><div class="digest-metric"><span>平均順位</span><strong>1.99</strong><em>6人中3位</em></div><div class="digest-metric"><span>和了率</span><strong>31.77%</strong><em>6人中2位</em></div><div class="digest-metric"><span>放銃率</span><strong>18.15%</strong><em>6人中6位</em></div><div class="digest-metric"><span>最高終了時持ち点</span><strong>172,700</strong><em>6人中2位</em></div><div class="digest-metric"><span>最低終了時持ち点</span><strong>-51,100</strong><em>6人中2位</em></div>
+              </div>
+            </article>
+            
+
+            <article class="player-card">
+              <div class="player-card-head">
+                <h3>アリスkey</h3>
+                <span>520半荘</span>
+              </div>
+              <div class="digest-metrics">
+                <div class="digest-metric"><span>獲得スコア</span><strong>-998.3</strong><em>6人中4位</em></div><div class="digest-metric"><span>平均順位</span><strong>2.02</strong><em>6人中4位</em></div><div class="digest-metric"><span>和了率</span><strong>29.03%</strong><em>6人中4位</em></div><div class="digest-metric"><span>放銃率</span><strong>15.39%</strong><em>6人中3位</em></div><div class="digest-metric"><span>最高終了時持ち点</span><strong>119,200</strong><em>6人中5位</em></div><div class="digest-metric"><span>最低終了時持ち点</span><strong>-62,800</strong><em>6人中5位</em></div>
+              </div>
+            </article>
+            
+
+            <article class="player-card">
+              <div class="player-card-head">
+                <h3>29ちゃん</h3>
+                <span>576半荘</span>
+              </div>
+              <div class="digest-metrics">
+                <div class="digest-metric"><span>獲得スコア</span><strong>-1,366.0</strong><em>6人中5位</em></div><div class="digest-metric"><span>平均順位</span><strong>2.04</strong><em>6人中5位</em></div><div class="digest-metric"><span>和了率</span><strong>26.81%</strong><em>6人中5位</em></div><div class="digest-metric"><span>放銃率</span><strong>14.61%</strong><em>6人中1位</em></div><div class="digest-metric"><span>最高終了時持ち点</span><strong>112,600</strong><em>6人中6位</em></div><div class="digest-metric"><span>最低終了時持ち点</span><strong>-53,300</strong><em>6人中3位</em></div>
+              </div>
+            </article>
+            
+
+            <article class="player-card">
+              <div class="player-card-head">
+                <h3>葡萄海ぶどう</h3>
+                <span>579半荘</span>
+              </div>
+              <div class="digest-metrics">
+                <div class="digest-metric"><span>獲得スコア</span><strong>-4,073.4</strong><em>6人中6位</em></div><div class="digest-metric"><span>平均順位</span><strong>2.13</strong><em>6人中6位</em></div><div class="digest-metric"><span>和了率</span><strong>26.45%</strong><em>6人中6位</em></div><div class="digest-metric"><span>放銃率</span><strong>17.29%</strong><em>6人中5位</em></div><div class="digest-metric"><span>最高終了時持ち点</span><strong>129,300</strong><em>6人中4位</em></div><div class="digest-metric"><span>最低終了時持ち点</span><strong>-106,800</strong><em>6人中6位</em></div>
+              </div>
+            </article>
+            
+      </section>
+
       <section class="summary" aria-label="集計概要">
         <div><span>対象半荘</span><strong>1,080</strong></div>
         <div><span>対象局数</span><strong>10,992</strong></div>
@@ -261,100 +338,6 @@
           </div>
         </section>
       </div>
-
-      <h2>個人成績ダイジェスト</h2>
-      <section class="cards">
-        
-            <article class="player-card">
-              <div class="player-card-head">
-                <h3>流れ者金融</h3>
-                <span>平均順位 1.83</span>
-              </div>
-              <div class="meter-row"><span>1位率</span><b>42.33%</b><i style="--w:42.33%"></i></div>
-              <div class="meter-row"><span>和了率</span><b>32.56%</b><i style="--w:32.56%"></i></div>
-              <div class="meter-row danger"><span>放銃率</span><b>15.02%</b><i style="--w:15.02%"></i></div>
-              <div class="mini-stats">
-                <div><span>対戦数</span><strong>541</strong></div>
-                <div><span>役満</span><strong>18</strong></div>
-              </div>
-            </article>
-            
-
-            <article class="player-card">
-              <div class="player-card-head">
-                <h3>ひなんじょ</h3>
-                <span>平均順位 1.98</span>
-              </div>
-              <div class="meter-row"><span>1位率</span><b>35.88%</b><i style="--w:35.88%"></i></div>
-              <div class="meter-row"><span>和了率</span><b>30.95%</b><i style="--w:30.95%"></i></div>
-              <div class="meter-row danger"><span>放銃率</span><b>16.88%</b><i style="--w:16.88%"></i></div>
-              <div class="mini-stats">
-                <div><span>対戦数</span><strong>524</strong></div>
-                <div><span>役満</span><strong>13</strong></div>
-              </div>
-            </article>
-            
-
-            <article class="player-card">
-              <div class="player-card-head">
-                <h3>鯛ofカルピス</h3>
-                <span>平均順位 1.99</span>
-              </div>
-              <div class="meter-row"><span>1位率</span><b>34.80%</b><i style="--w:34.8%"></i></div>
-              <div class="meter-row"><span>和了率</span><b>31.77%</b><i style="--w:31.77%"></i></div>
-              <div class="meter-row danger"><span>放銃率</span><b>18.15%</b><i style="--w:18.15%"></i></div>
-              <div class="mini-stats">
-                <div><span>対戦数</span><strong>500</strong></div>
-                <div><span>役満</span><strong>13</strong></div>
-              </div>
-            </article>
-            
-
-            <article class="player-card">
-              <div class="player-card-head">
-                <h3>アリスkey</h3>
-                <span>平均順位 2.02</span>
-              </div>
-              <div class="meter-row"><span>1位率</span><b>30.00%</b><i style="--w:30.0%"></i></div>
-              <div class="meter-row"><span>和了率</span><b>29.03%</b><i style="--w:29.03%"></i></div>
-              <div class="meter-row danger"><span>放銃率</span><b>15.39%</b><i style="--w:15.39%"></i></div>
-              <div class="mini-stats">
-                <div><span>対戦数</span><strong>520</strong></div>
-                <div><span>役満</span><strong>7</strong></div>
-              </div>
-            </article>
-            
-
-            <article class="player-card">
-              <div class="player-card-head">
-                <h3>29ちゃん</h3>
-                <span>平均順位 2.04</span>
-              </div>
-              <div class="meter-row"><span>1位率</span><b>30.90%</b><i style="--w:30.9%"></i></div>
-              <div class="meter-row"><span>和了率</span><b>26.81%</b><i style="--w:26.81%"></i></div>
-              <div class="meter-row danger"><span>放銃率</span><b>14.61%</b><i style="--w:14.61%"></i></div>
-              <div class="mini-stats">
-                <div><span>対戦数</span><strong>576</strong></div>
-                <div><span>役満</span><strong>16</strong></div>
-              </div>
-            </article>
-            
-
-            <article class="player-card">
-              <div class="player-card-head">
-                <h3>葡萄海ぶどう</h3>
-                <span>平均順位 2.13</span>
-              </div>
-              <div class="meter-row"><span>1位率</span><b>26.77%</b><i style="--w:26.77%"></i></div>
-              <div class="meter-row"><span>和了率</span><b>26.45%</b><i style="--w:26.45%"></i></div>
-              <div class="meter-row danger"><span>放銃率</span><b>17.29%</b><i style="--w:17.29%"></i></div>
-              <div class="mini-stats">
-                <div><span>対戦数</span><strong>579</strong></div>
-                <div><span>役満</span><strong>9</strong></div>
-              </div>
-            </article>
-            
-      </section>
 
       <h2>詳細スタッツ</h2>
       <div class="split-tables">
@@ -541,6 +524,76 @@
     
 
     <section class="tab-panel" id="panel-season-9" data-panel="season-9">
+      <h2>シーズン9 ダイジェスト</h2>
+      <section class="cards digest-cards">
+        
+            <article class="player-card">
+              <div class="player-card-head">
+                <h3>流れ者金融</h3>
+                <span>58半荘</span>
+              </div>
+              <div class="digest-metrics">
+                <div class="digest-metric"><span>獲得スコア</span><strong>563.7</strong><em>6人中1位</em></div><div class="digest-metric"><span>平均順位</span><strong>1.88</strong><em>6人中1位</em></div><div class="digest-metric"><span>和了率</span><strong>30.66%</strong><em>6人中2位</em></div><div class="digest-metric"><span>放銃率</span><strong>14.31%</strong><em>6人中2位</em></div><div class="digest-metric"><span>最高終了時持ち点</span><strong>187,700</strong><em>6人中1位</em></div><div class="digest-metric"><span>最低終了時持ち点</span><strong>-20,900</strong><em>6人中2位</em></div>
+              </div>
+            </article>
+            
+
+            <article class="player-card">
+              <div class="player-card-head">
+                <h3>ひなんじょ</h3>
+                <span>60半荘</span>
+              </div>
+              <div class="digest-metrics">
+                <div class="digest-metric"><span>獲得スコア</span><strong>406.2</strong><em>6人中2位</em></div><div class="digest-metric"><span>平均順位</span><strong>1.9</strong><em>6人中2位</em></div><div class="digest-metric"><span>和了率</span><strong>31.13%</strong><em>6人中1位</em></div><div class="digest-metric"><span>放銃率</span><strong>17.58%</strong><em>6人中5位</em></div><div class="digest-metric"><span>最高終了時持ち点</span><strong>152,200</strong><em>6人中2位</em></div><div class="digest-metric"><span>最低終了時持ち点</span><strong>-26,900</strong><em>6人中3位</em></div>
+              </div>
+            </article>
+            
+
+            <article class="player-card">
+              <div class="player-card-head">
+                <h3>鯛ofカルピス</h3>
+                <span>60半荘</span>
+              </div>
+              <div class="digest-metrics">
+                <div class="digest-metric"><span>獲得スコア</span><strong>304.7</strong><em>6人中3位</em></div><div class="digest-metric"><span>平均順位</span><strong>1.9</strong><em>6人中2位</em></div><div class="digest-metric"><span>和了率</span><strong>29.70%</strong><em>6人中5位</em></div><div class="digest-metric"><span>放銃率</span><strong>16.53%</strong><em>6人中4位</em></div><div class="digest-metric"><span>最高終了時持ち点</span><strong>127,400</strong><em>6人中3位</em></div><div class="digest-metric"><span>最低終了時持ち点</span><strong>-30,300</strong><em>6人中4位</em></div>
+              </div>
+            </article>
+            
+
+            <article class="player-card">
+              <div class="player-card-head">
+                <h3>29ちゃん</h3>
+                <span>62半荘</span>
+              </div>
+              <div class="digest-metrics">
+                <div class="digest-metric"><span>獲得スコア</span><strong>179.9</strong><em>6人中4位</em></div><div class="digest-metric"><span>平均順位</span><strong>1.9</strong><em>6人中2位</em></div><div class="digest-metric"><span>和了率</span><strong>29.88%</strong><em>6人中4位</em></div><div class="digest-metric"><span>放銃率</span><strong>13.26%</strong><em>6人中1位</em></div><div class="digest-metric"><span>最高終了時持ち点</span><strong>97,900</strong><em>6人中4位</em></div><div class="digest-metric"><span>最低終了時持ち点</span><strong>-42,200</strong><em>6人中5位</em></div>
+              </div>
+            </article>
+            
+
+            <article class="player-card">
+              <div class="player-card-head">
+                <h3>アリスkey</h3>
+                <span>54半荘</span>
+              </div>
+              <div class="digest-metrics">
+                <div class="digest-metric"><span>獲得スコア</span><strong>-202.1</strong><em>6人中5位</em></div><div class="digest-metric"><span>平均順位</span><strong>2.06</strong><em>6人中3位</em></div><div class="digest-metric"><span>和了率</span><strong>30.37%</strong><em>6人中3位</em></div><div class="digest-metric"><span>放銃率</span><strong>16.23%</strong><em>6人中3位</em></div><div class="digest-metric"><span>最高終了時持ち点</span><strong>79,800</strong><em>6人中6位</em></div><div class="digest-metric"><span>最低終了時持ち点</span><strong>-16,300</strong><em>6人中1位</em></div>
+              </div>
+            </article>
+            
+
+            <article class="player-card">
+              <div class="player-card-head">
+                <h3>葡萄海ぶどう</h3>
+                <span>66半荘</span>
+              </div>
+              <div class="digest-metrics">
+                <div class="digest-metric"><span>獲得スコア</span><strong>-1,252.4</strong><em>6人中6位</em></div><div class="digest-metric"><span>平均順位</span><strong>2.33</strong><em>6人中4位</em></div><div class="digest-metric"><span>和了率</span><strong>24.03%</strong><em>6人中6位</em></div><div class="digest-metric"><span>放銃率</span><strong>18.06%</strong><em>6人中6位</em></div><div class="digest-metric"><span>最高終了時持ち点</span><strong>94,100</strong><em>6人中5位</em></div><div class="digest-metric"><span>最低終了時持ち点</span><strong>-106,800</strong><em>6人中6位</em></div>
+              </div>
+            </article>
+            
+      </section>
+
       <section class="summary" aria-label="集計概要">
         <div><span>対象半荘</span><strong>120</strong></div>
         <div><span>対象局数</span><strong>1,243</strong></div>
@@ -588,100 +641,6 @@
           </div>
         </section>
       </div>
-
-      <h2>個人成績ダイジェスト</h2>
-      <section class="cards">
-        
-            <article class="player-card">
-              <div class="player-card-head">
-                <h3>流れ者金融</h3>
-                <span>平均順位 1.88</span>
-              </div>
-              <div class="meter-row"><span>1位率</span><b>34.48%</b><i style="--w:34.48%"></i></div>
-              <div class="meter-row"><span>和了率</span><b>30.66%</b><i style="--w:30.66%"></i></div>
-              <div class="meter-row danger"><span>放銃率</span><b>14.31%</b><i style="--w:14.31%"></i></div>
-              <div class="mini-stats">
-                <div><span>対戦数</span><strong>58</strong></div>
-                <div><span>役満</span><strong>1</strong></div>
-              </div>
-            </article>
-            
-
-            <article class="player-card">
-              <div class="player-card-head">
-                <h3>29ちゃん</h3>
-                <span>平均順位 1.9</span>
-              </div>
-              <div class="meter-row"><span>1位率</span><b>33.87%</b><i style="--w:33.87%"></i></div>
-              <div class="meter-row"><span>和了率</span><b>29.88%</b><i style="--w:29.88%"></i></div>
-              <div class="meter-row danger"><span>放銃率</span><b>13.26%</b><i style="--w:13.26%"></i></div>
-              <div class="mini-stats">
-                <div><span>対戦数</span><strong>62</strong></div>
-                <div><span>役満</span><strong>2</strong></div>
-              </div>
-            </article>
-            
-
-            <article class="player-card">
-              <div class="player-card-head">
-                <h3>ひなんじょ</h3>
-                <span>平均順位 1.9</span>
-              </div>
-              <div class="meter-row"><span>1位率</span><b>45.00%</b><i style="--w:45.0%"></i></div>
-              <div class="meter-row"><span>和了率</span><b>31.13%</b><i style="--w:31.13%"></i></div>
-              <div class="meter-row danger"><span>放銃率</span><b>17.58%</b><i style="--w:17.58%"></i></div>
-              <div class="mini-stats">
-                <div><span>対戦数</span><strong>60</strong></div>
-                <div><span>役満</span><strong>1</strong></div>
-              </div>
-            </article>
-            
-
-            <article class="player-card">
-              <div class="player-card-head">
-                <h3>鯛ofカルピス</h3>
-                <span>平均順位 1.9</span>
-              </div>
-              <div class="meter-row"><span>1位率</span><b>35.00%</b><i style="--w:35.0%"></i></div>
-              <div class="meter-row"><span>和了率</span><b>29.70%</b><i style="--w:29.7%"></i></div>
-              <div class="meter-row danger"><span>放銃率</span><b>16.53%</b><i style="--w:16.53%"></i></div>
-              <div class="mini-stats">
-                <div><span>対戦数</span><strong>60</strong></div>
-                <div><span>役満</span><strong>4</strong></div>
-              </div>
-            </article>
-            
-
-            <article class="player-card">
-              <div class="player-card-head">
-                <h3>アリスkey</h3>
-                <span>平均順位 2.06</span>
-              </div>
-              <div class="meter-row"><span>1位率</span><b>33.33%</b><i style="--w:33.33%"></i></div>
-              <div class="meter-row"><span>和了率</span><b>30.37%</b><i style="--w:30.37%"></i></div>
-              <div class="meter-row danger"><span>放銃率</span><b>16.23%</b><i style="--w:16.23%"></i></div>
-              <div class="mini-stats">
-                <div><span>対戦数</span><strong>54</strong></div>
-                <div><span>役満</span><strong>0</strong></div>
-              </div>
-            </article>
-            
-
-            <article class="player-card">
-              <div class="player-card-head">
-                <h3>葡萄海ぶどう</h3>
-                <span>平均順位 2.33</span>
-              </div>
-              <div class="meter-row"><span>1位率</span><b>19.70%</b><i style="--w:19.7%"></i></div>
-              <div class="meter-row"><span>和了率</span><b>24.03%</b><i style="--w:24.03%"></i></div>
-              <div class="meter-row danger"><span>放銃率</span><b>18.06%</b><i style="--w:18.06%"></i></div>
-              <div class="mini-stats">
-                <div><span>対戦数</span><strong>66</strong></div>
-                <div><span>役満</span><strong>2</strong></div>
-              </div>
-            </article>
-            
-      </section>
 
       <h2>詳細スタッツ</h2>
       <div class="split-tables">
@@ -769,6 +728,76 @@
     
 
     <section class="tab-panel" id="panel-season-8" data-panel="season-8">
+      <h2>シーズン8 ダイジェスト</h2>
+      <section class="cards digest-cards">
+        
+            <article class="player-card">
+              <div class="player-card-head">
+                <h3>流れ者金融</h3>
+                <span>63半荘</span>
+              </div>
+              <div class="digest-metrics">
+                <div class="digest-metric"><span>獲得スコア</span><strong>1,189.2</strong><em>6人中1位</em></div><div class="digest-metric"><span>平均順位</span><strong>1.65</strong><em>6人中1位</em></div><div class="digest-metric"><span>和了率</span><strong>36.23%</strong><em>6人中1位</em></div><div class="digest-metric"><span>放銃率</span><strong>15.82%</strong><em>6人中3位</em></div><div class="digest-metric"><span>最高終了時持ち点</span><strong>163,600</strong><em>6人中1位</em></div><div class="digest-metric"><span>最低終了時持ち点</span><strong>-46,500</strong><em>6人中6位</em></div>
+              </div>
+            </article>
+            
+
+            <article class="player-card">
+              <div class="player-card-head">
+                <h3>アリスkey</h3>
+                <span>59半荘</span>
+              </div>
+              <div class="digest-metrics">
+                <div class="digest-metric"><span>獲得スコア</span><strong>-53.8</strong><em>6人中2位</em></div><div class="digest-metric"><span>平均順位</span><strong>2.02</strong><em>6人中2位</em></div><div class="digest-metric"><span>和了率</span><strong>28.32%</strong><em>6人中3位</em></div><div class="digest-metric"><span>放銃率</span><strong>15.37%</strong><em>6人中2位</em></div><div class="digest-metric"><span>最高終了時持ち点</span><strong>81,500</strong><em>6人中6位</em></div><div class="digest-metric"><span>最低終了時持ち点</span><strong>-30,500</strong><em>6人中3位</em></div>
+              </div>
+            </article>
+            
+
+            <article class="player-card">
+              <div class="player-card-head">
+                <h3>ひなんじょ</h3>
+                <span>44半荘</span>
+              </div>
+              <div class="digest-metrics">
+                <div class="digest-metric"><span>獲得スコア</span><strong>-128.9</strong><em>6人中3位</em></div><div class="digest-metric"><span>平均順位</span><strong>2.11</strong><em>6人中4位</em></div><div class="digest-metric"><span>和了率</span><strong>30.35%</strong><em>6人中2位</em></div><div class="digest-metric"><span>放銃率</span><strong>17.18%</strong><em>6人中4位</em></div><div class="digest-metric"><span>最高終了時持ち点</span><strong>132,500</strong><em>6人中2位</em></div><div class="digest-metric"><span>最低終了時持ち点</span><strong>-20,500</strong><em>6人中1位</em></div>
+              </div>
+            </article>
+            
+
+            <article class="player-card">
+              <div class="player-card-head">
+                <h3>29ちゃん</h3>
+                <span>61半荘</span>
+              </div>
+              <div class="digest-metrics">
+                <div class="digest-metric"><span>獲得スコア</span><strong>-289.1</strong><em>6人中4位</em></div><div class="digest-metric"><span>平均順位</span><strong>2.07</strong><em>6人中3位</em></div><div class="digest-metric"><span>和了率</span><strong>27.36%</strong><em>6人中6位</em></div><div class="digest-metric"><span>放銃率</span><strong>14.43%</strong><em>6人中1位</em></div><div class="digest-metric"><span>最高終了時持ち点</span><strong>103,000</strong><em>6人中4位</em></div><div class="digest-metric"><span>最低終了時持ち点</span><strong>-33,700</strong><em>6人中4位</em></div>
+              </div>
+            </article>
+            
+
+            <article class="player-card">
+              <div class="player-card-head">
+                <h3>鯛ofカルピス</h3>
+                <span>57半荘</span>
+              </div>
+              <div class="digest-metrics">
+                <div class="digest-metric"><span>獲得スコア</span><strong>-306.7</strong><em>6人中5位</em></div><div class="digest-metric"><span>平均順位</span><strong>2.07</strong><em>6人中3位</em></div><div class="digest-metric"><span>和了率</span><strong>27.82%</strong><em>6人中5位</em></div><div class="digest-metric"><span>放銃率</span><strong>20.36%</strong><em>6人中6位</em></div><div class="digest-metric"><span>最高終了時持ち点</span><strong>114,900</strong><em>6人中3位</em></div><div class="digest-metric"><span>最低終了時持ち点</span><strong>-44,200</strong><em>6人中5位</em></div>
+              </div>
+            </article>
+            
+
+            <article class="player-card">
+              <div class="player-card-head">
+                <h3>葡萄海ぶどう</h3>
+                <span>76半荘</span>
+              </div>
+              <div class="digest-metrics">
+                <div class="digest-metric"><span>獲得スコア</span><strong>-410.7</strong><em>6人中6位</em></div><div class="digest-metric"><span>平均順位</span><strong>2.11</strong><em>6人中4位</em></div><div class="digest-metric"><span>和了率</span><strong>28.27%</strong><em>6人中4位</em></div><div class="digest-metric"><span>放銃率</span><strong>18.49%</strong><em>6人中5位</em></div><div class="digest-metric"><span>最高終了時持ち点</span><strong>101,100</strong><em>6人中5位</em></div><div class="digest-metric"><span>最低終了時持ち点</span><strong>-27,800</strong><em>6人中2位</em></div>
+              </div>
+            </article>
+            
+      </section>
+
       <section class="summary" aria-label="集計概要">
         <div><span>対象半荘</span><strong>120</strong></div>
         <div><span>対象局数</span><strong>1,182</strong></div>
@@ -816,100 +845,6 @@
           </div>
         </section>
       </div>
-
-      <h2>個人成績ダイジェスト</h2>
-      <section class="cards">
-        
-            <article class="player-card">
-              <div class="player-card-head">
-                <h3>流れ者金融</h3>
-                <span>平均順位 1.65</span>
-              </div>
-              <div class="meter-row"><span>1位率</span><b>57.14%</b><i style="--w:57.14%"></i></div>
-              <div class="meter-row"><span>和了率</span><b>36.23%</b><i style="--w:36.23%"></i></div>
-              <div class="meter-row danger"><span>放銃率</span><b>15.82%</b><i style="--w:15.82%"></i></div>
-              <div class="mini-stats">
-                <div><span>対戦数</span><strong>63</strong></div>
-                <div><span>役満</span><strong>2</strong></div>
-              </div>
-            </article>
-            
-
-            <article class="player-card">
-              <div class="player-card-head">
-                <h3>アリスkey</h3>
-                <span>平均順位 2.02</span>
-              </div>
-              <div class="meter-row"><span>1位率</span><b>32.20%</b><i style="--w:32.2%"></i></div>
-              <div class="meter-row"><span>和了率</span><b>28.32%</b><i style="--w:28.32%"></i></div>
-              <div class="meter-row danger"><span>放銃率</span><b>15.37%</b><i style="--w:15.37%"></i></div>
-              <div class="mini-stats">
-                <div><span>対戦数</span><strong>59</strong></div>
-                <div><span>役満</span><strong>1</strong></div>
-              </div>
-            </article>
-            
-
-            <article class="player-card">
-              <div class="player-card-head">
-                <h3>29ちゃん</h3>
-                <span>平均順位 2.07</span>
-              </div>
-              <div class="meter-row"><span>1位率</span><b>27.87%</b><i style="--w:27.87%"></i></div>
-              <div class="meter-row"><span>和了率</span><b>27.36%</b><i style="--w:27.36%"></i></div>
-              <div class="meter-row danger"><span>放銃率</span><b>14.43%</b><i style="--w:14.43%"></i></div>
-              <div class="mini-stats">
-                <div><span>対戦数</span><strong>61</strong></div>
-                <div><span>役満</span><strong>2</strong></div>
-              </div>
-            </article>
-            
-
-            <article class="player-card">
-              <div class="player-card-head">
-                <h3>鯛ofカルピス</h3>
-                <span>平均順位 2.07</span>
-              </div>
-              <div class="meter-row"><span>1位率</span><b>31.58%</b><i style="--w:31.58%"></i></div>
-              <div class="meter-row"><span>和了率</span><b>27.82%</b><i style="--w:27.82%"></i></div>
-              <div class="meter-row danger"><span>放銃率</span><b>20.36%</b><i style="--w:20.36%"></i></div>
-              <div class="mini-stats">
-                <div><span>対戦数</span><strong>57</strong></div>
-                <div><span>役満</span><strong>2</strong></div>
-              </div>
-            </article>
-            
-
-            <article class="player-card">
-              <div class="player-card-head">
-                <h3>ひなんじょ</h3>
-                <span>平均順位 2.11</span>
-              </div>
-              <div class="meter-row"><span>1位率</span><b>29.55%</b><i style="--w:29.55%"></i></div>
-              <div class="meter-row"><span>和了率</span><b>30.35%</b><i style="--w:30.35%"></i></div>
-              <div class="meter-row danger"><span>放銃率</span><b>17.18%</b><i style="--w:17.18%"></i></div>
-              <div class="mini-stats">
-                <div><span>対戦数</span><strong>44</strong></div>
-                <div><span>役満</span><strong>0</strong></div>
-              </div>
-            </article>
-            
-
-            <article class="player-card">
-              <div class="player-card-head">
-                <h3>葡萄海ぶどう</h3>
-                <span>平均順位 2.11</span>
-              </div>
-              <div class="meter-row"><span>1位率</span><b>22.37%</b><i style="--w:22.37%"></i></div>
-              <div class="meter-row"><span>和了率</span><b>28.27%</b><i style="--w:28.27%"></i></div>
-              <div class="meter-row danger"><span>放銃率</span><b>18.49%</b><i style="--w:18.49%"></i></div>
-              <div class="mini-stats">
-                <div><span>対戦数</span><strong>76</strong></div>
-                <div><span>役満</span><strong>1</strong></div>
-              </div>
-            </article>
-            
-      </section>
 
       <h2>詳細スタッツ</h2>
       <div class="split-tables">
@@ -1002,6 +937,76 @@
     
 
     <section class="tab-panel" id="panel-season-7" data-panel="season-7">
+      <h2>シーズン7 ダイジェスト</h2>
+      <section class="cards digest-cards">
+        
+            <article class="player-card">
+              <div class="player-card-head">
+                <h3>ひなんじょ</h3>
+                <span>61半荘</span>
+              </div>
+              <div class="digest-metrics">
+                <div class="digest-metric"><span>獲得スコア</span><strong>488.6</strong><em>6人中1位</em></div><div class="digest-metric"><span>平均順位</span><strong>1.82</strong><em>6人中1位</em></div><div class="digest-metric"><span>和了率</span><strong>32.56%</strong><em>6人中1位</em></div><div class="digest-metric"><span>放銃率</span><strong>15.04%</strong><em>6人中3位</em></div><div class="digest-metric"><span>最高終了時持ち点</span><strong>111,900</strong><em>6人中4位</em></div><div class="digest-metric"><span>最低終了時持ち点</span><strong>-32,900</strong><em>6人中2位</em></div>
+              </div>
+            </article>
+            
+
+            <article class="player-card">
+              <div class="player-card-head">
+                <h3>アリスkey</h3>
+                <span>57半荘</span>
+              </div>
+              <div class="digest-metrics">
+                <div class="digest-metric"><span>獲得スコア</span><strong>305.5</strong><em>6人中2位</em></div><div class="digest-metric"><span>平均順位</span><strong>1.89</strong><em>6人中2位</em></div><div class="digest-metric"><span>和了率</span><strong>30.32%</strong><em>6人中4位</em></div><div class="digest-metric"><span>放銃率</span><strong>13.29%</strong><em>6人中1位</em></div><div class="digest-metric"><span>最高終了時持ち点</span><strong>119,200</strong><em>6人中2位</em></div><div class="digest-metric"><span>最低終了時持ち点</span><strong>-36,500</strong><em>6人中3位</em></div>
+              </div>
+            </article>
+            
+
+            <article class="player-card">
+              <div class="player-card-head">
+                <h3>流れ者金融</h3>
+                <span>61半荘</span>
+              </div>
+              <div class="digest-metrics">
+                <div class="digest-metric"><span>獲得スコア</span><strong>289.2</strong><em>6人中3位</em></div><div class="digest-metric"><span>平均順位</span><strong>1.89</strong><em>6人中2位</em></div><div class="digest-metric"><span>和了率</span><strong>31.78%</strong><em>6人中3位</em></div><div class="digest-metric"><span>放銃率</span><strong>14.64%</strong><em>6人中2位</em></div><div class="digest-metric"><span>最高終了時持ち点</span><strong>97,100</strong><em>6人中6位</em></div><div class="digest-metric"><span>最低終了時持ち点</span><strong>-49,200</strong><em>6人中4位</em></div>
+              </div>
+            </article>
+            
+
+            <article class="player-card">
+              <div class="player-card-head">
+                <h3>鯛ofカルピス</h3>
+                <span>63半荘</span>
+              </div>
+              <div class="digest-metrics">
+                <div class="digest-metric"><span>獲得スコア</span><strong>-19.8</strong><em>6人中4位</em></div><div class="digest-metric"><span>平均順位</span><strong>2.08</strong><em>6人中3位</em></div><div class="digest-metric"><span>和了率</span><strong>31.91%</strong><em>6人中2位</em></div><div class="digest-metric"><span>放銃率</span><strong>19.91%</strong><em>6人中6位</em></div><div class="digest-metric"><span>最高終了時持ち点</span><strong>172,700</strong><em>6人中1位</em></div><div class="digest-metric"><span>最低終了時持ち点</span><strong>-27,000</strong><em>6人中1位</em></div>
+              </div>
+            </article>
+            
+
+            <article class="player-card">
+              <div class="player-card-head">
+                <h3>29ちゃん</h3>
+                <span>59半荘</span>
+              </div>
+              <div class="digest-metrics">
+                <div class="digest-metric"><span>獲得スコア</span><strong>-424.5</strong><em>6人中5位</em></div><div class="digest-metric"><span>平均順位</span><strong>2.15</strong><em>6人中4位</em></div><div class="digest-metric"><span>和了率</span><strong>26.88%</strong><em>6人中5位</em></div><div class="digest-metric"><span>放銃率</span><strong>15.62%</strong><em>6人中4位</em></div><div class="digest-metric"><span>最高終了時持ち点</span><strong>112,600</strong><em>6人中3位</em></div><div class="digest-metric"><span>最低終了時持ち点</span><strong>-32,900</strong><em>6人中2位</em></div>
+              </div>
+            </article>
+            
+
+            <article class="player-card">
+              <div class="player-card-head">
+                <h3>葡萄海ぶどう</h3>
+                <span>59半荘</span>
+              </div>
+              <div class="digest-metrics">
+                <div class="digest-metric"><span>獲得スコア</span><strong>-639.0</strong><em>6人中6位</em></div><div class="digest-metric"><span>平均順位</span><strong>2.17</strong><em>6人中5位</em></div><div class="digest-metric"><span>和了率</span><strong>23.38%</strong><em>6人中6位</em></div><div class="digest-metric"><span>放銃率</span><strong>18.24%</strong><em>6人中5位</em></div><div class="digest-metric"><span>最高終了時持ち点</span><strong>106,600</strong><em>6人中5位</em></div><div class="digest-metric"><span>最低終了時持ち点</span><strong>-55,200</strong><em>6人中5位</em></div>
+              </div>
+            </article>
+            
+      </section>
+
       <section class="summary" aria-label="集計概要">
         <div><span>対象半荘</span><strong>120</strong></div>
         <div><span>対象局数</span><strong>1,245</strong></div>
@@ -1049,100 +1054,6 @@
           </div>
         </section>
       </div>
-
-      <h2>個人成績ダイジェスト</h2>
-      <section class="cards">
-        
-            <article class="player-card">
-              <div class="player-card-head">
-                <h3>ひなんじょ</h3>
-                <span>平均順位 1.82</span>
-              </div>
-              <div class="meter-row"><span>1位率</span><b>39.34%</b><i style="--w:39.34%"></i></div>
-              <div class="meter-row"><span>和了率</span><b>32.56%</b><i style="--w:32.56%"></i></div>
-              <div class="meter-row danger"><span>放銃率</span><b>15.04%</b><i style="--w:15.04%"></i></div>
-              <div class="mini-stats">
-                <div><span>対戦数</span><strong>61</strong></div>
-                <div><span>役満</span><strong>0</strong></div>
-              </div>
-            </article>
-            
-
-            <article class="player-card">
-              <div class="player-card-head">
-                <h3>アリスkey</h3>
-                <span>平均順位 1.89</span>
-              </div>
-              <div class="meter-row"><span>1位率</span><b>40.35%</b><i style="--w:40.35%"></i></div>
-              <div class="meter-row"><span>和了率</span><b>30.32%</b><i style="--w:30.32%"></i></div>
-              <div class="meter-row danger"><span>放銃率</span><b>13.29%</b><i style="--w:13.29%"></i></div>
-              <div class="mini-stats">
-                <div><span>対戦数</span><strong>57</strong></div>
-                <div><span>役満</span><strong>1</strong></div>
-              </div>
-            </article>
-            
-
-            <article class="player-card">
-              <div class="player-card-head">
-                <h3>流れ者金融</h3>
-                <span>平均順位 1.89</span>
-              </div>
-              <div class="meter-row"><span>1位率</span><b>37.70%</b><i style="--w:37.7%"></i></div>
-              <div class="meter-row"><span>和了率</span><b>31.78%</b><i style="--w:31.78%"></i></div>
-              <div class="meter-row danger"><span>放銃率</span><b>14.64%</b><i style="--w:14.64%"></i></div>
-              <div class="mini-stats">
-                <div><span>対戦数</span><strong>61</strong></div>
-                <div><span>役満</span><strong>0</strong></div>
-              </div>
-            </article>
-            
-
-            <article class="player-card">
-              <div class="player-card-head">
-                <h3>鯛ofカルピス</h3>
-                <span>平均順位 2.08</span>
-              </div>
-              <div class="meter-row"><span>1位率</span><b>30.16%</b><i style="--w:30.16%"></i></div>
-              <div class="meter-row"><span>和了率</span><b>31.91%</b><i style="--w:31.91%"></i></div>
-              <div class="meter-row danger"><span>放銃率</span><b>19.91%</b><i style="--w:19.91%"></i></div>
-              <div class="mini-stats">
-                <div><span>対戦数</span><strong>63</strong></div>
-                <div><span>役満</span><strong>3</strong></div>
-              </div>
-            </article>
-            
-
-            <article class="player-card">
-              <div class="player-card-head">
-                <h3>29ちゃん</h3>
-                <span>平均順位 2.15</span>
-              </div>
-              <div class="meter-row"><span>1位率</span><b>23.73%</b><i style="--w:23.73%"></i></div>
-              <div class="meter-row"><span>和了率</span><b>26.88%</b><i style="--w:26.88%"></i></div>
-              <div class="meter-row danger"><span>放銃率</span><b>15.62%</b><i style="--w:15.62%"></i></div>
-              <div class="mini-stats">
-                <div><span>対戦数</span><strong>59</strong></div>
-                <div><span>役満</span><strong>1</strong></div>
-              </div>
-            </article>
-            
-
-            <article class="player-card">
-              <div class="player-card-head">
-                <h3>葡萄海ぶどう</h3>
-                <span>平均順位 2.17</span>
-              </div>
-              <div class="meter-row"><span>1位率</span><b>28.81%</b><i style="--w:28.81%"></i></div>
-              <div class="meter-row"><span>和了率</span><b>23.38%</b><i style="--w:23.38%"></i></div>
-              <div class="meter-row danger"><span>放銃率</span><b>18.24%</b><i style="--w:18.24%"></i></div>
-              <div class="mini-stats">
-                <div><span>対戦数</span><strong>59</strong></div>
-                <div><span>役満</span><strong>0</strong></div>
-              </div>
-            </article>
-            
-      </section>
 
       <h2>詳細スタッツ</h2>
       <div class="split-tables">
@@ -1223,6 +1134,76 @@
     
 
     <section class="tab-panel" id="panel-season-6" data-panel="season-6">
+      <h2>シーズン6 ダイジェスト</h2>
+      <section class="cards digest-cards">
+        
+            <article class="player-card">
+              <div class="player-card-head">
+                <h3>流れ者金融</h3>
+                <span>57半荘</span>
+              </div>
+              <div class="digest-metrics">
+                <div class="digest-metric"><span>獲得スコア</span><strong>125.9</strong><em>6人中1位</em></div><div class="digest-metric"><span>平均順位</span><strong>1.95</strong><em>6人中1位</em></div><div class="digest-metric"><span>和了率</span><strong>30.72%</strong><em>6人中2位</em></div><div class="digest-metric"><span>放銃率</span><strong>15.36%</strong><em>6人中2位</em></div><div class="digest-metric"><span>最高終了時持ち点</span><strong>111,700</strong><em>6人中3位</em></div><div class="digest-metric"><span>最低終了時持ち点</span><strong>-14,300</strong><em>6人中1位</em></div>
+              </div>
+            </article>
+            
+
+            <article class="player-card">
+              <div class="player-card-head">
+                <h3>ひなんじょ</h3>
+                <span>56半荘</span>
+              </div>
+              <div class="digest-metrics">
+                <div class="digest-metric"><span>獲得スコア</span><strong>116.7</strong><em>6人中2位</em></div><div class="digest-metric"><span>平均順位</span><strong>2.04</strong><em>6人中4位</em></div><div class="digest-metric"><span>和了率</span><strong>30.19%</strong><em>6人中3位</em></div><div class="digest-metric"><span>放銃率</span><strong>16.42%</strong><em>6人中6位</em></div><div class="digest-metric"><span>最高終了時持ち点</span><strong>101,600</strong><em>6人中5位</em></div><div class="digest-metric"><span>最低終了時持ち点</span><strong>-28,900</strong><em>6人中3位</em></div>
+              </div>
+            </article>
+            
+
+            <article class="player-card">
+              <div class="player-card-head">
+                <h3>鯛ofカルピス</h3>
+                <span>58半荘</span>
+              </div>
+              <div class="digest-metrics">
+                <div class="digest-metric"><span>獲得スコア</span><strong>41.6</strong><em>6人中3位</em></div><div class="digest-metric"><span>平均順位</span><strong>2.03</strong><em>6人中3位</em></div><div class="digest-metric"><span>和了率</span><strong>31.72%</strong><em>6人中1位</em></div><div class="digest-metric"><span>放銃率</span><strong>15.86%</strong><em>6人中4位</em></div><div class="digest-metric"><span>最高終了時持ち点</span><strong>130,500</strong><em>6人中1位</em></div><div class="digest-metric"><span>最低終了時持ち点</span><strong>-19,800</strong><em>6人中2位</em></div>
+              </div>
+            </article>
+            
+
+            <article class="player-card">
+              <div class="player-card-head">
+                <h3>アリスkey</h3>
+                <span>62半荘</span>
+              </div>
+              <div class="digest-metrics">
+                <div class="digest-metric"><span>獲得スコア</span><strong>-50.1</strong><em>6人中4位</em></div><div class="digest-metric"><span>平均順位</span><strong>1.95</strong><em>6人中1位</em></div><div class="digest-metric"><span>和了率</span><strong>29.87%</strong><em>6人中4位</em></div><div class="digest-metric"><span>放銃率</span><strong>14.70%</strong><em>6人中1位</em></div><div class="digest-metric"><span>最高終了時持ち点</span><strong>91,000</strong><em>6人中6位</em></div><div class="digest-metric"><span>最低終了時持ち点</span><strong>-62,800</strong><em>6人中6位</em></div>
+              </div>
+            </article>
+            
+
+            <article class="player-card">
+              <div class="player-card-head">
+                <h3>29ちゃん</h3>
+                <span>63半荘</span>
+              </div>
+              <div class="digest-metrics">
+                <div class="digest-metric"><span>獲得スコア</span><strong>-97.2</strong><em>6人中5位</em></div><div class="digest-metric"><span>平均順位</span><strong>2.0</strong><em>6人中2位</em></div><div class="digest-metric"><span>和了率</span><strong>27.15%</strong><em>6人中6位</em></div><div class="digest-metric"><span>放銃率</span><strong>15.49%</strong><em>6人中3位</em></div><div class="digest-metric"><span>最高終了時持ち点</span><strong>103,000</strong><em>6人中4位</em></div><div class="digest-metric"><span>最低終了時持ち点</span><strong>-51,600</strong><em>6人中5位</em></div>
+              </div>
+            </article>
+            
+
+            <article class="player-card">
+              <div class="player-card-head">
+                <h3>葡萄海ぶどう</h3>
+                <span>64半荘</span>
+              </div>
+              <div class="digest-metrics">
+                <div class="digest-metric"><span>獲得スコア</span><strong>-136.9</strong><em>6人中6位</em></div><div class="digest-metric"><span>平均順位</span><strong>2.03</strong><em>6人中3位</em></div><div class="digest-metric"><span>和了率</span><strong>27.77%</strong><em>6人中5位</em></div><div class="digest-metric"><span>放銃率</span><strong>16.26%</strong><em>6人中5位</em></div><div class="digest-metric"><span>最高終了時持ち点</span><strong>129,300</strong><em>6人中2位</em></div><div class="digest-metric"><span>最低終了時持ち点</span><strong>-33,400</strong><em>6人中4位</em></div>
+              </div>
+            </article>
+            
+      </section>
+
       <section class="summary" aria-label="集計概要">
         <div><span>対象半荘</span><strong>120</strong></div>
         <div><span>対象局数</span><strong>1,225</strong></div>
@@ -1270,100 +1251,6 @@
           </div>
         </section>
       </div>
-
-      <h2>個人成績ダイジェスト</h2>
-      <section class="cards">
-        
-            <article class="player-card">
-              <div class="player-card-head">
-                <h3>アリスkey</h3>
-                <span>平均順位 1.95</span>
-              </div>
-              <div class="meter-row"><span>1位率</span><b>33.87%</b><i style="--w:33.87%"></i></div>
-              <div class="meter-row"><span>和了率</span><b>29.87%</b><i style="--w:29.87%"></i></div>
-              <div class="meter-row danger"><span>放銃率</span><b>14.70%</b><i style="--w:14.7%"></i></div>
-              <div class="mini-stats">
-                <div><span>対戦数</span><strong>62</strong></div>
-                <div><span>役満</span><strong>0</strong></div>
-              </div>
-            </article>
-            
-
-            <article class="player-card">
-              <div class="player-card-head">
-                <h3>流れ者金融</h3>
-                <span>平均順位 1.95</span>
-              </div>
-              <div class="meter-row"><span>1位率</span><b>36.84%</b><i style="--w:36.84%"></i></div>
-              <div class="meter-row"><span>和了率</span><b>30.72%</b><i style="--w:30.72%"></i></div>
-              <div class="meter-row danger"><span>放銃率</span><b>15.36%</b><i style="--w:15.36%"></i></div>
-              <div class="mini-stats">
-                <div><span>対戦数</span><strong>57</strong></div>
-                <div><span>役満</span><strong>3</strong></div>
-              </div>
-            </article>
-            
-
-            <article class="player-card">
-              <div class="player-card-head">
-                <h3>29ちゃん</h3>
-                <span>平均順位 2.0</span>
-              </div>
-              <div class="meter-row"><span>1位率</span><b>28.57%</b><i style="--w:28.57%"></i></div>
-              <div class="meter-row"><span>和了率</span><b>27.15%</b><i style="--w:27.15%"></i></div>
-              <div class="meter-row danger"><span>放銃率</span><b>15.49%</b><i style="--w:15.49%"></i></div>
-              <div class="mini-stats">
-                <div><span>対戦数</span><strong>63</strong></div>
-                <div><span>役満</span><strong>1</strong></div>
-              </div>
-            </article>
-            
-
-            <article class="player-card">
-              <div class="player-card-head">
-                <h3>葡萄海ぶどう</h3>
-                <span>平均順位 2.03</span>
-              </div>
-              <div class="meter-row"><span>1位率</span><b>34.38%</b><i style="--w:34.38%"></i></div>
-              <div class="meter-row"><span>和了率</span><b>27.77%</b><i style="--w:27.77%"></i></div>
-              <div class="meter-row danger"><span>放銃率</span><b>16.26%</b><i style="--w:16.26%"></i></div>
-              <div class="mini-stats">
-                <div><span>対戦数</span><strong>64</strong></div>
-                <div><span>役満</span><strong>1</strong></div>
-              </div>
-            </article>
-            
-
-            <article class="player-card">
-              <div class="player-card-head">
-                <h3>鯛ofカルピス</h3>
-                <span>平均順位 2.03</span>
-              </div>
-              <div class="meter-row"><span>1位率</span><b>34.48%</b><i style="--w:34.48%"></i></div>
-              <div class="meter-row"><span>和了率</span><b>31.72%</b><i style="--w:31.72%"></i></div>
-              <div class="meter-row danger"><span>放銃率</span><b>15.86%</b><i style="--w:15.86%"></i></div>
-              <div class="mini-stats">
-                <div><span>対戦数</span><strong>58</strong></div>
-                <div><span>役満</span><strong>0</strong></div>
-              </div>
-            </article>
-            
-
-            <article class="player-card">
-              <div class="player-card-head">
-                <h3>ひなんじょ</h3>
-                <span>平均順位 2.04</span>
-              </div>
-              <div class="meter-row"><span>1位率</span><b>32.14%</b><i style="--w:32.14%"></i></div>
-              <div class="meter-row"><span>和了率</span><b>30.19%</b><i style="--w:30.19%"></i></div>
-              <div class="meter-row danger"><span>放銃率</span><b>16.42%</b><i style="--w:16.42%"></i></div>
-              <div class="mini-stats">
-                <div><span>対戦数</span><strong>56</strong></div>
-                <div><span>役満</span><strong>1</strong></div>
-              </div>
-            </article>
-            
-      </section>
 
       <h2>詳細スタッツ</h2>
       <div class="split-tables">
@@ -1445,6 +1332,76 @@
     
 
     <section class="tab-panel" id="panel-season-5" data-panel="season-5">
+      <h2>シーズン5 ダイジェスト</h2>
+      <section class="cards digest-cards">
+        
+            <article class="player-card">
+              <div class="player-card-head">
+                <h3>流れ者金融</h3>
+                <span>69半荘</span>
+              </div>
+              <div class="digest-metrics">
+                <div class="digest-metric"><span>獲得スコア</span><strong>941.7</strong><em>6人中1位</em></div><div class="digest-metric"><span>平均順位</span><strong>1.75</strong><em>6人中1位</em></div><div class="digest-metric"><span>和了率</span><strong>33.67%</strong><em>6人中2位</em></div><div class="digest-metric"><span>放銃率</span><strong>12.72%</strong><em>6人中1位</em></div><div class="digest-metric"><span>最高終了時持ち点</span><strong>103,000</strong><em>6人中2位</em></div><div class="digest-metric"><span>最低終了時持ち点</span><strong>-21,800</strong><em>6人中2位</em></div>
+              </div>
+            </article>
+            
+
+            <article class="player-card">
+              <div class="player-card-head">
+                <h3>葡萄海ぶどう</h3>
+                <span>58半荘</span>
+              </div>
+              <div class="digest-metrics">
+                <div class="digest-metric"><span>獲得スコア</span><strong>315.7</strong><em>6人中2位</em></div><div class="digest-metric"><span>平均順位</span><strong>1.93</strong><em>6人中3位</em></div><div class="digest-metric"><span>和了率</span><strong>30.42%</strong><em>6人中3位</em></div><div class="digest-metric"><span>放銃率</span><strong>15.56%</strong><em>6人中4位</em></div><div class="digest-metric"><span>最高終了時持ち点</span><strong>123,700</strong><em>6人中1位</em></div><div class="digest-metric"><span>最低終了時持ち点</span><strong>-36,100</strong><em>6人中3位</em></div>
+              </div>
+            </article>
+            
+
+            <article class="player-card">
+              <div class="player-card-head">
+                <h3>鯛ofカルピス</h3>
+                <span>51半荘</span>
+              </div>
+              <div class="digest-metrics">
+                <div class="digest-metric"><span>獲得スコア</span><strong>148.9</strong><em>6人中3位</em></div><div class="digest-metric"><span>平均順位</span><strong>1.88</strong><em>6人中2位</em></div><div class="digest-metric"><span>和了率</span><strong>35.03%</strong><em>6人中1位</em></div><div class="digest-metric"><span>放銃率</span><strong>18.64%</strong><em>6人中6位</em></div><div class="digest-metric"><span>最高終了時持ち点</span><strong>97,500</strong><em>6人中3位</em></div><div class="digest-metric"><span>最低終了時持ち点</span><strong>-48,000</strong><em>6人中4位</em></div>
+              </div>
+            </article>
+            
+
+            <article class="player-card">
+              <div class="player-card-head">
+                <h3>ひなんじょ</h3>
+                <span>60半荘</span>
+              </div>
+              <div class="digest-metrics">
+                <div class="digest-metric"><span>獲得スコア</span><strong>-347.4</strong><em>6人中4位</em></div><div class="digest-metric"><span>平均順位</span><strong>2.1</strong><em>6人中4位</em></div><div class="digest-metric"><span>和了率</span><strong>28.74%</strong><em>6人中4位</em></div><div class="digest-metric"><span>放銃率</span><strong>18.54%</strong><em>6人中5位</em></div><div class="digest-metric"><span>最高終了時持ち点</span><strong>90,100</strong><em>6人中5位</em></div><div class="digest-metric"><span>最低終了時持ち点</span><strong>-19,800</strong><em>6人中1位</em></div>
+              </div>
+            </article>
+            
+
+            <article class="player-card">
+              <div class="player-card-head">
+                <h3>29ちゃん</h3>
+                <span>62半荘</span>
+              </div>
+              <div class="digest-metrics">
+                <div class="digest-metric"><span>獲得スコア</span><strong>-408.7</strong><em>6人中5位</em></div><div class="digest-metric"><span>平均順位</span><strong>2.15</strong><em>6人中5位</em></div><div class="digest-metric"><span>和了率</span><strong>23.81%</strong><em>6人中6位</em></div><div class="digest-metric"><span>放銃率</span><strong>13.52%</strong><em>6人中2位</em></div><div class="digest-metric"><span>最高終了時持ち点</span><strong>77,800</strong><em>6人中6位</em></div><div class="digest-metric"><span>最低終了時持ち点</span><strong>-53,300</strong><em>6人中5位</em></div>
+              </div>
+            </article>
+            
+
+            <article class="player-card">
+              <div class="player-card-head">
+                <h3>アリスkey</h3>
+                <span>60半荘</span>
+              </div>
+              <div class="digest-metrics">
+                <div class="digest-metric"><span>獲得スコア</span><strong>-650.2</strong><em>6人中6位</em></div><div class="digest-metric"><span>平均順位</span><strong>2.2</strong><em>6人中6位</em></div><div class="digest-metric"><span>和了率</span><strong>25.98%</strong><em>6人中5位</em></div><div class="digest-metric"><span>放銃率</span><strong>15.28%</strong><em>6人中3位</em></div><div class="digest-metric"><span>最高終了時持ち点</span><strong>93,400</strong><em>6人中4位</em></div><div class="digest-metric"><span>最低終了時持ち点</span><strong>-55,200</strong><em>6人中6位</em></div>
+              </div>
+            </article>
+            
+      </section>
+
       <section class="summary" aria-label="集計概要">
         <div><span>対象半荘</span><strong>120</strong></div>
         <div><span>対象局数</span><strong>1,223</strong></div>
@@ -1492,100 +1449,6 @@
           </div>
         </section>
       </div>
-
-      <h2>個人成績ダイジェスト</h2>
-      <section class="cards">
-        
-            <article class="player-card">
-              <div class="player-card-head">
-                <h3>流れ者金融</h3>
-                <span>平均順位 1.75</span>
-              </div>
-              <div class="meter-row"><span>1位率</span><b>47.83%</b><i style="--w:47.83%"></i></div>
-              <div class="meter-row"><span>和了率</span><b>33.67%</b><i style="--w:33.67%"></i></div>
-              <div class="meter-row danger"><span>放銃率</span><b>12.72%</b><i style="--w:12.72%"></i></div>
-              <div class="mini-stats">
-                <div><span>対戦数</span><strong>69</strong></div>
-                <div><span>役満</span><strong>4</strong></div>
-              </div>
-            </article>
-            
-
-            <article class="player-card">
-              <div class="player-card-head">
-                <h3>鯛ofカルピス</h3>
-                <span>平均順位 1.88</span>
-              </div>
-              <div class="meter-row"><span>1位率</span><b>43.14%</b><i style="--w:43.14%"></i></div>
-              <div class="meter-row"><span>和了率</span><b>35.03%</b><i style="--w:35.03%"></i></div>
-              <div class="meter-row danger"><span>放銃率</span><b>18.64%</b><i style="--w:18.64%"></i></div>
-              <div class="mini-stats">
-                <div><span>対戦数</span><strong>51</strong></div>
-                <div><span>役満</span><strong>1</strong></div>
-              </div>
-            </article>
-            
-
-            <article class="player-card">
-              <div class="player-card-head">
-                <h3>葡萄海ぶどう</h3>
-                <span>平均順位 1.93</span>
-              </div>
-              <div class="meter-row"><span>1位率</span><b>36.21%</b><i style="--w:36.21%"></i></div>
-              <div class="meter-row"><span>和了率</span><b>30.42%</b><i style="--w:30.42%"></i></div>
-              <div class="meter-row danger"><span>放銃率</span><b>15.56%</b><i style="--w:15.56%"></i></div>
-              <div class="mini-stats">
-                <div><span>対戦数</span><strong>58</strong></div>
-                <div><span>役満</span><strong>3</strong></div>
-              </div>
-            </article>
-            
-
-            <article class="player-card">
-              <div class="player-card-head">
-                <h3>ひなんじょ</h3>
-                <span>平均順位 2.1</span>
-              </div>
-              <div class="meter-row"><span>1位率</span><b>31.67%</b><i style="--w:31.67%"></i></div>
-              <div class="meter-row"><span>和了率</span><b>28.74%</b><i style="--w:28.74%"></i></div>
-              <div class="meter-row danger"><span>放銃率</span><b>18.54%</b><i style="--w:18.54%"></i></div>
-              <div class="mini-stats">
-                <div><span>対戦数</span><strong>60</strong></div>
-                <div><span>役満</span><strong>1</strong></div>
-              </div>
-            </article>
-            
-
-            <article class="player-card">
-              <div class="player-card-head">
-                <h3>29ちゃん</h3>
-                <span>平均順位 2.15</span>
-              </div>
-              <div class="meter-row"><span>1位率</span><b>24.19%</b><i style="--w:24.19%"></i></div>
-              <div class="meter-row"><span>和了率</span><b>23.81%</b><i style="--w:23.81%"></i></div>
-              <div class="meter-row danger"><span>放銃率</span><b>13.52%</b><i style="--w:13.52%"></i></div>
-              <div class="mini-stats">
-                <div><span>対戦数</span><strong>62</strong></div>
-                <div><span>役満</span><strong>1</strong></div>
-              </div>
-            </article>
-            
-
-            <article class="player-card">
-              <div class="player-card-head">
-                <h3>アリスkey</h3>
-                <span>平均順位 2.2</span>
-              </div>
-              <div class="meter-row"><span>1位率</span><b>16.67%</b><i style="--w:16.67%"></i></div>
-              <div class="meter-row"><span>和了率</span><b>25.98%</b><i style="--w:25.98%"></i></div>
-              <div class="meter-row danger"><span>放銃率</span><b>15.28%</b><i style="--w:15.28%"></i></div>
-              <div class="mini-stats">
-                <div><span>対戦数</span><strong>60</strong></div>
-                <div><span>役満</span><strong>1</strong></div>
-              </div>
-            </article>
-            
-      </section>
 
       <h2>詳細スタッツ</h2>
       <div class="split-tables">
@@ -1689,6 +1552,76 @@
     
 
     <section class="tab-panel" id="panel-season-4" data-panel="season-4">
+      <h2>シーズン4 ダイジェスト</h2>
+      <section class="cards digest-cards">
+        
+            <article class="player-card">
+              <div class="player-card-head">
+                <h3>ひなんじょ</h3>
+                <span>52半荘</span>
+              </div>
+              <div class="digest-metrics">
+                <div class="digest-metric"><span>獲得スコア</span><strong>333.8</strong><em>6人中1位</em></div><div class="digest-metric"><span>平均順位</span><strong>1.83</strong><em>6人中1位</em></div><div class="digest-metric"><span>和了率</span><strong>32.26%</strong><em>6人中1位</em></div><div class="digest-metric"><span>放銃率</span><strong>14.72%</strong><em>6人中3位</em></div><div class="digest-metric"><span>最高終了時持ち点</span><strong>104,200</strong><em>6人中4位</em></div><div class="digest-metric"><span>最低終了時持ち点</span><strong>-29,600</strong><em>6人中3位</em></div>
+              </div>
+            </article>
+            
+
+            <article class="player-card">
+              <div class="player-card-head">
+                <h3>流れ者金融</h3>
+                <span>61半荘</span>
+              </div>
+              <div class="digest-metrics">
+                <div class="digest-metric"><span>獲得スコア</span><strong>207.9</strong><em>6人中2位</em></div><div class="digest-metric"><span>平均順位</span><strong>1.93</strong><em>6人中3位</em></div><div class="digest-metric"><span>和了率</span><strong>31.72%</strong><em>6人中2位</em></div><div class="digest-metric"><span>放銃率</span><strong>16.09%</strong><em>6人中4位</em></div><div class="digest-metric"><span>最高終了時持ち点</span><strong>95,400</strong><em>6人中5位</em></div><div class="digest-metric"><span>最低終了時持ち点</span><strong>-45,300</strong><em>6人中6位</em></div>
+              </div>
+            </article>
+            
+
+            <article class="player-card">
+              <div class="player-card-head">
+                <h3>29ちゃん</h3>
+                <span>60半荘</span>
+              </div>
+              <div class="digest-metrics">
+                <div class="digest-metric"><span>獲得スコア</span><strong>95.9</strong><em>6人中3位</em></div><div class="digest-metric"><span>平均順位</span><strong>1.9</strong><em>6人中2位</em></div><div class="digest-metric"><span>和了率</span><strong>25.65%</strong><em>6人中6位</em></div><div class="digest-metric"><span>放銃率</span><strong>14.05%</strong><em>6人中1位</em></div><div class="digest-metric"><span>最高終了時持ち点</span><strong>106,700</strong><em>6人中3位</em></div><div class="digest-metric"><span>最低終了時持ち点</span><strong>-16,300</strong><em>6人中1位</em></div>
+              </div>
+            </article>
+            
+
+            <article class="player-card">
+              <div class="player-card-head">
+                <h3>鯛ofカルピス</h3>
+                <span>60半荘</span>
+              </div>
+              <div class="digest-metrics">
+                <div class="digest-metric"><span>獲得スコア</span><strong>-97.1</strong><em>6人中4位</em></div><div class="digest-metric"><span>平均順位</span><strong>2.1</strong><em>6人中5位</em></div><div class="digest-metric"><span>和了率</span><strong>30.67%</strong><em>6人中3位</em></div><div class="digest-metric"><span>放銃率</span><strong>18.83%</strong><em>6人中6位</em></div><div class="digest-metric"><span>最高終了時持ち点</span><strong>148,500</strong><em>6人中1位</em></div><div class="digest-metric"><span>最低終了時持ち点</span><strong>-23,200</strong><em>6人中2位</em></div>
+              </div>
+            </article>
+            
+
+            <article class="player-card">
+              <div class="player-card-head">
+                <h3>アリスkey</h3>
+                <span>59半荘</span>
+              </div>
+              <div class="digest-metrics">
+                <div class="digest-metric"><span>獲得スコア</span><strong>-134.8</strong><em>6人中5位</em></div><div class="digest-metric"><span>平均順位</span><strong>2.07</strong><em>6人中4位</em></div><div class="digest-metric"><span>和了率</span><strong>28.50%</strong><em>6人中4位</em></div><div class="digest-metric"><span>放銃率</span><strong>14.34%</strong><em>6人中2位</em></div><div class="digest-metric"><span>最高終了時持ち点</span><strong>79,000</strong><em>6人中6位</em></div><div class="digest-metric"><span>最低終了時持ち点</span><strong>-33,100</strong><em>6人中4位</em></div>
+              </div>
+            </article>
+            
+
+            <article class="player-card">
+              <div class="player-card-head">
+                <h3>葡萄海ぶどう</h3>
+                <span>68半荘</span>
+              </div>
+              <div class="digest-metrics">
+                <div class="digest-metric"><span>獲得スコア</span><strong>-405.7</strong><em>6人中6位</em></div><div class="digest-metric"><span>平均順位</span><strong>2.13</strong><em>6人中6位</em></div><div class="digest-metric"><span>和了率</span><strong>26.83%</strong><em>6人中5位</em></div><div class="digest-metric"><span>放銃率</span><strong>17.16%</strong><em>6人中5位</em></div><div class="digest-metric"><span>最高終了時持ち点</span><strong>107,800</strong><em>6人中2位</em></div><div class="digest-metric"><span>最低終了時持ち点</span><strong>-35,200</strong><em>6人中5位</em></div>
+              </div>
+            </article>
+            
+      </section>
+
       <section class="summary" aria-label="集計概要">
         <div><span>対象半荘</span><strong>120</strong></div>
         <div><span>対象局数</span><strong>1,212</strong></div>
@@ -1736,100 +1669,6 @@
           </div>
         </section>
       </div>
-
-      <h2>個人成績ダイジェスト</h2>
-      <section class="cards">
-        
-            <article class="player-card">
-              <div class="player-card-head">
-                <h3>ひなんじょ</h3>
-                <span>平均順位 1.83</span>
-              </div>
-              <div class="meter-row"><span>1位率</span><b>46.15%</b><i style="--w:46.15%"></i></div>
-              <div class="meter-row"><span>和了率</span><b>32.26%</b><i style="--w:32.26%"></i></div>
-              <div class="meter-row danger"><span>放銃率</span><b>14.72%</b><i style="--w:14.72%"></i></div>
-              <div class="mini-stats">
-                <div><span>対戦数</span><strong>52</strong></div>
-                <div><span>役満</span><strong>1</strong></div>
-              </div>
-            </article>
-            
-
-            <article class="player-card">
-              <div class="player-card-head">
-                <h3>29ちゃん</h3>
-                <span>平均順位 1.9</span>
-              </div>
-              <div class="meter-row"><span>1位率</span><b>41.67%</b><i style="--w:41.67%"></i></div>
-              <div class="meter-row"><span>和了率</span><b>25.65%</b><i style="--w:25.65%"></i></div>
-              <div class="meter-row danger"><span>放銃率</span><b>14.05%</b><i style="--w:14.05%"></i></div>
-              <div class="mini-stats">
-                <div><span>対戦数</span><strong>60</strong></div>
-                <div><span>役満</span><strong>2</strong></div>
-              </div>
-            </article>
-            
-
-            <article class="player-card">
-              <div class="player-card-head">
-                <h3>流れ者金融</h3>
-                <span>平均順位 1.93</span>
-              </div>
-              <div class="meter-row"><span>1位率</span><b>31.15%</b><i style="--w:31.15%"></i></div>
-              <div class="meter-row"><span>和了率</span><b>31.72%</b><i style="--w:31.72%"></i></div>
-              <div class="meter-row danger"><span>放銃率</span><b>16.09%</b><i style="--w:16.09%"></i></div>
-              <div class="mini-stats">
-                <div><span>対戦数</span><strong>61</strong></div>
-                <div><span>役満</span><strong>3</strong></div>
-              </div>
-            </article>
-            
-
-            <article class="player-card">
-              <div class="player-card-head">
-                <h3>アリスkey</h3>
-                <span>平均順位 2.07</span>
-              </div>
-              <div class="meter-row"><span>1位率</span><b>23.73%</b><i style="--w:23.73%"></i></div>
-              <div class="meter-row"><span>和了率</span><b>28.50%</b><i style="--w:28.5%"></i></div>
-              <div class="meter-row danger"><span>放銃率</span><b>14.34%</b><i style="--w:14.34%"></i></div>
-              <div class="mini-stats">
-                <div><span>対戦数</span><strong>59</strong></div>
-                <div><span>役満</span><strong>1</strong></div>
-              </div>
-            </article>
-            
-
-            <article class="player-card">
-              <div class="player-card-head">
-                <h3>鯛ofカルピス</h3>
-                <span>平均順位 2.1</span>
-              </div>
-              <div class="meter-row"><span>1位率</span><b>31.67%</b><i style="--w:31.67%"></i></div>
-              <div class="meter-row"><span>和了率</span><b>30.67%</b><i style="--w:30.67%"></i></div>
-              <div class="meter-row danger"><span>放銃率</span><b>18.83%</b><i style="--w:18.83%"></i></div>
-              <div class="mini-stats">
-                <div><span>対戦数</span><strong>60</strong></div>
-                <div><span>役満</span><strong>1</strong></div>
-              </div>
-            </article>
-            
-
-            <article class="player-card">
-              <div class="player-card-head">
-                <h3>葡萄海ぶどう</h3>
-                <span>平均順位 2.13</span>
-              </div>
-              <div class="meter-row"><span>1位率</span><b>27.94%</b><i style="--w:27.94%"></i></div>
-              <div class="meter-row"><span>和了率</span><b>26.83%</b><i style="--w:26.83%"></i></div>
-              <div class="meter-row danger"><span>放銃率</span><b>17.16%</b><i style="--w:17.16%"></i></div>
-              <div class="mini-stats">
-                <div><span>対戦数</span><strong>68</strong></div>
-                <div><span>役満</span><strong>1</strong></div>
-              </div>
-            </article>
-            
-      </section>
 
       <h2>詳細スタッツ</h2>
       <div class="split-tables">
@@ -1923,6 +1762,76 @@
     
 
     <section class="tab-panel" id="panel-season-3" data-panel="season-3">
+      <h2>シーズン3 ダイジェスト</h2>
+      <section class="cards digest-cards">
+        
+            <article class="player-card">
+              <div class="player-card-head">
+                <h3>流れ者金融</h3>
+                <span>60半荘</span>
+              </div>
+              <div class="digest-metrics">
+                <div class="digest-metric"><span>獲得スコア</span><strong>803.9</strong><em>6人中1位</em></div><div class="digest-metric"><span>平均順位</span><strong>1.75</strong><em>6人中1位</em></div><div class="digest-metric"><span>和了率</span><strong>34.34%</strong><em>6人中2位</em></div><div class="digest-metric"><span>放銃率</span><strong>15.26%</strong><em>6人中3位</em></div><div class="digest-metric"><span>最高終了時持ち点</span><strong>147,900</strong><em>6人中1位</em></div><div class="digest-metric"><span>最低終了時持ち点</span><strong>-12,700</strong><em>6人中2位</em></div>
+              </div>
+            </article>
+            
+
+            <article class="player-card">
+              <div class="player-card-head">
+                <h3>鯛ofカルピス</h3>
+                <span>51半荘</span>
+              </div>
+              <div class="digest-metrics">
+                <div class="digest-metric"><span>獲得スコア</span><strong>363.4</strong><em>6人中2位</em></div><div class="digest-metric"><span>平均順位</span><strong>1.88</strong><em>6人中2位</em></div><div class="digest-metric"><span>和了率</span><strong>34.50%</strong><em>6人中1位</em></div><div class="digest-metric"><span>放銃率</span><strong>17.44%</strong><em>6人中5位</em></div><div class="digest-metric"><span>最高終了時持ち点</span><strong>132,400</strong><em>6人中2位</em></div><div class="digest-metric"><span>最低終了時持ち点</span><strong>-7,000</strong><em>6人中1位</em></div>
+              </div>
+            </article>
+            
+
+            <article class="player-card">
+              <div class="player-card-head">
+                <h3>ひなんじょ</h3>
+                <span>69半荘</span>
+              </div>
+              <div class="digest-metrics">
+                <div class="digest-metric"><span>獲得スコア</span><strong>84.7</strong><em>6人中3位</em></div><div class="digest-metric"><span>平均順位</span><strong>2.03</strong><em>6人中4位</em></div><div class="digest-metric"><span>和了率</span><strong>29.13%</strong><em>6人中3位</em></div><div class="digest-metric"><span>放銃率</span><strong>15.18%</strong><em>6人中2位</em></div><div class="digest-metric"><span>最高終了時持ち点</span><strong>124,800</strong><em>6人中3位</em></div><div class="digest-metric"><span>最低終了時持ち点</span><strong>-55,500</strong><em>6人中6位</em></div>
+              </div>
+            </article>
+            
+
+            <article class="player-card">
+              <div class="player-card-head">
+                <h3>アリスkey</h3>
+                <span>45半荘</span>
+              </div>
+              <div class="digest-metrics">
+                <div class="digest-metric"><span>獲得スコア</span><strong>-165.1</strong><em>6人中4位</em></div><div class="digest-metric"><span>平均順位</span><strong>1.98</strong><em>6人中3位</em></div><div class="digest-metric"><span>和了率</span><strong>29.03%</strong><em>6人中4位</em></div><div class="digest-metric"><span>放銃率</span><strong>18.49%</strong><em>6人中6位</em></div><div class="digest-metric"><span>最高終了時持ち点</span><strong>86,000</strong><em>6人中5位</em></div><div class="digest-metric"><span>最低終了時持ち点</span><strong>-34,300</strong><em>6人中4位</em></div>
+              </div>
+            </article>
+            
+
+            <article class="player-card">
+              <div class="player-card-head">
+                <h3>29ちゃん</h3>
+                <span>75半荘</span>
+              </div>
+              <div class="digest-metrics">
+                <div class="digest-metric"><span>獲得スコア</span><strong>-379.1</strong><em>6人中5位</em></div><div class="digest-metric"><span>平均順位</span><strong>2.07</strong><em>6人中5位</em></div><div class="digest-metric"><span>和了率</span><strong>24.84%</strong><em>6人中6位</em></div><div class="digest-metric"><span>放銃率</span><strong>14.07%</strong><em>6人中1位</em></div><div class="digest-metric"><span>最高終了時持ち点</span><strong>108,500</strong><em>6人中4位</em></div><div class="digest-metric"><span>最低終了時持ち点</span><strong>-35,900</strong><em>6人中5位</em></div>
+              </div>
+            </article>
+            
+
+            <article class="player-card">
+              <div class="player-card-head">
+                <h3>葡萄海ぶどう</h3>
+                <span>60半荘</span>
+              </div>
+              <div class="digest-metrics">
+                <div class="digest-metric"><span>獲得スコア</span><strong>-707.8</strong><em>6人中6位</em></div><div class="digest-metric"><span>平均順位</span><strong>2.25</strong><em>6人中6位</em></div><div class="digest-metric"><span>和了率</span><strong>25.28%</strong><em>6人中5位</em></div><div class="digest-metric"><span>放銃率</span><strong>16.32%</strong><em>6人中4位</em></div><div class="digest-metric"><span>最高終了時持ち点</span><strong>76,600</strong><em>6人中6位</em></div><div class="digest-metric"><span>最低終了時持ち点</span><strong>-26,300</strong><em>6人中3位</em></div>
+              </div>
+            </article>
+            
+      </section>
+
       <section class="summary" aria-label="集計概要">
         <div><span>対象半荘</span><strong>120</strong></div>
         <div><span>対象局数</span><strong>1,254</strong></div>
@@ -1970,100 +1879,6 @@
           </div>
         </section>
       </div>
-
-      <h2>個人成績ダイジェスト</h2>
-      <section class="cards">
-        
-            <article class="player-card">
-              <div class="player-card-head">
-                <h3>流れ者金融</h3>
-                <span>平均順位 1.75</span>
-              </div>
-              <div class="meter-row"><span>1位率</span><b>48.33%</b><i style="--w:48.33%"></i></div>
-              <div class="meter-row"><span>和了率</span><b>34.34%</b><i style="--w:34.34%"></i></div>
-              <div class="meter-row danger"><span>放銃率</span><b>15.26%</b><i style="--w:15.26%"></i></div>
-              <div class="mini-stats">
-                <div><span>対戦数</span><strong>60</strong></div>
-                <div><span>役満</span><strong>1</strong></div>
-              </div>
-            </article>
-            
-
-            <article class="player-card">
-              <div class="player-card-head">
-                <h3>鯛ofカルピス</h3>
-                <span>平均順位 1.88</span>
-              </div>
-              <div class="meter-row"><span>1位率</span><b>39.22%</b><i style="--w:39.22%"></i></div>
-              <div class="meter-row"><span>和了率</span><b>34.50%</b><i style="--w:34.5%"></i></div>
-              <div class="meter-row danger"><span>放銃率</span><b>17.44%</b><i style="--w:17.44%"></i></div>
-              <div class="mini-stats">
-                <div><span>対戦数</span><strong>51</strong></div>
-                <div><span>役満</span><strong>2</strong></div>
-              </div>
-            </article>
-            
-
-            <article class="player-card">
-              <div class="player-card-head">
-                <h3>アリスkey</h3>
-                <span>平均順位 1.98</span>
-              </div>
-              <div class="meter-row"><span>1位率</span><b>28.89%</b><i style="--w:28.89%"></i></div>
-              <div class="meter-row"><span>和了率</span><b>29.03%</b><i style="--w:29.03%"></i></div>
-              <div class="meter-row danger"><span>放銃率</span><b>18.49%</b><i style="--w:18.49%"></i></div>
-              <div class="mini-stats">
-                <div><span>対戦数</span><strong>45</strong></div>
-                <div><span>役満</span><strong>1</strong></div>
-              </div>
-            </article>
-            
-
-            <article class="player-card">
-              <div class="player-card-head">
-                <h3>ひなんじょ</h3>
-                <span>平均順位 2.03</span>
-              </div>
-              <div class="meter-row"><span>1位率</span><b>30.43%</b><i style="--w:30.43%"></i></div>
-              <div class="meter-row"><span>和了率</span><b>29.13%</b><i style="--w:29.13%"></i></div>
-              <div class="meter-row danger"><span>放銃率</span><b>15.18%</b><i style="--w:15.18%"></i></div>
-              <div class="mini-stats">
-                <div><span>対戦数</span><strong>69</strong></div>
-                <div><span>役満</span><strong>4</strong></div>
-              </div>
-            </article>
-            
-
-            <article class="player-card">
-              <div class="player-card-head">
-                <h3>29ちゃん</h3>
-                <span>平均順位 2.07</span>
-              </div>
-              <div class="meter-row"><span>1位率</span><b>33.33%</b><i style="--w:33.33%"></i></div>
-              <div class="meter-row"><span>和了率</span><b>24.84%</b><i style="--w:24.84%"></i></div>
-              <div class="meter-row danger"><span>放銃率</span><b>14.07%</b><i style="--w:14.07%"></i></div>
-              <div class="mini-stats">
-                <div><span>対戦数</span><strong>75</strong></div>
-                <div><span>役満</span><strong>0</strong></div>
-              </div>
-            </article>
-            
-
-            <article class="player-card">
-              <div class="player-card-head">
-                <h3>葡萄海ぶどう</h3>
-                <span>平均順位 2.25</span>
-              </div>
-              <div class="meter-row"><span>1位率</span><b>20.00%</b><i style="--w:20.0%"></i></div>
-              <div class="meter-row"><span>和了率</span><b>25.28%</b><i style="--w:25.28%"></i></div>
-              <div class="meter-row danger"><span>放銃率</span><b>16.32%</b><i style="--w:16.32%"></i></div>
-              <div class="mini-stats">
-                <div><span>対戦数</span><strong>60</strong></div>
-                <div><span>役満</span><strong>0</strong></div>
-              </div>
-            </article>
-            
-      </section>
 
       <h2>詳細スタッツ</h2>
       <div class="split-tables">
@@ -2150,6 +1965,76 @@
     
 
     <section class="tab-panel" id="panel-season-2" data-panel="season-2">
+      <h2>シーズン2 ダイジェスト</h2>
+      <section class="cards digest-cards">
+        
+            <article class="player-card">
+              <div class="player-card-head">
+                <h3>流れ者金融</h3>
+                <span>61半荘</span>
+              </div>
+              <div class="digest-metrics">
+                <div class="digest-metric"><span>獲得スコア</span><strong>524.7</strong><em>6人中1位</em></div><div class="digest-metric"><span>平均順位</span><strong>1.84</strong><em>6人中1位</em></div><div class="digest-metric"><span>和了率</span><strong>31.73%</strong><em>6人中2位</em></div><div class="digest-metric"><span>放銃率</span><strong>14.62%</strong><em>6人中1位</em></div><div class="digest-metric"><span>最高終了時持ち点</span><strong>112,200</strong><em>6人中2位</em></div><div class="digest-metric"><span>最低終了時持ち点</span><strong>-4,900</strong><em>6人中1位</em></div>
+              </div>
+            </article>
+            
+
+            <article class="player-card">
+              <div class="player-card-head">
+                <h3>鯛ofカルピス</h3>
+                <span>56半荘</span>
+              </div>
+              <div class="digest-metrics">
+                <div class="digest-metric"><span>獲得スコア</span><strong>126.0</strong><em>6人中2位</em></div><div class="digest-metric"><span>平均順位</span><strong>2.02</strong><em>6人中4位</em></div><div class="digest-metric"><span>和了率</span><strong>33.33%</strong><em>6人中1位</em></div><div class="digest-metric"><span>放銃率</span><strong>16.85%</strong><em>6人中4位</em></div><div class="digest-metric"><span>最高終了時持ち点</span><strong>88,400</strong><em>6人中5位</em></div><div class="digest-metric"><span>最低終了時持ち点</span><strong>-11,600</strong><em>6人中2位</em></div>
+              </div>
+            </article>
+            
+
+            <article class="player-card">
+              <div class="player-card-head">
+                <h3>アリスkey</h3>
+                <span>64半荘</span>
+              </div>
+              <div class="digest-metrics">
+                <div class="digest-metric"><span>獲得スコア</span><strong>53.4</strong><em>6人中3位</em></div><div class="digest-metric"><span>平均順位</span><strong>2.0</strong><em>6人中3位</em></div><div class="digest-metric"><span>和了率</span><strong>30.66%</strong><em>6人中3位</em></div><div class="digest-metric"><span>放銃率</span><strong>15.73%</strong><em>6人中3位</em></div><div class="digest-metric"><span>最高終了時持ち点</span><strong>92,400</strong><em>6人中4位</em></div><div class="digest-metric"><span>最低終了時持ち点</span><strong>-53,000</strong><em>6人中5位</em></div>
+              </div>
+            </article>
+            
+
+            <article class="player-card">
+              <div class="player-card-head">
+                <h3>29ちゃん</h3>
+                <span>58半荘</span>
+              </div>
+              <div class="digest-metrics">
+                <div class="digest-metric"><span>獲得スコア</span><strong>-10.3</strong><em>6人中4位</em></div><div class="digest-metric"><span>平均順位</span><strong>2.02</strong><em>6人中4位</em></div><div class="digest-metric"><span>和了率</span><strong>27.45%</strong><em>6人中5位</em></div><div class="digest-metric"><span>放銃率</span><strong>14.69%</strong><em>6人中2位</em></div><div class="digest-metric"><span>最高終了時持ち点</span><strong>94,800</strong><em>6人中3位</em></div><div class="digest-metric"><span>最低終了時持ち点</span><strong>-14,000</strong><em>6人中3位</em></div>
+              </div>
+            </article>
+            
+
+            <article class="player-card">
+              <div class="player-card-head">
+                <h3>ひなんじょ</h3>
+                <span>62半荘</span>
+              </div>
+              <div class="digest-metrics">
+                <div class="digest-metric"><span>獲得スコア</span><strong>-13.2</strong><em>6人中5位</em></div><div class="digest-metric"><span>平均順位</span><strong>1.95</strong><em>6人中2位</em></div><div class="digest-metric"><span>和了率</span><strong>29.82%</strong><em>6人中4位</em></div><div class="digest-metric"><span>放銃率</span><strong>18.26%</strong><em>6人中5位</em></div><div class="digest-metric"><span>最高終了時持ち点</span><strong>113,400</strong><em>6人中1位</em></div><div class="digest-metric"><span>最低終了時持ち点</span><strong>-31,000</strong><em>6人中4位</em></div>
+              </div>
+            </article>
+            
+
+            <article class="player-card">
+              <div class="player-card-head">
+                <h3>葡萄海ぶどう</h3>
+                <span>59半荘</span>
+              </div>
+              <div class="digest-metrics">
+                <div class="digest-metric"><span>獲得スコア</span><strong>-680.6</strong><em>6人中6位</em></div><div class="digest-metric"><span>平均順位</span><strong>2.19</strong><em>6人中5位</em></div><div class="digest-metric"><span>和了率</span><strong>24.51%</strong><em>6人中6位</em></div><div class="digest-metric"><span>放銃率</span><strong>18.52%</strong><em>6人中6位</em></div><div class="digest-metric"><span>最高終了時持ち点</span><strong>92,400</strong><em>6人中4位</em></div><div class="digest-metric"><span>最低終了時持ち点</span><strong>-63,000</strong><em>6人中6位</em></div>
+              </div>
+            </article>
+            
+      </section>
+
       <section class="summary" aria-label="集計概要">
         <div><span>対象半荘</span><strong>120</strong></div>
         <div><span>対象局数</span><strong>1,169</strong></div>
@@ -2197,100 +2082,6 @@
           </div>
         </section>
       </div>
-
-      <h2>個人成績ダイジェスト</h2>
-      <section class="cards">
-        
-            <article class="player-card">
-              <div class="player-card-head">
-                <h3>流れ者金融</h3>
-                <span>平均順位 1.84</span>
-              </div>
-              <div class="meter-row"><span>1位率</span><b>40.98%</b><i style="--w:40.98%"></i></div>
-              <div class="meter-row"><span>和了率</span><b>31.73%</b><i style="--w:31.73%"></i></div>
-              <div class="meter-row danger"><span>放銃率</span><b>14.62%</b><i style="--w:14.62%"></i></div>
-              <div class="mini-stats">
-                <div><span>対戦数</span><strong>61</strong></div>
-                <div><span>役満</span><strong>2</strong></div>
-              </div>
-            </article>
-            
-
-            <article class="player-card">
-              <div class="player-card-head">
-                <h3>ひなんじょ</h3>
-                <span>平均順位 1.95</span>
-              </div>
-              <div class="meter-row"><span>1位率</span><b>38.71%</b><i style="--w:38.71%"></i></div>
-              <div class="meter-row"><span>和了率</span><b>29.82%</b><i style="--w:29.82%"></i></div>
-              <div class="meter-row danger"><span>放銃率</span><b>18.26%</b><i style="--w:18.26%"></i></div>
-              <div class="mini-stats">
-                <div><span>対戦数</span><strong>62</strong></div>
-                <div><span>役満</span><strong>4</strong></div>
-              </div>
-            </article>
-            
-
-            <article class="player-card">
-              <div class="player-card-head">
-                <h3>アリスkey</h3>
-                <span>平均順位 2.0</span>
-              </div>
-              <div class="meter-row"><span>1位率</span><b>28.12%</b><i style="--w:28.12%"></i></div>
-              <div class="meter-row"><span>和了率</span><b>30.66%</b><i style="--w:30.66%"></i></div>
-              <div class="meter-row danger"><span>放銃率</span><b>15.73%</b><i style="--w:15.73%"></i></div>
-              <div class="mini-stats">
-                <div><span>対戦数</span><strong>64</strong></div>
-                <div><span>役満</span><strong>1</strong></div>
-              </div>
-            </article>
-            
-
-            <article class="player-card">
-              <div class="player-card-head">
-                <h3>29ちゃん</h3>
-                <span>平均順位 2.02</span>
-              </div>
-              <div class="meter-row"><span>1位率</span><b>34.48%</b><i style="--w:34.48%"></i></div>
-              <div class="meter-row"><span>和了率</span><b>27.45%</b><i style="--w:27.45%"></i></div>
-              <div class="meter-row danger"><span>放銃率</span><b>14.69%</b><i style="--w:14.69%"></i></div>
-              <div class="mini-stats">
-                <div><span>対戦数</span><strong>58</strong></div>
-                <div><span>役満</span><strong>2</strong></div>
-              </div>
-            </article>
-            
-
-            <article class="player-card">
-              <div class="player-card-head">
-                <h3>鯛ofカルピス</h3>
-                <span>平均順位 2.02</span>
-              </div>
-              <div class="meter-row"><span>1位率</span><b>32.14%</b><i style="--w:32.14%"></i></div>
-              <div class="meter-row"><span>和了率</span><b>33.33%</b><i style="--w:33.33%"></i></div>
-              <div class="meter-row danger"><span>放銃率</span><b>16.85%</b><i style="--w:16.85%"></i></div>
-              <div class="mini-stats">
-                <div><span>対戦数</span><strong>56</strong></div>
-                <div><span>役満</span><strong>0</strong></div>
-              </div>
-            </article>
-            
-
-            <article class="player-card">
-              <div class="player-card-head">
-                <h3>葡萄海ぶどう</h3>
-                <span>平均順位 2.19</span>
-              </div>
-              <div class="meter-row"><span>1位率</span><b>25.42%</b><i style="--w:25.42%"></i></div>
-              <div class="meter-row"><span>和了率</span><b>24.51%</b><i style="--w:24.51%"></i></div>
-              <div class="meter-row danger"><span>放銃率</span><b>18.52%</b><i style="--w:18.52%"></i></div>
-              <div class="mini-stats">
-                <div><span>対戦数</span><strong>59</strong></div>
-                <div><span>役満</span><strong>0</strong></div>
-              </div>
-            </article>
-            
-      </section>
 
       <h2>詳細スタッツ</h2>
       <div class="split-tables">
@@ -2377,6 +2168,76 @@
     
 
     <section class="tab-panel" id="panel-season-1" data-panel="season-1">
+      <h2>シーズン1 ダイジェスト</h2>
+      <section class="cards digest-cards">
+        
+            <article class="player-card">
+              <div class="player-card-head">
+                <h3>流れ者金融</h3>
+                <span>51半荘</span>
+              </div>
+              <div class="digest-metrics">
+                <div class="digest-metric"><span>獲得スコア</span><strong>188.1</strong><em>6人中1位</em></div><div class="digest-metric"><span>平均順位</span><strong>1.88</strong><em>6人中2位</em></div><div class="digest-metric"><span>和了率</span><strong>31.59%</strong><em>6人中3位</em></div><div class="digest-metric"><span>放銃率</span><strong>16.86%</strong><em>6人中3位</em></div><div class="digest-metric"><span>最高終了時持ち点</span><strong>103,600</strong><em>6人中3位</em></div><div class="digest-metric"><span>最低終了時持ち点</span><strong>-42,500</strong><em>6人中4位</em></div>
+              </div>
+            </article>
+            
+
+            <article class="player-card">
+              <div class="player-card-head">
+                <h3>鯛ofカルピス</h3>
+                <span>44半荘</span>
+              </div>
+              <div class="digest-metrics">
+                <div class="digest-metric"><span>獲得スコア</span><strong>58.7</strong><em>6人中2位</em></div><div class="digest-metric"><span>平均順位</span><strong>1.86</strong><em>6人中1位</em></div><div class="digest-metric"><span>和了率</span><strong>31.94%</strong><em>6人中2位</em></div><div class="digest-metric"><span>放銃率</span><strong>19.00%</strong><em>6人中5位</em></div><div class="digest-metric"><span>最高終了時持ち点</span><strong>87,300</strong><em>6人中6位</em></div><div class="digest-metric"><span>最低終了時持ち点</span><strong>-51,100</strong><em>6人中6位</em></div>
+              </div>
+            </article>
+            
+
+            <article class="player-card">
+              <div class="player-card-head">
+                <h3>ひなんじょ</h3>
+                <span>60半荘</span>
+              </div>
+              <div class="digest-metrics">
+                <div class="digest-metric"><span>獲得スコア</span><strong>43.2</strong><em>6人中3位</em></div><div class="digest-metric"><span>平均順位</span><strong>2.02</strong><em>6人中3位</em></div><div class="digest-metric"><span>和了率</span><strong>34.55%</strong><em>6人中1位</em></div><div class="digest-metric"><span>放銃率</span><strong>19.17%</strong><em>6人中6位</em></div><div class="digest-metric"><span>最高終了時持ち点</span><strong>118,600</strong><em>6人中1位</em></div><div class="digest-metric"><span>最低終了時持ち点</span><strong>-17,600</strong><em>6人中1位</em></div>
+              </div>
+            </article>
+            
+
+            <article class="player-card">
+              <div class="player-card-head">
+                <h3>29ちゃん</h3>
+                <span>76半荘</span>
+              </div>
+              <div class="digest-metrics">
+                <div class="digest-metric"><span>獲得スコア</span><strong>-32.9</strong><em>6人中4位</em></div><div class="digest-metric"><span>平均順位</span><strong>2.07</strong><em>6人中4位</em></div><div class="digest-metric"><span>和了率</span><strong>28.42%</strong><em>6人中4位</em></div><div class="digest-metric"><span>放銃率</span><strong>16.18%</strong><em>6人中2位</em></div><div class="digest-metric"><span>最高終了時持ち点</span><strong>106,800</strong><em>6人中2位</em></div><div class="digest-metric"><span>最低終了時持ち点</span><strong>-21,600</strong><em>6人中2位</em></div>
+              </div>
+            </article>
+            
+
+            <article class="player-card">
+              <div class="player-card-head">
+                <h3>アリスkey</h3>
+                <span>60半荘</span>
+              </div>
+              <div class="digest-metrics">
+                <div class="digest-metric"><span>獲得スコア</span><strong>-101.1</strong><em>6人中5位</em></div><div class="digest-metric"><span>平均順位</span><strong>2.02</strong><em>6人中3位</em></div><div class="digest-metric"><span>和了率</span><strong>28.39%</strong><em>6人中5位</em></div><div class="digest-metric"><span>放銃率</span><strong>15.77%</strong><em>6人中1位</em></div><div class="digest-metric"><span>最高終了時持ち点</span><strong>91,500</strong><em>6人中4位</em></div><div class="digest-metric"><span>最低終了時持ち点</span><strong>-45,100</strong><em>6人中5位</em></div>
+              </div>
+            </article>
+            
+
+            <article class="player-card">
+              <div class="player-card-head">
+                <h3>葡萄海ぶどう</h3>
+                <span>69半荘</span>
+              </div>
+              <div class="digest-metrics">
+                <div class="digest-metric"><span>獲得スコア</span><strong>-156.0</strong><em>6人中6位</em></div><div class="digest-metric"><span>平均順位</span><strong>2.07</strong><em>6人中4位</em></div><div class="digest-metric"><span>和了率</span><strong>27.11%</strong><em>6人中6位</em></div><div class="digest-metric"><span>放銃率</span><strong>16.87%</strong><em>6人中4位</em></div><div class="digest-metric"><span>最高終了時持ち点</span><strong>89,600</strong><em>6人中5位</em></div><div class="digest-metric"><span>最低終了時持ち点</span><strong>-22,900</strong><em>6人中3位</em></div>
+              </div>
+            </article>
+            
+      </section>
+
       <section class="summary" aria-label="集計概要">
         <div><span>対象半荘</span><strong>120</strong></div>
         <div><span>対象局数</span><strong>1,239</strong></div>
@@ -2424,100 +2285,6 @@
           </div>
         </section>
       </div>
-
-      <h2>個人成績ダイジェスト</h2>
-      <section class="cards">
-        
-            <article class="player-card">
-              <div class="player-card-head">
-                <h3>鯛ofカルピス</h3>
-                <span>平均順位 1.86</span>
-              </div>
-              <div class="meter-row"><span>1位率</span><b>38.64%</b><i style="--w:38.64%"></i></div>
-              <div class="meter-row"><span>和了率</span><b>31.94%</b><i style="--w:31.94%"></i></div>
-              <div class="meter-row danger"><span>放銃率</span><b>19.00%</b><i style="--w:19.0%"></i></div>
-              <div class="mini-stats">
-                <div><span>対戦数</span><strong>44</strong></div>
-                <div><span>役満</span><strong>0</strong></div>
-              </div>
-            </article>
-            
-
-            <article class="player-card">
-              <div class="player-card-head">
-                <h3>流れ者金融</h3>
-                <span>平均順位 1.88</span>
-              </div>
-              <div class="meter-row"><span>1位率</span><b>45.10%</b><i style="--w:45.1%"></i></div>
-              <div class="meter-row"><span>和了率</span><b>31.59%</b><i style="--w:31.59%"></i></div>
-              <div class="meter-row danger"><span>放銃率</span><b>16.86%</b><i style="--w:16.86%"></i></div>
-              <div class="mini-stats">
-                <div><span>対戦数</span><strong>51</strong></div>
-                <div><span>役満</span><strong>2</strong></div>
-              </div>
-            </article>
-            
-
-            <article class="player-card">
-              <div class="player-card-head">
-                <h3>ひなんじょ</h3>
-                <span>平均順位 2.02</span>
-              </div>
-              <div class="meter-row"><span>1位率</span><b>30.00%</b><i style="--w:30.0%"></i></div>
-              <div class="meter-row"><span>和了率</span><b>34.55%</b><i style="--w:34.55%"></i></div>
-              <div class="meter-row danger"><span>放銃率</span><b>19.17%</b><i style="--w:19.17%"></i></div>
-              <div class="mini-stats">
-                <div><span>対戦数</span><strong>60</strong></div>
-                <div><span>役満</span><strong>1</strong></div>
-              </div>
-            </article>
-            
-
-            <article class="player-card">
-              <div class="player-card-head">
-                <h3>アリスkey</h3>
-                <span>平均順位 2.02</span>
-              </div>
-              <div class="meter-row"><span>1位率</span><b>33.33%</b><i style="--w:33.33%"></i></div>
-              <div class="meter-row"><span>和了率</span><b>28.39%</b><i style="--w:28.39%"></i></div>
-              <div class="meter-row danger"><span>放銃率</span><b>15.77%</b><i style="--w:15.77%"></i></div>
-              <div class="mini-stats">
-                <div><span>対戦数</span><strong>60</strong></div>
-                <div><span>役満</span><strong>1</strong></div>
-              </div>
-            </article>
-            
-
-            <article class="player-card">
-              <div class="player-card-head">
-                <h3>29ちゃん</h3>
-                <span>平均順位 2.07</span>
-              </div>
-              <div class="meter-row"><span>1位率</span><b>30.26%</b><i style="--w:30.26%"></i></div>
-              <div class="meter-row"><span>和了率</span><b>28.42%</b><i style="--w:28.42%"></i></div>
-              <div class="meter-row danger"><span>放銃率</span><b>16.18%</b><i style="--w:16.18%"></i></div>
-              <div class="mini-stats">
-                <div><span>対戦数</span><strong>76</strong></div>
-                <div><span>役満</span><strong>5</strong></div>
-              </div>
-            </article>
-            
-
-            <article class="player-card">
-              <div class="player-card-head">
-                <h3>葡萄海ぶどう</h3>
-                <span>平均順位 2.07</span>
-              </div>
-              <div class="meter-row"><span>1位率</span><b>27.54%</b><i style="--w:27.54%"></i></div>
-              <div class="meter-row"><span>和了率</span><b>27.11%</b><i style="--w:27.11%"></i></div>
-              <div class="meter-row danger"><span>放銃率</span><b>16.87%</b><i style="--w:16.87%"></i></div>
-              <div class="mini-stats">
-                <div><span>対戦数</span><strong>69</strong></div>
-                <div><span>役満</span><strong>1</strong></div>
-              </div>
-            </article>
-            
-      </section>
 
       <h2>詳細スタッツ</h2>
       <div class="split-tables">
