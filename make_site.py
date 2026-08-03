@@ -988,12 +988,12 @@ def digest_cards(rows: list[dict[str, str]]) -> str:
         name = row.get("player", "")
         metric_rows = []
         for col, reverse in DIGEST_METRICS:
-            rank, total = metric_rank(rows, name, col, reverse)
+            rank, _total = metric_rank(rows, name, col, reverse)
             metric_rows.append(
                 "<div class=\"digest-metric\">"
                 f"<span>{esc(LABELS[col])}</span>"
                 f"<strong>{format_cell_value(col, row.get(col, ''))}</strong>"
-                f"<em>{total}人中{rank}位</em>"
+                f"<em>{rank}位</em>"
                 "</div>"
             )
         cards.append(
