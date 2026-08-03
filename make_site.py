@@ -597,8 +597,8 @@ def metric_popup_html(col: str) -> str:
 
 def percent_text(numerator: int, denominator: int) -> str:
     if denominator <= 0:
-        return "0.00%"
-    return f"{numerator / denominator * 100:.2f}%"
+        return "0.0%"
+    return f"{numerator / denominator * 100:.1f}%"
 
 
 def parse_riichi_quality_breakdown(value: str) -> dict[str, int]:
