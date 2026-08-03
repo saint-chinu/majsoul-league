@@ -2034,6 +2034,7 @@ def main() -> None:
     .mermaid {{ border: 1px solid var(--line); border-radius: 8px; padding: 14px; overflow: auto; background: #fff; margin: 8px 0 16px; }}
     .subnote {{ margin: -4px 0 12px; color: var(--muted); }}
     .split-tables {{ display: grid; gap: 14px; }}
+    .stat-table-panel {{ min-width: 0; }}
     .stat-table-panel h3 {{ margin: 0 0 8px; color: var(--accent); font-size: 15px; }}
     .generated-note {{ margin-top: 18px; font-size: 12px; }}
     footer {{ padding: 18px 32px 30px; border-top: 1px solid var(--line); color: var(--muted); font-size: 12px; }}
