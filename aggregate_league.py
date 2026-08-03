@@ -714,6 +714,16 @@ def riichi_quality_top_label(player_stats):
     )
     return RIICHI_QUALITY_LABELS.get(key, key)
 
+def riichi_quality_breakdown(player_stats):
+    if not player_stats.riichi_quality_counts:
+        return ""
+    parts = []
+    for key, _label, _recommended in RIICHI_QUALITY_CATEGORIES:
+        count = int(player_stats.riichi_quality_counts.get(key, 0))
+        if count:
+            parts.append(f"{key}:{count}")
+    return "|".join(parts)
+
 def has_top_score(scores, seat):
     if len(scores) < 3 or seat not in {0, 1, 2}:
         return False
@@ -1353,6 +1363,7 @@ def write_summary(stats):
             "riichi_recommended_rate",
             "riichi_not_recommended_rate",
             "riichi_quality_top_category",
+            "riichi_quality_breakdown",
         ])
 
         for player_name, player_stats in sorted(stats.items(), key=lambda item: item[0]):
@@ -1406,6 +1417,7 @@ def write_summary(stats):
                     player_stats.riichi,
                 ),
                 riichi_quality_top_label(player_stats),
+                riichi_quality_breakdown(player_stats),
             ])
 
 def write_yakuman_summary(stats):

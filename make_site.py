@@ -106,7 +106,7 @@ METRIC_DESCRIPTIONS = {
     "riichi_miss_rate": "リーチした局で、自分が和了できなかった割合。",
     "bad_shape_riichi_rate": "リーチのうち、待ち枚数4枚以下の割合。両ヤオチュウ・役牌シャンポン、字牌・萬子単騎は除外。",
     "top_riichi_rate": "リーチ時点でトップ目だった割合。",
-    "riichi_quality_score": "リーチ待ちを-5点から10点で採点した平均値。クリックで配点表を表示。",
+    "riichi_quality_score": "リーチ待ちを-5点から10点で採点した平均値。スコアをクリックすると分類内訳を表示。",
     "riichi_recommended_rate": "分類上、リーチしてよい待ちに入った割合。",
     "riichi_not_recommended_rate": "分類上、リーチすべきでない待ちに入った割合。",
     "riichi_quality_top_category": "そのプレイヤーで最も多かったリーチ待ち分類。",
@@ -595,6 +595,78 @@ def metric_popup_html(col: str) -> str:
     return f"<p>{esc(description)}</p>{table_html}"
 
 
+def percent_text(numerator: int, denominator: int) -> str:
+    if denominator <= 0:
+        return "0.00%"
+    return f"{numerator / denominator * 100:.2f}%"
+
+
+def parse_riichi_quality_breakdown(value: str) -> dict[str, int]:
+    counts = {}
+    for part in (value or "").split("|"):
+        if ":" not in part:
+            continue
+        key, raw_count = part.split(":", 1)
+        try:
+            counts[key] = int(raw_count)
+        except ValueError:
+            continue
+    return counts
+
+
+def riichi_quality_breakdown_table(row: dict[str, str]) -> str:
+    try:
+        from aggregate_league import RIICHI_QUALITY_CATEGORIES, RIICHI_QUALITY_SCORE
+    except Exception:
+        return ""
+
+    counts = parse_riichi_quality_breakdown(row.get("riichi_quality_breakdown", ""))
+    total = sum(counts.values())
+    if not counts or total <= 0:
+        return "<p>分類内訳はありません。</p>"
+
+    body_rows = []
+    for key, label, recommended in RIICHI_QUALITY_CATEGORIES:
+        count = counts.get(key, 0)
+        if not count:
+            continue
+        body_rows.append(
+            "<tr>"
+            f"<td class=\"name\">{esc(label)}</td>"
+            f"<td>{count}</td>"
+            f"<td>{percent_text(count, total)}</td>"
+            f"<td>{esc(RIICHI_QUALITY_SCORE.get(key, ''))}</td>"
+            f"<td>{'リーチ可' if recommended else '非推奨'}</td>"
+            "</tr>"
+        )
+
+    head = "<th>分類</th><th>回数</th><th>割合</th><th>スコア</th><th>判定</th>"
+    return (
+        "<h3>分類内訳</h3>"
+        "<div class=\"table-wrap quality-breakdown\">"
+        f"<table><thead><tr>{head}</tr></thead><tbody>{''.join(body_rows)}</tbody></table>"
+        "</div>"
+    )
+
+
+def riichi_quality_score_cell(row: dict[str, str]) -> str:
+    score = format_cell_value("riichi_quality_score", row.get("riichi_quality_score", ""))
+    if not row.get("riichi_quality_breakdown"):
+        return score
+    subject = row.get("player") or row.get("season") or "リーチ質"
+    popup_html = (
+        "<p>この行のリーチを待ち分類ごとに分解した内訳です。</p>"
+        f"{riichi_quality_breakdown_table(row)}"
+        "<h3>配点表</h3>"
+        f"{riichi_quality_definition_table()}"
+    )
+    return (
+        f"<button class=\"metric-value-help\" type=\"button\" "
+        f"data-metric-title=\"{esc(subject)} リーチ質内訳\" "
+        f"data-metric-html=\"{esc(popup_html)}\">{score}</button>"
+    )
+
+
 def header_cell(col: str) -> str:
     label = esc(LABELS.get(col, col))
     description = METRIC_DESCRIPTIONS.get(col)
@@ -642,7 +714,10 @@ def table(
         for col in columns:
             value = row.get(col, "")
             cls = "name sticky-name" if col == "player" else ""
-            value = format_cell_value(col, value)
+            if col == "riichi_quality_score":
+                value = riichi_quality_score_cell(row)
+            else:
+                value = format_cell_value(col, value)
             cells.append(f"<td class=\"{cls}\">{value}</td>")
         body_rows.append("<tr>" + "".join(cells) + "</tr>")
     return f"<table><thead><tr>{head}</tr></thead><tbody>{''.join(body_rows)}</tbody></table>"
@@ -1227,6 +1302,7 @@ def aggregate_uuids(uuids: set[str]) -> tuple[list[dict[str, str]], list[dict[st
             aggregate_game,
             average,
             percent,
+            riichi_quality_breakdown,
             riichi_quality_recommended_count,
             riichi_quality_top_label,
         )
@@ -1317,6 +1393,7 @@ def aggregate_uuids(uuids: set[str]) -> tuple[list[dict[str, str]], list[dict[st
                     player_stats.riichi,
                 ),
                 "riichi_quality_top_category": riichi_quality_top_label(player_stats),
+                "riichi_quality_breakdown": riichi_quality_breakdown(player_stats),
                 "max_final_point": str(max(player_stats.final_points) if player_stats.final_points else ""),
                 "min_final_point": str(min(player_stats.final_points) if player_stats.final_points else ""),
                 "yakuman_count": str(player_stats.yakuman_count),
@@ -1932,6 +2009,8 @@ def main() -> None:
     .metric-help {{ appearance: none; display: inline-flex; align-items: center; justify-content: flex-end; gap: 5px; border: 0; padding: 0; background: transparent; color: inherit; font: inherit; font-weight: 800; cursor: pointer; }}
     .metric-help:hover {{ color: var(--accent); }}
     .metric-help span {{ display: inline-grid; place-items: center; width: 16px; height: 16px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); font-size: 11px; line-height: 1; }}
+    .metric-value-help {{ appearance: none; border: 0; padding: 0; background: transparent; color: var(--accent); font: inherit; font-weight: 900; cursor: pointer; }}
+    .metric-value-help:hover {{ text-decoration: underline; text-underline-offset: 3px; }}
     .metric-modal[hidden] {{ display: none; }}
     .metric-modal {{ position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; padding: 18px; }}
     .metric-modal-backdrop {{ position: absolute; inset: 0; background: rgba(23, 32, 42, .38); }}
