@@ -2044,6 +2044,7 @@ def main() -> None:
       .ranking-grid {{ grid-template-columns: 1fr; }}
       .analysis-grid {{ grid-template-columns: 1fr; }}
       .cards, .yakuman-grid {{ grid-template-columns: 1fr; }}
+      td.sticky-name, th.sticky-name {{ width: 112px; min-width: 112px; max-width: 112px; overflow: hidden; text-overflow: ellipsis; }}
       h1 {{ font-size: 26px; }}
     }}
   </style>
