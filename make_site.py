@@ -1697,7 +1697,7 @@ def render_player_panel(
         [cumulative_row],
         [
           ("順位スタッツ", PLAYER_RANK_COLUMNS),
-          ("和了・放銃・手役", PLAYER_WIN_COLUMNS),
+          ("和了・放銃スタッツ", PLAYER_WIN_COLUMNS),
         ],
       )}
 
@@ -1711,7 +1711,7 @@ def render_player_panel(
         season_rows,
         [
           ("順位スタッツ", PLAYER_SEASON_RANK_COLUMNS),
-          ("和了・放銃・手役", PLAYER_SEASON_WIN_COLUMNS),
+          ("和了・放銃スタッツ", PLAYER_SEASON_WIN_COLUMNS),
         ],
       )}
       <div class="table-wrap">
@@ -1790,7 +1790,7 @@ def render_stats_panel(context: dict[str, object]) -> str:
         rows,
         [
           ("順位スタッツ", rank_columns),
-          ("和了・放銃・手役", MAIN_WIN_COLUMNS),
+          ("和了・放銃スタッツ", MAIN_WIN_COLUMNS),
         ],
         rank_by="earned_score",
         reverse=True,
@@ -1804,6 +1804,25 @@ def render_stats_panel(context: dict[str, object]) -> str:
       <h2>{esc(team_block_title)}</h2>
       {team_block}
       {mvp_block}
+
+      <h2>詳細スタッツ</h2>
+      {split_tables(
+        rows,
+        [
+          ("順位スタッツ", DETAIL_RANK_COLUMNS),
+          ("和了・放銃スタッツ", DETAIL_WIN_COLUMNS),
+        ],
+        rank_by="average_rank",
+      )}
+
+      <h2>許されない相関図</h2>
+      <p class="subnote">矢印は「左のプレイヤーが右のプレイヤーへ、同卓時の最終持ち点差でネット献上」。ラベルは 献上点棒 / 直接対戦数。</p>
+      {correlation_mermaid(correlation_rows)}
+      <div class="table-wrap">
+        {correlation_table(correlation_rows)}
+      </div>
+
+      <p class="generated-note">1位率トップ: {esc(best_top["player"])} ({esc(best_top["rank1_rate"])})</p>
 
       <div class="ranking-grid">
         <section class="ranking-panel">
@@ -1820,29 +1839,10 @@ def render_stats_panel(context: dict[str, object]) -> str:
         </section>
       </div>
 
-      <h2>詳細スタッツ</h2>
-      {split_tables(
-        rows,
-        [
-          ("順位スタッツ", DETAIL_RANK_COLUMNS),
-          ("和了・放銃・その他", DETAIL_WIN_COLUMNS),
-        ],
-        rank_by="average_rank",
-      )}
-
-      <h2>許されない相関図</h2>
-      <p class="subnote">矢印は「左のプレイヤーが右のプレイヤーへ、同卓時の最終持ち点差でネット献上」。ラベルは 献上点棒 / 直接対戦数。</p>
-      {correlation_mermaid(correlation_rows)}
-      <div class="table-wrap">
-        {correlation_table(correlation_rows)}
-      </div>
-
       <h2>役満内訳</h2>
       <section class="yakuman-grid">
         {yakuman_section(yakuman_rows, yakuman_detail_rows)}
       </section>
-
-      <p class="generated-note">1位率トップ: {esc(best_top["player"])} ({esc(best_top["rank1_rate"])})</p>
     </section>
     """
 
