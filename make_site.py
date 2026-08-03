@@ -760,7 +760,7 @@ def team_section(team_rows: list[dict[str, object]]) -> str:
         body.append(
             "<tr>"
             f"<td>{i}</td>"
-            f"<td class=\"name\">{esc(row['team'])}</td>"
+            f"<td class=\"name sticky-name\">{esc(row['team'])}</td>"
             f"<td class=\"roles\">{esc(row['members'])}</td>"
             f"<td class=\"roles\">{esc(row['member_details'])}</td>"
             f"<td>{number(row['total_score'], 1)}</td>"
@@ -770,7 +770,7 @@ def team_section(team_rows: list[dict[str, object]]) -> str:
     return (
         "<div class=\"table-wrap\">"
         "<table class=\"team-table\">"
-        "<thead><tr><th>チーム順位</th><th>チーム</th><th>メンバー</th><th>単体成績</th><th>合計成績</th><th>合計対戦数</th></tr></thead>"
+        "<thead><tr><th>チーム順位</th><th class=\"sticky-name\">チーム</th><th>メンバー</th><th>単体成績</th><th>合計成績</th><th>合計対戦数</th></tr></thead>"
         f"<tbody>{''.join(body)}</tbody></table>"
         "</div>"
     )
@@ -821,7 +821,7 @@ def team_champion_section(rows: list[dict[str, object]]) -> str:
         body.append(
             "<tr>"
             f"<td>{i}</td>"
-            f"<td class=\"name\">{esc(row['player'])}</td>"
+            f"<td class=\"name sticky-name\">{esc(row['player'])}</td>"
             f"<td>{esc(row['wins'])}</td>"
             f"<td class=\"roles\">{esc(row['seasons'])}</td>"
             f"<td class=\"roles\">{esc(row['teams'])}</td>"
@@ -830,7 +830,7 @@ def team_champion_section(rows: list[dict[str, object]]) -> str:
     return (
         "<div class=\"table-wrap\">"
         "<table class=\"team-table\">"
-        "<thead><tr><th>順位</th><th>プレイヤー</th><th>チーム優勝回数</th><th>優勝シーズン</th><th>優勝チーム</th></tr></thead>"
+        "<thead><tr><th>順位</th><th class=\"sticky-name\">プレイヤー</th><th>チーム優勝回数</th><th>優勝シーズン</th><th>優勝チーム</th></tr></thead>"
         f"<tbody>{''.join(body)}</tbody></table>"
         "</div>"
     )
@@ -878,7 +878,7 @@ def season_mvp_section(rows: list[dict[str, object]]) -> str:
         body.append(
             "<tr>"
             f"<td>{i}</td>"
-            f"<td class=\"name\">{esc(row['player'])}</td>"
+            f"<td class=\"name sticky-name\">{esc(row['player'])}</td>"
             f"<td>{esc(row['wins'])}</td>"
             f"<td class=\"roles\">{esc(row['details'])}</td>"
             "</tr>"
@@ -886,7 +886,7 @@ def season_mvp_section(rows: list[dict[str, object]]) -> str:
     return (
         "<div class=\"table-wrap\">"
         "<table class=\"team-table\">"
-        "<thead><tr><th>順位</th><th>プレイヤー</th><th>MVP回数</th><th>内訳</th></tr></thead>"
+        "<thead><tr><th>順位</th><th class=\"sticky-name\">プレイヤー</th><th>MVP回数</th><th>内訳</th></tr></thead>"
         f"<tbody>{''.join(body)}</tbody></table>"
         "</div>"
     )
@@ -1050,7 +1050,7 @@ def yakuman_ranking_table(rows: list[dict[str, object]], payment_label: str) -> 
         body.append(
             "<tr>"
             f"<td>{i}</td>"
-            f"<td class=\"name\">{esc(row['player'])}</td>"
+            f"<td class=\"name sticky-name\">{esc(row['player'])}</td>"
             f"<td>{esc(row['count'])}</td>"
             f"<td class=\"roles\">{esc(row['roles'])}</td>"
             f"<td>{number(row['payment'])}</td>"
@@ -1059,7 +1059,7 @@ def yakuman_ranking_table(rows: list[dict[str, object]], payment_label: str) -> 
 
     return (
         "<table class=\"yakuman-rank-table\">"
-        f"<thead><tr><th>順位</th><th>プレイヤー</th><th>回数</th><th>役</th><th>{esc(payment_label)}</th></tr></thead>"
+        f"<thead><tr><th>順位</th><th class=\"sticky-name\">プレイヤー</th><th>回数</th><th>役</th><th>{esc(payment_label)}</th></tr></thead>"
         f"<tbody>{''.join(body)}</tbody></table>"
     )
 
@@ -1127,7 +1127,7 @@ def correlation_table(rows: list[dict[str, object]]) -> str:
         body.append(
             "<tr>"
             f"<td>{i}</td>"
-            f"<td class=\"name\">{esc(row['giver'])}</td>"
+            f"<td class=\"name sticky-name\">{esc(row['giver'])}</td>"
             f"<td class=\"name\">{esc(row['receiver'])}</td>"
             f"<td>{number(row['amount'])}</td>"
             f"<td>{esc(row['games'])}</td>"
@@ -1136,7 +1136,7 @@ def correlation_table(rows: list[dict[str, object]]) -> str:
 
     return (
         "<table class=\"relation-table\">"
-        "<thead><tr><th>順位</th><th>献上者</th><th>受取人</th><th>ネット献上点棒</th><th>直接対戦数</th></tr></thead>"
+        "<thead><tr><th>順位</th><th class=\"sticky-name\">献上者</th><th>受取人</th><th>ネット献上点棒</th><th>直接対戦数</th></tr></thead>"
         f"<tbody>{''.join(body)}</tbody></table>"
     )
 
@@ -1435,7 +1435,10 @@ def player_rank_table(rows: list[dict[str, str]]) -> str:
     if not rows:
         return "<p class=\"empty\">順位データがありません。</p>"
     columns = ["metric", "value", "rank_text", "direction"]
-    head = "".join(f"<th>{esc(LABELS[c])}</th>" for c in columns)
+    head = "".join(
+        f"<th class=\"sticky-name\">{esc(LABELS[c])}</th>" if c == "metric" else f"<th>{esc(LABELS[c])}</th>"
+        for c in columns
+    )
     body = []
     for row in rows:
         classes = []
@@ -1446,7 +1449,7 @@ def player_rank_table(rows: list[dict[str, str]]) -> str:
         tr_class = f" class=\"{' '.join(classes)}\"" if classes else ""
         body.append(
             f"<tr{tr_class}>"
-            f"<td class=\"name\">{esc(row['metric'])}</td>"
+            f"<td class=\"name sticky-name\">{esc(row['metric'])}</td>"
             f"<td>{row['value']}</td>"
             f"<td>{esc(row['rank_text'])}</td>"
             f"<td>{esc(row['direction'])}</td>"
@@ -1908,14 +1911,14 @@ def main() -> None:
     .mini-stats div {{ background: var(--fill); border-radius: 6px; padding: 8px; }}
     .mini-stats span {{ display: block; font-size: 11px; color: var(--muted); }}
     .mini-stats strong {{ font-size: 17px; }}
-    .table-wrap {{ position: relative; overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; }}
-    table {{ border-collapse: collapse; width: 100%; min-width: 920px; font-size: 14px; }}
-    th, td {{ border-bottom: 1px solid var(--line); padding: 8px 9px; text-align: right; white-space: nowrap; }}
+    .table-wrap {{ position: relative; max-width: 100%; overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; -webkit-overflow-scrolling: touch; isolation: isolate; }}
+    table {{ border-collapse: separate; border-spacing: 0; width: 100%; min-width: 920px; font-size: 14px; }}
+    th, td {{ border-bottom: 1px solid var(--line); padding: 8px 9px; text-align: right; white-space: nowrap; background: #fff; }}
     th {{ background: var(--fill); font-weight: 700; color: #30363d; }}
     tr:last-child td {{ border-bottom: 0; }}
     td.name, th:nth-child(2), th.sticky-name {{ text-align: left; font-weight: 700; }}
-    .sticky-name {{ position: sticky; left: 0; z-index: 2; min-width: 128px; max-width: 180px; background: #fff; box-shadow: 1px 0 0 var(--line); }}
-    th.sticky-name {{ z-index: 3; background: var(--fill); }}
+    td.sticky-name, th.sticky-name {{ position: sticky; left: 0; z-index: 4; min-width: 128px; max-width: 180px; background: #fff; box-shadow: 1px 0 0 var(--line), 8px 0 12px rgba(23, 32, 42, .05); background-clip: padding-box; }}
+    th.sticky-name {{ z-index: 5; background: var(--fill); }}
     .metric-best td.sticky-name {{ background: #fff7df; }}
     .metric-worst td.sticky-name {{ background: #f1f3f5; }}
     td.roles {{ text-align: left; white-space: normal; min-width: 240px; }}
