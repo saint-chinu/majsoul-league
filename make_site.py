@@ -21,8 +21,8 @@ SEASON_FILE_RE = re.compile(r"admin_paifu_ids_season(\d+)\.csv$")
 LABELS = {
     "rank": "順位",
     "player": "プレイヤー",
-    "games": "対戦数",
-    "earned_score": "獲得スコア",
+    "games": "半荘数",
+    "earned_score": "スコア",
     "rank1_rate": "1位率",
     "rank2_rate": "2位率",
     "rank3_rate": "3位率",
@@ -66,6 +66,8 @@ LABELS = {
     "max_final_point": "最高終了時持ち点",
     "min_final_point": "最低終了時持ち点",
     "yakuman_count": "役満回数",
+    "mvp_count": "MVP回数",
+    "team_champion_count": "チーム優勝回数",
     "season": "シーズン",
     "metric": "項目",
     "value": "値",
@@ -119,6 +121,8 @@ METRIC_DESCRIPTIONS = {
     "max_final_point": "半荘終了時持ち点の最高値。",
     "min_final_point": "半荘終了時持ち点の最低値。",
     "yakuman_count": "役満を和了した回数。ダブル役満は別役扱い。",
+    "mvp_count": "シーズン内の獲得スコアが1位だった回数。累計ページのみ表示。",
+    "team_champion_count": "所属チームがシーズン優勝した回数。累計ページのみ表示。",
 }
 
 
@@ -309,19 +313,23 @@ MAIN_RANK_COLUMNS = [
     "rank3_rate",
     "last_avoid_rate",
     "top_keep_rate",
-    "first_tenpai_rate",
-    "tenpai_keep_rate",
     "top_stay_rate",
     "second_stay_rate",
     "last_stay_rate",
-    "late_noten_houjuu_rate",
-    "late_noten_fresh_discard_rate",
     "winning_run_points",
+]
+
+
+CUMULATIVE_RANK_COLUMNS = MAIN_RANK_COLUMNS + [
+    "mvp_count",
+    "team_champion_count",
 ]
 
 
 MAIN_WIN_COLUMNS = [
     "player",
+    "first_tenpai_rate",
+    "tenpai_keep_rate",
     "hu_rate",
     "average_hu_point",
     "average_called_hu_point",
@@ -331,6 +339,8 @@ MAIN_WIN_COLUMNS = [
     "called_houjuu_rate",
     "two_called_houjuu_rate",
     "called_haneman_houjuu_rate",
+    "late_noten_houjuu_rate",
+    "late_noten_fresh_discard_rate",
     "called_rate",
     "riichi_rate",
     "riichi_miss_rate",
@@ -368,13 +378,9 @@ DETAIL_RANK_COLUMNS = [
     "player",
     "rounds",
     "top_keep_rate",
-    "first_tenpai_rate",
-    "tenpai_keep_rate",
     "top_stay_rate",
     "second_stay_rate",
     "last_stay_rate",
-    "late_noten_houjuu_rate",
-    "late_noten_fresh_discard_rate",
     "winning_run_points",
     "max_final_point",
     "min_final_point",
@@ -383,12 +389,16 @@ DETAIL_RANK_COLUMNS = [
 
 DETAIL_WIN_COLUMNS = [
     "player",
+    "first_tenpai_rate",
+    "tenpai_keep_rate",
     "average_hu_point",
     "average_called_hu_point",
     "average_houjuu_point",
     "called_houjuu_rate",
     "two_called_houjuu_rate",
     "called_haneman_houjuu_rate",
+    "late_noten_houjuu_rate",
+    "late_noten_fresh_discard_rate",
     "average_opening_shanten",
     "average_opening_dora",
 ]
@@ -404,19 +414,17 @@ PLAYER_RANK_COLUMNS = [
     "rank3_rate",
     "last_avoid_rate",
     "top_keep_rate",
-    "first_tenpai_rate",
-    "tenpai_keep_rate",
     "top_stay_rate",
     "second_stay_rate",
     "last_stay_rate",
-    "late_noten_houjuu_rate",
-    "late_noten_fresh_discard_rate",
     "winning_run_points",
 ]
 
 
 PLAYER_WIN_COLUMNS = [
     "player",
+    "first_tenpai_rate",
+    "tenpai_keep_rate",
     "hu_rate",
     "average_hu_point",
     "average_called_hu_point",
@@ -426,6 +434,8 @@ PLAYER_WIN_COLUMNS = [
     "called_houjuu_rate",
     "two_called_houjuu_rate",
     "called_haneman_houjuu_rate",
+    "late_noten_houjuu_rate",
+    "late_noten_fresh_discard_rate",
     "called_rate",
     "riichi_rate",
     "riichi_miss_rate",
@@ -457,19 +467,17 @@ PLAYER_SEASON_RANK_COLUMNS = [
     "average_rank",
     "last_avoid_rate",
     "top_keep_rate",
-    "first_tenpai_rate",
-    "tenpai_keep_rate",
     "top_stay_rate",
     "second_stay_rate",
     "last_stay_rate",
-    "late_noten_houjuu_rate",
-    "late_noten_fresh_discard_rate",
     "winning_run_points",
 ]
 
 
 PLAYER_SEASON_WIN_COLUMNS = [
     "season",
+    "first_tenpai_rate",
+    "tenpai_keep_rate",
     "hu_rate",
     "average_hu_point",
     "average_called_hu_point",
@@ -479,6 +487,8 @@ PLAYER_SEASON_WIN_COLUMNS = [
     "called_houjuu_rate",
     "two_called_houjuu_rate",
     "called_haneman_houjuu_rate",
+    "late_noten_houjuu_rate",
+    "late_noten_fresh_discard_rate",
     "called_rate",
     "riichi_rate",
     "riichi_miss_rate",
@@ -980,6 +990,26 @@ def season_mvp_section(rows: list[dict[str, object]]) -> str:
         f"<tbody>{''.join(body)}</tbody></table>"
         "</div>"
     )
+
+
+def add_cumulative_awards(
+    context: dict[str, object],
+    mvp_rows: list[dict[str, object]],
+    team_champion_rows: list[dict[str, object]],
+) -> None:
+    mvp_counts = {
+        str(row.get("player", "")): str(row.get("wins", 0))
+        for row in mvp_rows
+    }
+    team_counts = {
+        str(row.get("player", "")): str(row.get("wins", 0))
+        for row in team_champion_rows
+    }
+
+    for row in list(context.get("rows", [])):
+        player = row.get("player", "")
+        row["mvp_count"] = mvp_counts.get(player, "0")
+        row["team_champion_count"] = team_counts.get(player, "0")
 
 
 def digest_cards(rows: list[dict[str, str]]) -> str:
@@ -1666,7 +1696,7 @@ def render_player_panel(
       {split_tables(
         [cumulative_row],
         [
-          ("順位・立ち位置", PLAYER_RANK_COLUMNS),
+          ("順位スタッツ", PLAYER_RANK_COLUMNS),
           ("和了・放銃・手役", PLAYER_WIN_COLUMNS),
         ],
       )}
@@ -1680,7 +1710,7 @@ def render_player_panel(
       {split_tables(
         season_rows,
         [
-          ("順位・立ち位置", PLAYER_SEASON_RANK_COLUMNS),
+          ("順位スタッツ", PLAYER_SEASON_RANK_COLUMNS),
           ("和了・放銃・手役", PLAYER_SEASON_WIN_COLUMNS),
         ],
       )}
@@ -1730,6 +1760,7 @@ def render_stats_panel(context: dict[str, object]) -> str:
     if context["key"] == "all":
         team_block_title = "チーム優勝経験"
         team_block = team_champion_section(list(context.get("team_champion_rows", [])))
+        rank_columns = CUMULATIVE_RANK_COLUMNS
         mvp_block = (
             "<h2>シーズンMVP経験</h2>"
             + season_mvp_section(list(context.get("season_mvp_rows", [])))
@@ -1737,6 +1768,7 @@ def render_stats_panel(context: dict[str, object]) -> str:
     else:
         team_block_title = f"{context['label']} チーム成績"
         team_block = team_section(list(context.get("team_rows", [])))
+        rank_columns = MAIN_RANK_COLUMNS
         mvp_block = ""
 
     return f"""
@@ -1757,7 +1789,7 @@ def render_stats_panel(context: dict[str, object]) -> str:
       {split_tables(
         rows,
         [
-          ("順位・立ち位置", MAIN_RANK_COLUMNS),
+          ("順位スタッツ", rank_columns),
           ("和了・放銃・手役", MAIN_WIN_COLUMNS),
         ],
         rank_by="earned_score",
@@ -1792,7 +1824,7 @@ def render_stats_panel(context: dict[str, object]) -> str:
       {split_tables(
         rows,
         [
-          ("順位・立ち位置", DETAIL_RANK_COLUMNS),
+          ("順位スタッツ", DETAIL_RANK_COLUMNS),
           ("和了・放銃・その他", DETAIL_WIN_COLUMNS),
         ],
         rank_by="average_rank",
@@ -1854,6 +1886,11 @@ def main() -> None:
     cumulative_context = build_context("all", "累計", all_uuids)
     cumulative_context["team_champion_rows"] = team_champion_rows(season_contexts)
     cumulative_context["season_mvp_rows"] = season_mvp_rows(season_contexts)
+    add_cumulative_awards(
+        cumulative_context,
+        list(cumulative_context["season_mvp_rows"]),
+        list(cumulative_context["team_champion_rows"]),
+    )
     contexts = [cumulative_context] + season_contexts
     player_names = [
         row["player"]
