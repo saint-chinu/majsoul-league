@@ -39,6 +39,17 @@ LABELS = {
     "tsumo_rate": "ツモ率",
     "houjuu_rate": "放銃率",
     "average_houjuu_point": "放銃平均打点",
+    "noten_houjuu_rate": "ノーテン放銃率",
+    "two_shanten_houjuu_rate": "2シャン以下放銃率",
+    "riichi_after_houjuu_rate": "リーチ後放銃率",
+    "vs_riichi_houjuu_rate": "対リーチ放銃率",
+    "vs_dama_houjuu_rate": "対ダマ放銃率",
+    "vs_called_houjuu_rate": "対鳴き放銃率",
+    "vs_two_called_houjuu_rate": "2副露放銃率",
+    "vs_haneman_houjuu_rate": "跳満以上放銃率",
+    "late_noten_houjuu_share": "終盤ノーテン放銃",
+    "deal_in_quality_score": "放銃質スコア",
+    "deal_in_quality_top_category": "最多放銃分類",
     "called_houjuu_rate": "鳴き手放銃率",
     "two_called_houjuu_rate": "2副露以上放銃率",
     "called_haneman_houjuu_rate": "鳴き跳満以上放銃率",
@@ -49,7 +60,7 @@ LABELS = {
     "second_stay_rate": "2位滞在率",
     "last_stay_rate": "ラス滞在率",
     "late_noten_houjuu_rate": "後半非聴放銃率",
-    "late_noten_fresh_discard_rate": "後半非聴生牌率",
+    "late_noten_fresh_discard_rate": "終盤非聴生牌",
     "winning_run_points": "ウイニングラン加点",
     "average_opening_shanten": "平均配牌シャンテン",
     "average_opening_dora": "平均配牌ドラ",
@@ -108,6 +119,17 @@ METRIC_DESCRIPTIONS = {
     "tsumo_rate": "和了のうち、ツモ和了だった割合。",
     "houjuu_rate": "参加局のうち、自分が放銃した割合。",
     "average_houjuu_point": "放銃時に支払った点数の平均。",
+    "noten_houjuu_rate": "ロン放銃のうち、自分が非テンパイだった割合。",
+    "two_shanten_houjuu_rate": "ロン放銃のうち、自分が2シャンテン以上遠い状態だった割合。",
+    "riichi_after_houjuu_rate": "ロン放銃のうち、自分のリーチ後放銃だった割合。",
+    "vs_riichi_houjuu_rate": "ロン放銃のうち、リーチ者へ放銃した割合。",
+    "vs_dama_houjuu_rate": "ロン放銃のうち、門前非リーチの相手へ放銃した割合。",
+    "vs_called_houjuu_rate": "ロン放銃のうち、鳴いた相手へ放銃した割合。",
+    "vs_two_called_houjuu_rate": "ロン放銃のうち、2副露以上の相手へ放銃した割合。",
+    "vs_haneman_houjuu_rate": "ロン放銃のうち、支払点12,000点以上だった割合。",
+    "late_noten_houjuu_share": "ロン放銃のうち、12巡目以降の非テンパイ打牌で放銃した割合。",
+    "deal_in_quality_score": "放銃時の押し理由と失点状況を採点した平均値。スコアをクリックすると分類内訳を表示。",
+    "deal_in_quality_top_category": "そのプレイヤーで最も多かった放銃分類。",
     "called_houjuu_rate": "参加局のうち、鳴いた手へのロン放銃になった割合。",
     "two_called_houjuu_rate": "参加局のうち、2副露以上の手へのロン放銃になった割合。",
     "called_haneman_houjuu_rate": "参加局のうち、鳴いた跳満以上の手へのロン放銃になった割合。ロン支払点12,000点以上を跳満以上として集計。",
@@ -298,6 +320,15 @@ PLAYER_RANK_METRICS = [
     ("tsumo_rate", True, "高い方が上位"),
     ("houjuu_rate", False, "低い方が上位"),
     ("average_houjuu_point", False, "低い方が上位"),
+    ("noten_houjuu_rate", False, "低い方が上位"),
+    ("two_shanten_houjuu_rate", False, "低い方が上位"),
+    ("riichi_after_houjuu_rate", False, "低い方が上位"),
+    ("vs_riichi_houjuu_rate", False, "低い方が上位"),
+    ("vs_dama_houjuu_rate", False, "低い方が上位"),
+    ("vs_called_houjuu_rate", False, "低い方が上位"),
+    ("vs_two_called_houjuu_rate", False, "低い方が上位"),
+    ("vs_haneman_houjuu_rate", False, "低い方が上位"),
+    ("deal_in_quality_score", True, "高い方が上位"),
     ("called_houjuu_rate", False, "低い方が上位"),
     ("two_called_houjuu_rate", False, "低い方が上位"),
     ("called_haneman_houjuu_rate", False, "低い方が上位"),
@@ -356,9 +387,6 @@ MAIN_WIN_COLUMNS = [
     "tsumo_rate",
     "houjuu_rate",
     "average_houjuu_point",
-    "called_houjuu_rate",
-    "two_called_houjuu_rate",
-    "called_haneman_houjuu_rate",
     "late_noten_houjuu_rate",
     "late_noten_fresh_discard_rate",
     "called_rate",
@@ -396,6 +424,25 @@ CALL_QUALITY_COLUMNS = [
     "average_first_call_turn",
     "call_quality_score",
     "call_quality_top_category",
+]
+
+
+DEAL_IN_QUALITY_COLUMNS = [
+    "player",
+    "houjuu_rate",
+    "average_houjuu_point",
+    "noten_houjuu_rate",
+    "two_shanten_houjuu_rate",
+    "riichi_after_houjuu_rate",
+    "vs_riichi_houjuu_rate",
+    "vs_dama_houjuu_rate",
+    "vs_called_houjuu_rate",
+    "vs_two_called_houjuu_rate",
+    "vs_haneman_houjuu_rate",
+    "late_noten_houjuu_share",
+    "late_noten_fresh_discard_rate",
+    "deal_in_quality_score",
+    "deal_in_quality_top_category",
 ]
 
 
@@ -466,9 +513,6 @@ PLAYER_WIN_COLUMNS = [
     "tsumo_rate",
     "houjuu_rate",
     "average_houjuu_point",
-    "called_houjuu_rate",
-    "two_called_houjuu_rate",
-    "called_haneman_houjuu_rate",
     "late_noten_houjuu_rate",
     "late_noten_fresh_discard_rate",
     "called_rate",
@@ -508,6 +552,25 @@ PLAYER_CALL_QUALITY_COLUMNS = [
     "average_first_call_turn",
     "call_quality_score",
     "call_quality_top_category",
+]
+
+
+PLAYER_DEAL_IN_QUALITY_COLUMNS = [
+    "player",
+    "season",
+    "houjuu_rate",
+    "average_houjuu_point",
+    "noten_houjuu_rate",
+    "two_shanten_houjuu_rate",
+    "riichi_after_houjuu_rate",
+    "vs_riichi_houjuu_rate",
+    "vs_dama_houjuu_rate",
+    "vs_called_houjuu_rate",
+    "vs_two_called_houjuu_rate",
+    "vs_haneman_houjuu_rate",
+    "late_noten_houjuu_share",
+    "deal_in_quality_score",
+    "deal_in_quality_top_category",
 ]
 
 
@@ -628,7 +691,7 @@ def metric_value(row: dict[str, str], col: str) -> float:
 def format_cell_value(col: str, value: str | int | float) -> str:
     if col == "earned_score":
         return number(value, 1)
-    if col in {"riichi_quality_score", "call_quality_score"}:
+    if col in {"riichi_quality_score", "call_quality_score", "deal_in_quality_score"}:
         return number(value, 2)
     if col == "average_first_call_turn":
         return number(value, 1)
@@ -665,6 +728,8 @@ def metric_popup_html(col: str) -> str:
         table_html = riichi_quality_definition_table()
     elif col == "call_quality_score":
         table_html = call_quality_definition_table()
+    elif col == "deal_in_quality_score":
+        table_html = deal_in_quality_definition_table()
     else:
         return ""
     if not table_html:
@@ -827,6 +892,89 @@ def call_quality_score_cell(row: dict[str, str]) -> str:
     )
 
 
+def parse_deal_in_quality_breakdown(value: str) -> dict[str, int]:
+    counts = {}
+    for part in (value or "").split("|"):
+        if ":" not in part:
+            continue
+        key, raw_count = part.split(":", 1)
+        try:
+            counts[key] = int(raw_count)
+        except ValueError:
+            continue
+    return counts
+
+
+def deal_in_quality_definition_table() -> str:
+    try:
+        from aggregate_league import DEAL_IN_QUALITY_CATEGORIES, DEAL_IN_QUALITY_SCORE
+    except Exception:
+        return ""
+
+    body = []
+    for key, label in DEAL_IN_QUALITY_CATEGORIES:
+        body.append(
+            "<tr>"
+            f"<td>{esc(DEAL_IN_QUALITY_SCORE[key])}</td>"
+            f"<td class=\"name\">{esc(label)}</td>"
+            "</tr>"
+        )
+    head = "<th>スコア</th><th>分類</th>"
+    return f"<div class=\"table-wrap quality-def\"><table><thead><tr>{head}</tr></thead><tbody>{''.join(body)}</tbody></table></div>"
+
+
+def deal_in_quality_breakdown_table(row: dict[str, str]) -> str:
+    try:
+        from aggregate_league import DEAL_IN_QUALITY_CATEGORIES, DEAL_IN_QUALITY_SCORE
+    except Exception:
+        return ""
+
+    counts = parse_deal_in_quality_breakdown(row.get("deal_in_quality_breakdown", ""))
+    total = sum(counts.values())
+    if not counts or total <= 0:
+        return "<p>分類内訳はありません。</p>"
+
+    body_rows = []
+    for key, label in DEAL_IN_QUALITY_CATEGORIES:
+        count = counts.get(key, 0)
+        if not count:
+            continue
+        body_rows.append(
+            "<tr>"
+            f"<td class=\"name\">{esc(label)}</td>"
+            f"<td>{count}</td>"
+            f"<td>{percent_text(count, total)}</td>"
+            f"<td>{esc(DEAL_IN_QUALITY_SCORE.get(key, ''))}</td>"
+            "</tr>"
+        )
+
+    head = "<th>分類</th><th>回数</th><th>割合</th><th>スコア</th>"
+    return (
+        "<h3>分類内訳</h3>"
+        "<div class=\"table-wrap quality-breakdown\">"
+        f"<table><thead><tr>{head}</tr></thead><tbody>{''.join(body_rows)}</tbody></table>"
+        "</div>"
+    )
+
+
+def deal_in_quality_score_cell(row: dict[str, str]) -> str:
+    score = format_cell_value("deal_in_quality_score", row.get("deal_in_quality_score", ""))
+    if not row.get("deal_in_quality_breakdown"):
+        return score
+    subject = row.get("player") or row.get("season") or "放銃質"
+    popup_html = (
+        "<p>この行のロン放銃を分類ごとに分解した内訳です。複合条件は重複して数えています。</p>"
+        f"{deal_in_quality_breakdown_table(row)}"
+        "<h3>配点表</h3>"
+        f"{deal_in_quality_definition_table()}"
+    )
+    return (
+        f"<button class=\"metric-value-help\" type=\"button\" "
+        f"data-metric-title=\"{esc(subject)} 放銃質内訳\" "
+        f"data-metric-html=\"{esc(popup_html)}\">{score}</button>"
+    )
+
+
 def header_cell(col: str) -> str:
     label = esc(LABELS.get(col, col))
     description = METRIC_DESCRIPTIONS.get(col)
@@ -878,6 +1026,8 @@ def table(
                 value = riichi_quality_score_cell(row)
             elif col == "call_quality_score":
                 value = call_quality_score_cell(row)
+            elif col == "deal_in_quality_score":
+                value = deal_in_quality_score_cell(row)
             else:
                 value = format_cell_value(col, value)
             cells.append(f"<td class=\"{cls}\">{value}</td>")
@@ -901,6 +1051,15 @@ def call_quality_table(rows: list[dict[str, str]]) -> str:
         reverse=True,
     )
     return table(ordered, CALL_QUALITY_COLUMNS, rank_by="call_quality_score", reverse=True)
+
+
+def deal_in_quality_table(rows: list[dict[str, str]]) -> str:
+    ordered = sorted(
+        rows,
+        key=lambda row: metric_value(row, "deal_in_quality_score"),
+        reverse=True,
+    )
+    return table(ordered, DEAL_IN_QUALITY_COLUMNS, rank_by="deal_in_quality_score", reverse=True)
 
 
 def riichi_quality_definition_table() -> str:
@@ -1496,6 +1655,8 @@ def aggregate_uuids(uuids: set[str]) -> tuple[list[dict[str, str]], list[dict[st
             average,
             call_quality_breakdown,
             call_quality_top_label,
+            deal_in_quality_breakdown,
+            deal_in_quality_top_label,
             percent,
             riichi_quality_breakdown,
             riichi_quality_recommended_count,
@@ -1543,6 +1704,20 @@ def aggregate_uuids(uuids: set[str]) -> tuple[list[dict[str, str]], list[dict[st
                 "tsumo_rate": percent(player_stats.tsumo, player_stats.hu),
                 "houjuu_rate": percent(player_stats.houjuu, player_stats.rounds),
                 "average_houjuu_point": str(average(player_stats.houjuu_point_sum, player_stats.houjuu, 1)),
+                "noten_houjuu_rate": percent(player_stats.noten_houjuu, player_stats.deal_in_events),
+                "two_shanten_houjuu_rate": percent(player_stats.two_shanten_houjuu, player_stats.deal_in_events),
+                "riichi_after_houjuu_rate": percent(player_stats.riichi_after_houjuu, player_stats.deal_in_events),
+                "vs_riichi_houjuu_rate": percent(player_stats.vs_riichi_houjuu, player_stats.deal_in_events),
+                "vs_dama_houjuu_rate": percent(player_stats.vs_dama_houjuu, player_stats.deal_in_events),
+                "vs_called_houjuu_rate": percent(player_stats.vs_called_houjuu, player_stats.deal_in_events),
+                "vs_two_called_houjuu_rate": percent(player_stats.two_called_houjuu, player_stats.deal_in_events),
+                "vs_haneman_houjuu_rate": percent(player_stats.called_haneman_houjuu, player_stats.deal_in_events),
+                "late_noten_houjuu_share": percent(player_stats.late_noten_houjuu, player_stats.deal_in_events),
+                "deal_in_quality_score": str(
+                    average(player_stats.deal_in_quality_score_sum, player_stats.deal_in_events, 2)
+                ),
+                "deal_in_quality_top_category": deal_in_quality_top_label(player_stats),
+                "deal_in_quality_breakdown": deal_in_quality_breakdown(player_stats),
                 "called_houjuu_rate": percent(player_stats.called_houjuu, player_stats.rounds),
                 "two_called_houjuu_rate": percent(player_stats.two_called_houjuu, player_stats.rounds),
                 "called_haneman_houjuu_rate": percent(
@@ -1880,6 +2055,11 @@ def render_player_panel(
         {table([cumulative_row], CALL_QUALITY_COLUMNS)}
       </div>
 
+      <h2>{esc(player)} 放銃の質</h2>
+      <div class="table-wrap">
+        {table([cumulative_row], DEAL_IN_QUALITY_COLUMNS)}
+      </div>
+
       <h2>{esc(player)} シーズン別推移</h2>
       {split_tables(
         season_rows,
@@ -1893,6 +2073,9 @@ def render_player_panel(
       </div>
       <div class="table-wrap">
         {table(season_rows, PLAYER_CALL_QUALITY_COLUMNS)}
+      </div>
+      <div class="table-wrap">
+        {table(season_rows, PLAYER_DEAL_IN_QUALITY_COLUMNS)}
       </div>
 
       <h2>{esc(player)} 項目別順位</h2>
@@ -1981,6 +2164,11 @@ def render_stats_panel(context: dict[str, object]) -> str:
       <h2>{esc(context['label'])} 鳴きの質</h2>
       <div class="table-wrap">
         {call_quality_table(rows)}
+      </div>
+
+      <h2>{esc(context['label'])} 放銃の質</h2>
+      <div class="table-wrap">
+        {deal_in_quality_table(rows)}
       </div>
 
       <h2>{esc(team_block_title)}</h2>

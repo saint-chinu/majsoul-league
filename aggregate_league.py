@@ -126,6 +126,42 @@ CALL_QUALITY_LABELS = {
     key: label for key, label in CALL_QUALITY_CATEGORIES
 }
 
+DEAL_IN_QUALITY_CATEGORIES = [
+    ("riichi_dora4_good", "ドラ4以上良形リーチ後放銃"),
+    ("riichi_dora3_good", "ドラ3良形リーチ後放銃"),
+    ("dealer_good_riichi", "親番良形リーチ後放銃"),
+    ("comeback_hand", "まくれる手で放銃"),
+    ("riichi_dora2_good", "ドラ2良形リーチ後放銃"),
+    ("riichi_dora1_good", "ドラ1良形リーチ後放銃"),
+    ("chase_riichi_declaration_deal_in", "追っかけリーチ宣言牌放銃"),
+    ("bad_shape_riichi_deal_in", "愚形リーチ後放銃"),
+    ("one_shanten_vs_riichi", "1シャンテンから対リーチ放銃"),
+    ("late_noten_deal_in", "終盤ノーテン放銃"),
+    ("two_shanten_or_worse_vs_riichi", "2シャンテン以下から対リーチ放銃"),
+    ("top_haneman_deal_in", "トップ目から跳満以上放銃"),
+    ("oorasu_rank_drop_deal_in", "オーラス着順落ち放銃"),
+    ("other_deal_in", "その他放銃"),
+]
+DEAL_IN_QUALITY_SCORE = {
+    "riichi_dora4_good": 5,
+    "riichi_dora3_good": 3,
+    "dealer_good_riichi": 3,
+    "comeback_hand": 2,
+    "riichi_dora2_good": 1,
+    "riichi_dora1_good": 0,
+    "chase_riichi_declaration_deal_in": -2,
+    "bad_shape_riichi_deal_in": -3,
+    "one_shanten_vs_riichi": -3,
+    "late_noten_deal_in": -5,
+    "two_shanten_or_worse_vs_riichi": -7,
+    "top_haneman_deal_in": -8,
+    "oorasu_rank_drop_deal_in": -10,
+    "other_deal_in": 0,
+}
+DEAL_IN_QUALITY_LABELS = {
+    key: label for key, label in DEAL_IN_QUALITY_CATEGORIES
+}
+
 @dataclass
 class PlayerStats:
     games: int = 0
@@ -147,6 +183,15 @@ class PlayerStats:
     called_houjuu: int = 0
     two_called_houjuu: int = 0
     called_haneman_houjuu: int = 0
+    deal_in_events: int = 0
+    noten_houjuu: int = 0
+    two_shanten_houjuu: int = 0
+    riichi_after_houjuu: int = 0
+    vs_riichi_houjuu: int = 0
+    vs_dama_houjuu: int = 0
+    vs_called_houjuu: int = 0
+    deal_in_quality_score_sum: int = 0
+    deal_in_quality_counts: Counter = field(default_factory=Counter)
     called: int = 0
     riichi: int = 0
     riichi_miss: int = 0
@@ -800,6 +845,25 @@ def call_quality_breakdown(player_stats):
             parts.append(f"{key}:{count}")
     return "|".join(parts)
 
+def deal_in_quality_top_label(player_stats):
+    if not player_stats.deal_in_quality_counts:
+        return ""
+    key, _count = max(
+        player_stats.deal_in_quality_counts.items(),
+        key=lambda item: (item[1], DEAL_IN_QUALITY_SCORE.get(item[0], 0)),
+    )
+    return DEAL_IN_QUALITY_LABELS.get(key, key)
+
+def deal_in_quality_breakdown(player_stats):
+    if not player_stats.deal_in_quality_counts:
+        return ""
+    parts = []
+    for key, _label in DEAL_IN_QUALITY_CATEGORIES:
+        count = int(player_stats.deal_in_quality_counts.get(key, 0))
+        if count:
+            parts.append(f"{key}:{count}")
+    return "|".join(parts)
+
 def has_top_score(scores, seat):
     if len(scores) < 3 or seat not in {0, 1, 2}:
         return False
@@ -957,6 +1021,103 @@ def classify_call_event(
             categories.append("added_kan_under_riichi")
 
     return categories, sum(CALL_QUALITY_SCORE[key] for key in categories)
+
+def count_dora_tiles(tiles, dora_indicators):
+    dora_tiles = riichi_dora_tiles(dora_indicators)
+    count = 0
+    for tile in tiles:
+        normalized = normalize_tile(tile)
+        count += dora_tiles[normalized]
+        if str(tile).startswith("0"):
+            count += 1
+    return count
+
+def estimate_riichi_point(dora_count):
+    if dora_count >= 4:
+        return 12000
+    if dora_count == 3:
+        return 8000
+    if dora_count == 2:
+        return 5200
+    return 2600
+
+def can_overtake_with_hand(scores, seat, estimated_point):
+    if len(scores) < 3 or seat not in {0, 1, 2}:
+        return False
+    rank = score_rank(scores, seat)
+    if rank is None or rank == 1:
+        return False
+    score_list = [int(score) for score in scores[:3]]
+    seat_score = score_list[seat]
+    targets = [score for index, score in enumerate(score_list) if index != seat and score > seat_score]
+    if not targets:
+        return False
+    return min(targets) - seat_score <= estimated_point
+
+def classify_deal_in_event(
+    loser,
+    winner,
+    payment,
+    hule,
+    scores_before,
+    scores_after,
+    loser_shanten,
+    loser_riichi_info,
+    winner_riichi,
+    winner_melds,
+    last_late_noten,
+    last_riichi_declaration,
+    last_chase_riichi,
+    chang,
+    dealer,
+):
+    categories = []
+    loser_riichi = bool(loser_riichi_info.get("riichi"))
+    loser_good_riichi = bool(loser_riichi_info.get("good_shape"))
+    loser_dora = int(loser_riichi_info.get("dora_count", 0))
+    estimated_point = int(loser_riichi_info.get("estimated_point", 0))
+
+    if loser_riichi:
+        if loser_good_riichi and loser_dora >= 4:
+            categories.append("riichi_dora4_good")
+        elif loser_good_riichi and loser_dora == 3:
+            categories.append("riichi_dora3_good")
+        elif loser_good_riichi and loser_dora == 2:
+            categories.append("riichi_dora2_good")
+        elif loser_good_riichi and loser_dora == 1:
+            categories.append("riichi_dora1_good")
+        if loser_good_riichi and loser == dealer:
+            categories.append("dealer_good_riichi")
+        if not loser_good_riichi:
+            categories.append("bad_shape_riichi_deal_in")
+        if estimated_point and can_overtake_with_hand(scores_before, loser, estimated_point):
+            categories.append("comeback_hand")
+
+    if last_riichi_declaration and last_chase_riichi:
+        categories.append("chase_riichi_declaration_deal_in")
+
+    if winner_riichi:
+        if loser_shanten == 1:
+            categories.append("one_shanten_vs_riichi")
+        elif loser_shanten >= 2:
+            categories.append("two_shanten_or_worse_vs_riichi")
+
+    if last_late_noten:
+        categories.append("late_noten_deal_in")
+
+    if score_rank(scores_before, loser) == 1 and payment >= 12000:
+        categories.append("top_haneman_deal_in")
+
+    if is_oorasu(chang, dealer) and scores_after and len(scores_after) >= 3:
+        before_rank = score_rank(scores_before, loser)
+        after_rank = score_rank(scores_after, loser)
+        if before_rank is not None and after_rank is not None and after_rank > before_rank:
+            categories.append("oorasu_rank_drop_deal_in")
+
+    if not categories:
+        categories.append("other_deal_in")
+
+    return categories, sum(DEAL_IN_QUALITY_SCORE[key] for key in categories)
 
 def is_late_noten_discard(msg, seat, turn_counts, riichi_seats):
     if seat not in {0, 1, 2}:
@@ -1209,6 +1370,14 @@ def aggregate_game(uuid, stats, yakuman_details):
     visible_counts = Counter()
     turn_counts = {0: 0, 1: 0, 2: 0}
     last_discard_late_noten = {0: False, 1: False, 2: False}
+    last_discard_shanten = {0: 8, 1: 8, 2: 8}
+    last_discard_riichi_declaration = {0: False, 1: False, 2: False}
+    last_discard_chase_riichi = {0: False, 1: False, 2: False}
+    riichi_info = {
+        0: {"riichi": False},
+        1: {"riichi": False},
+        2: {"riichi": False},
+    }
     riichi_winners = set()
     first_tenpai_seat = None
     round_start_scores = [35000, 35000, 35000]
@@ -1333,6 +1502,14 @@ def aggregate_game(uuid, stats, yakuman_details):
             visible_counts = Counter()
             turn_counts = {0: 0, 1: 0, 2: 0}
             last_discard_late_noten = {0: False, 1: False, 2: False}
+            last_discard_shanten = {0: 8, 1: 8, 2: 8}
+            last_discard_riichi_declaration = {0: False, 1: False, 2: False}
+            last_discard_chase_riichi = {0: False, 1: False, 2: False}
+            riichi_info = {
+                0: {"riichi": False},
+                1: {"riichi": False},
+                2: {"riichi": False},
+            }
             opening_kita = {0: 0, 1: 0, 2: 0}
             opening_done = set()
             opening_dora_indicators = new_round_dora_indicators(msg)
@@ -1358,6 +1535,15 @@ def aggregate_game(uuid, stats, yakuman_details):
                 turn_counts[seat] += 1
                 late_noten = is_late_noten_discard(msg, seat, turn_counts, riichi)
                 last_discard_late_noten[seat] = late_noten
+                last_discard_shanten[seat] = shanten_with_fixed_melds(
+                    current_hands[seat],
+                    current_open_melds[seat],
+                )
+                is_riichi = is_riichi_discard(msg)
+                last_discard_riichi_declaration[seat] = is_riichi
+                last_discard_chase_riichi[seat] = is_riichi and any(
+                    other != seat for other in riichi
+                )
                 if late_noten:
                     player_name = seat_to_name.get(seat)
                     if player_name:
@@ -1379,7 +1565,7 @@ def aggregate_game(uuid, stats, yakuman_details):
                         or is_riichi_discard(msg)
                     )
                 observe_tenpai(seat, msg)
-                if is_riichi_discard(msg) and seat not in riichi:
+                if is_riichi and seat not in riichi:
                     riichi.add(seat)
                     player_name = seat_to_name.get(seat)
                     if player_name:
@@ -1409,6 +1595,14 @@ def aggregate_game(uuid, stats, yakuman_details):
                         )
                         player_stats.riichi_quality_counts[quality] += 1
                         player_stats.riichi_quality_score_sum += RIICHI_QUALITY_SCORE[quality]
+                        good_shape = quality in {"ryanmen_many", "ryanmen_3men", "ryanmen_5plus"}
+                        dora_count = count_dora_tiles(current_hands[seat] + waits, current_dora_indicators)
+                        riichi_info[seat] = {
+                            "riichi": True,
+                            "good_shape": good_shape,
+                            "dora_count": dora_count,
+                            "estimated_point": estimate_riichi_point(dora_count),
+                        }
 
         elif record_name == ".lq.RecordDealTile":
             seat = getattr(msg, "seat", None)
@@ -1512,18 +1706,49 @@ def aggregate_game(uuid, stats, yakuman_details):
                     houjuu.add(loser)
                     loser_name = seat_to_name.get(loser)
                     if loser_name:
+                        scores_before_hule = list(current_scores)
+                        scores_after_hule = list(getattr(msg, "scores", []))
                         if last_discard_late_noten.get(loser, False):
                             stats[loser_name].late_noten_houjuu += 1
                         for hule in msg.hules:
                             if not getattr(hule, "zimo", False):
+                                winner = int(getattr(hule, "seat", -1))
                                 payment = ron_payment_point(hule)
                                 winner_melds = hule_meld_count(hule)
-                                stats[loser_name].houjuu_point_sum += payment
-                                stats[loser_name].called_houjuu += int(winner_melds >= 1)
-                                stats[loser_name].two_called_houjuu += int(winner_melds >= 2)
-                                stats[loser_name].called_haneman_houjuu += int(
+                                loser_stats = stats[loser_name]
+                                loser_stats.houjuu_point_sum += payment
+                                loser_stats.called_houjuu += int(winner_melds >= 1)
+                                loser_stats.two_called_houjuu += int(winner_melds >= 2)
+                                loser_stats.called_haneman_houjuu += int(
                                     winner_melds >= 1 and payment >= 12000
                                 )
+                                loser_stats.deal_in_events += 1
+                                loser_stats.noten_houjuu += int(last_discard_shanten.get(loser, 8) > 0)
+                                loser_stats.two_shanten_houjuu += int(last_discard_shanten.get(loser, 8) >= 2)
+                                loser_stats.riichi_after_houjuu += int(loser in riichi)
+                                loser_stats.vs_riichi_houjuu += int(winner in riichi)
+                                loser_stats.vs_called_houjuu += int(winner_melds >= 1)
+                                loser_stats.vs_dama_houjuu += int(winner not in riichi and winner_melds == 0)
+                                categories, score = classify_deal_in_event(
+                                    loser,
+                                    winner,
+                                    payment,
+                                    hule,
+                                    scores_before_hule,
+                                    scores_after_hule,
+                                    last_discard_shanten.get(loser, 8),
+                                    riichi_info.get(loser, {"riichi": loser in riichi}),
+                                    winner in riichi,
+                                    winner_melds,
+                                    last_discard_late_noten.get(loser, False),
+                                    last_discard_riichi_declaration.get(loser, False),
+                                    last_discard_chase_riichi.get(loser, False),
+                                    current_chang,
+                                    current_dealer,
+                                )
+                                loser_stats.deal_in_quality_score_sum += score
+                                for category in categories:
+                                    loser_stats.deal_in_quality_counts[category] += 1
 
             for hule in msg.hules:
                 seat = int(getattr(hule, "seat", -1))
@@ -1609,6 +1834,18 @@ def write_summary(stats):
             "tsumo_rate",
             "houjuu_rate",
             "average_houjuu_point",
+            "noten_houjuu_rate",
+            "two_shanten_houjuu_rate",
+            "riichi_after_houjuu_rate",
+            "vs_riichi_houjuu_rate",
+            "vs_dama_houjuu_rate",
+            "vs_called_houjuu_rate",
+            "vs_two_called_houjuu_rate",
+            "vs_haneman_houjuu_rate",
+            "late_noten_houjuu_share",
+            "deal_in_quality_score",
+            "deal_in_quality_top_category",
+            "deal_in_quality_breakdown",
             "called_houjuu_rate",
             "two_called_houjuu_rate",
             "called_haneman_houjuu_rate",
@@ -1669,6 +1906,18 @@ def write_summary(stats):
                 percent(player_stats.tsumo, player_stats.hu),
                 percent(player_stats.houjuu, player_stats.rounds),
                 average(player_stats.houjuu_point_sum, player_stats.houjuu, 1),
+                percent(player_stats.noten_houjuu, player_stats.deal_in_events),
+                percent(player_stats.two_shanten_houjuu, player_stats.deal_in_events),
+                percent(player_stats.riichi_after_houjuu, player_stats.deal_in_events),
+                percent(player_stats.vs_riichi_houjuu, player_stats.deal_in_events),
+                percent(player_stats.vs_dama_houjuu, player_stats.deal_in_events),
+                percent(player_stats.vs_called_houjuu, player_stats.deal_in_events),
+                percent(player_stats.two_called_houjuu, player_stats.deal_in_events),
+                percent(player_stats.called_haneman_houjuu, player_stats.deal_in_events),
+                percent(player_stats.late_noten_houjuu, player_stats.deal_in_events),
+                average(player_stats.deal_in_quality_score_sum, player_stats.deal_in_events, 2),
+                deal_in_quality_top_label(player_stats),
+                deal_in_quality_breakdown(player_stats),
                 percent(player_stats.called_houjuu, player_stats.rounds),
                 percent(player_stats.two_called_houjuu, player_stats.rounds),
                 percent(player_stats.called_haneman_houjuu, player_stats.rounds),
