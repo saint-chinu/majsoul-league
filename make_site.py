@@ -63,6 +63,14 @@ LABELS = {
     "riichi_recommended_rate": "リーチ可率",
     "riichi_not_recommended_rate": "非推奨リーチ率",
     "riichi_quality_top_category": "最多リーチ分類",
+    "call_after_hu_rate": "鳴き後和了率",
+    "call_after_houjuu_rate": "鳴き後放銃率",
+    "two_called_rate": "2副露以上率",
+    "two_called_hu_rate": "2副露以上和了率",
+    "two_called_after_houjuu_rate": "2副露以上放銃率",
+    "average_first_call_turn": "初副露巡目平均",
+    "call_quality_score": "鳴き質スコア",
+    "call_quality_top_category": "最多鳴き分類",
     "max_final_point": "最高終了時持ち点",
     "min_final_point": "最低終了時持ち点",
     "yakuman_count": "役満回数",
@@ -112,6 +120,14 @@ METRIC_DESCRIPTIONS = {
     "riichi_recommended_rate": "分類上、リーチしてよい待ちに入った割合。",
     "riichi_not_recommended_rate": "分類上、リーチすべきでない待ちに入った割合。",
     "riichi_quality_top_category": "そのプレイヤーで最も多かったリーチ待ち分類。",
+    "call_after_hu_rate": "副露した局のうち、自分が和了した割合。",
+    "call_after_houjuu_rate": "副露した局のうち、自分が放銃した割合。",
+    "two_called_rate": "参加局のうち、2副露以上した割合。",
+    "two_called_hu_rate": "2副露以上した局のうち、自分が和了した割合。",
+    "two_called_after_houjuu_rate": "2副露以上した局のうち、自分が放銃した割合。",
+    "average_first_call_turn": "その局で最初に鳴いた巡目の平均。",
+    "call_quality_score": "副露判断を点数・形・局面で採点した平均値。スコアをクリックすると分類内訳を表示。",
+    "call_quality_top_category": "そのプレイヤーで最も多かった副露分類。",
     "open_tanyao_hu_rate": "和了のうち、喰いタンだった割合。",
     "chiitoi_hu_rate": "和了のうち、七対子だった割合。",
     "honitsu_hu_rate": "和了のうち、ホンイツだった割合。",
@@ -295,6 +311,10 @@ PLAYER_RANK_METRICS = [
     ("late_noten_fresh_discard_rate", False, "低い方が上位"),
     ("winning_run_points", True, "高い方が上位"),
     ("called_rate", True, "高い順"),
+    ("call_after_hu_rate", True, "高い方が上位"),
+    ("call_after_houjuu_rate", False, "低い方が上位"),
+    ("two_called_rate", True, "高い順"),
+    ("call_quality_score", True, "高い方が上位"),
     ("riichi_rate", True, "高い順"),
     ("riichi_miss_rate", False, "低い方が上位"),
     ("bad_shape_riichi_rate", False, "低い方が上位"),
@@ -361,6 +381,21 @@ RIICHI_QUALITY_COLUMNS = [
     "riichi_recommended_rate",
     "riichi_not_recommended_rate",
     "riichi_quality_top_category",
+]
+
+
+CALL_QUALITY_COLUMNS = [
+    "player",
+    "called_rate",
+    "call_after_hu_rate",
+    "average_called_hu_point",
+    "call_after_houjuu_rate",
+    "two_called_rate",
+    "two_called_hu_rate",
+    "two_called_after_houjuu_rate",
+    "average_first_call_turn",
+    "call_quality_score",
+    "call_quality_top_category",
 ]
 
 
@@ -457,6 +492,22 @@ PLAYER_RIICHI_QUALITY_COLUMNS = [
     "riichi_recommended_rate",
     "riichi_not_recommended_rate",
     "riichi_quality_top_category",
+]
+
+
+PLAYER_CALL_QUALITY_COLUMNS = [
+    "player",
+    "season",
+    "called_rate",
+    "call_after_hu_rate",
+    "average_called_hu_point",
+    "call_after_houjuu_rate",
+    "two_called_rate",
+    "two_called_hu_rate",
+    "two_called_after_houjuu_rate",
+    "average_first_call_turn",
+    "call_quality_score",
+    "call_quality_top_category",
 ]
 
 
@@ -577,12 +628,15 @@ def metric_value(row: dict[str, str], col: str) -> float:
 def format_cell_value(col: str, value: str | int | float) -> str:
     if col == "earned_score":
         return number(value, 1)
-    if col == "riichi_quality_score":
+    if col in {"riichi_quality_score", "call_quality_score"}:
         return number(value, 2)
+    if col == "average_first_call_turn":
+        return number(value, 1)
     if col in {"average_opening_shanten", "average_opening_dora"}:
         return number(value, 2)
     if col in {
         "average_hu_point",
+        "average_called_hu_point",
         "average_houjuu_point",
         "max_final_point",
         "min_final_point",
@@ -606,10 +660,13 @@ def metric_rank(rows: list[dict[str, str]], player: str, col: str, reverse: bool
 
 
 def metric_popup_html(col: str) -> str:
-    if col != "riichi_quality_score":
-        return ""
     description = METRIC_DESCRIPTIONS.get(col, "")
-    table_html = riichi_quality_definition_table()
+    if col == "riichi_quality_score":
+        table_html = riichi_quality_definition_table()
+    elif col == "call_quality_score":
+        table_html = call_quality_definition_table()
+    else:
+        return ""
     if not table_html:
         return ""
     return f"<p>{esc(description)}</p>{table_html}"
@@ -687,6 +744,89 @@ def riichi_quality_score_cell(row: dict[str, str]) -> str:
     )
 
 
+def parse_call_quality_breakdown(value: str) -> dict[str, int]:
+    counts = {}
+    for part in (value or "").split("|"):
+        if ":" not in part:
+            continue
+        key, raw_count = part.split(":", 1)
+        try:
+            counts[key] = int(raw_count)
+        except ValueError:
+            continue
+    return counts
+
+
+def call_quality_definition_table() -> str:
+    try:
+        from aggregate_league import CALL_QUALITY_CATEGORIES, CALL_QUALITY_SCORE
+    except Exception:
+        return ""
+
+    body = []
+    for key, label in CALL_QUALITY_CATEGORIES:
+        body.append(
+            "<tr>"
+            f"<td>{esc(CALL_QUALITY_SCORE[key])}</td>"
+            f"<td class=\"name\">{esc(label)}</td>"
+            "</tr>"
+        )
+    head = "<th>スコア</th><th>分類</th>"
+    return f"<div class=\"table-wrap quality-def\"><table><thead><tr>{head}</tr></thead><tbody>{''.join(body)}</tbody></table></div>"
+
+
+def call_quality_breakdown_table(row: dict[str, str]) -> str:
+    try:
+        from aggregate_league import CALL_QUALITY_CATEGORIES, CALL_QUALITY_SCORE
+    except Exception:
+        return ""
+
+    counts = parse_call_quality_breakdown(row.get("call_quality_breakdown", ""))
+    total = sum(counts.values())
+    if not counts or total <= 0:
+        return "<p>分類内訳はありません。</p>"
+
+    body_rows = []
+    for key, label in CALL_QUALITY_CATEGORIES:
+        count = counts.get(key, 0)
+        if not count:
+            continue
+        body_rows.append(
+            "<tr>"
+            f"<td class=\"name\">{esc(label)}</td>"
+            f"<td>{count}</td>"
+            f"<td>{percent_text(count, total)}</td>"
+            f"<td>{esc(CALL_QUALITY_SCORE.get(key, ''))}</td>"
+            "</tr>"
+        )
+
+    head = "<th>分類</th><th>回数</th><th>割合</th><th>スコア</th>"
+    return (
+        "<h3>分類内訳</h3>"
+        "<div class=\"table-wrap quality-breakdown\">"
+        f"<table><thead><tr>{head}</tr></thead><tbody>{''.join(body_rows)}</tbody></table>"
+        "</div>"
+    )
+
+
+def call_quality_score_cell(row: dict[str, str]) -> str:
+    score = format_cell_value("call_quality_score", row.get("call_quality_score", ""))
+    if not row.get("call_quality_breakdown"):
+        return score
+    subject = row.get("player") or row.get("season") or "鳴き質"
+    popup_html = (
+        "<p>この行の副露を分類ごとに分解した内訳です。複合条件は重複して数えています。</p>"
+        f"{call_quality_breakdown_table(row)}"
+        "<h3>配点表</h3>"
+        f"{call_quality_definition_table()}"
+    )
+    return (
+        f"<button class=\"metric-value-help\" type=\"button\" "
+        f"data-metric-title=\"{esc(subject)} 鳴き質内訳\" "
+        f"data-metric-html=\"{esc(popup_html)}\">{score}</button>"
+    )
+
+
 def header_cell(col: str) -> str:
     label = esc(LABELS.get(col, col))
     description = METRIC_DESCRIPTIONS.get(col)
@@ -736,6 +876,8 @@ def table(
             cls = "name sticky-name" if col == "player" else ""
             if col == "riichi_quality_score":
                 value = riichi_quality_score_cell(row)
+            elif col == "call_quality_score":
+                value = call_quality_score_cell(row)
             else:
                 value = format_cell_value(col, value)
             cells.append(f"<td class=\"{cls}\">{value}</td>")
@@ -750,6 +892,15 @@ def riichi_quality_table(rows: list[dict[str, str]]) -> str:
         reverse=True,
     )
     return table(ordered, RIICHI_QUALITY_COLUMNS, rank_by="riichi_quality_score", reverse=True)
+
+
+def call_quality_table(rows: list[dict[str, str]]) -> str:
+    ordered = sorted(
+        rows,
+        key=lambda row: metric_value(row, "call_quality_score"),
+        reverse=True,
+    )
+    return table(ordered, CALL_QUALITY_COLUMNS, rank_by="call_quality_score", reverse=True)
 
 
 def riichi_quality_definition_table() -> str:
@@ -1343,6 +1494,8 @@ def aggregate_uuids(uuids: set[str]) -> tuple[list[dict[str, str]], list[dict[st
             PlayerStats,
             aggregate_game,
             average,
+            call_quality_breakdown,
+            call_quality_top_label,
             percent,
             riichi_quality_breakdown,
             riichi_quality_recommended_count,
@@ -1396,6 +1549,17 @@ def aggregate_uuids(uuids: set[str]) -> tuple[list[dict[str, str]], list[dict[st
                     player_stats.called_haneman_houjuu,
                     player_stats.rounds,
                 ),
+                "call_after_hu_rate": percent(player_stats.called_hu, player_stats.called),
+                "call_after_houjuu_rate": percent(player_stats.called_houjuu_rounds, player_stats.called),
+                "two_called_rate": percent(player_stats.two_called_rounds, player_stats.rounds),
+                "two_called_hu_rate": percent(player_stats.two_called_hu, player_stats.two_called_rounds),
+                "two_called_after_houjuu_rate": percent(
+                    player_stats.two_called_houjuu_rounds,
+                    player_stats.two_called_rounds,
+                ),
+                "average_first_call_turn": str(
+                    average(player_stats.first_call_turn_sum, player_stats.first_call_count, 1)
+                ),
                 "top_keep_rate": percent(player_stats.top_keep_successes, player_stats.top_keep_chances),
                 "first_tenpai_rate": percent(player_stats.first_tenpai, player_stats.rounds),
                 "tenpai_keep_rate": percent(player_stats.tenpai_discards, player_stats.discards),
@@ -1436,6 +1600,11 @@ def aggregate_uuids(uuids: set[str]) -> tuple[list[dict[str, str]], list[dict[st
                 ),
                 "riichi_quality_top_category": riichi_quality_top_label(player_stats),
                 "riichi_quality_breakdown": riichi_quality_breakdown(player_stats),
+                "call_quality_score": str(
+                    average(player_stats.call_quality_score_sum, player_stats.call_quality_events, 2)
+                ),
+                "call_quality_top_category": call_quality_top_label(player_stats),
+                "call_quality_breakdown": call_quality_breakdown(player_stats),
                 "max_final_point": str(max(player_stats.final_points) if player_stats.final_points else ""),
                 "min_final_point": str(min(player_stats.final_points) if player_stats.final_points else ""),
                 "yakuman_count": str(player_stats.yakuman_count),
@@ -1706,6 +1875,11 @@ def render_player_panel(
         {table([cumulative_row], RIICHI_QUALITY_COLUMNS)}
       </div>
 
+      <h2>{esc(player)} 鳴きの質</h2>
+      <div class="table-wrap">
+        {table([cumulative_row], CALL_QUALITY_COLUMNS)}
+      </div>
+
       <h2>{esc(player)} シーズン別推移</h2>
       {split_tables(
         season_rows,
@@ -1716,6 +1890,9 @@ def render_player_panel(
       )}
       <div class="table-wrap">
         {table(season_rows, PLAYER_RIICHI_QUALITY_COLUMNS)}
+      </div>
+      <div class="table-wrap">
+        {table(season_rows, PLAYER_CALL_QUALITY_COLUMNS)}
       </div>
 
       <h2>{esc(player)} 項目別順位</h2>
@@ -1799,6 +1976,11 @@ def render_stats_panel(context: dict[str, object]) -> str:
       <h2>{esc(context['label'])} リーチの質</h2>
       <div class="table-wrap">
         {riichi_quality_table(rows)}
+      </div>
+
+      <h2>{esc(context['label'])} 鳴きの質</h2>
+      <div class="table-wrap">
+        {call_quality_table(rows)}
       </div>
 
       <h2>{esc(team_block_title)}</h2>

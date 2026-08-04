@@ -78,6 +78,54 @@ RIICHI_QUALITY_RECOMMENDED = {
 }
 RIICHI_QUALITY_DEFAULT = "bad_two_or_less"
 
+CALL_QUALITY_CATEGORIES = [
+    ("call_tenpai_haneman_good", "副露テンパイ跳満以上良形"),
+    ("call_tenpai_haneman_bad", "副露テンパイ跳満以上愚形"),
+    ("call_tenpai_mangan_good", "副露テンパイ満貫良形"),
+    ("call_tenpai_mangan_bad", "副露テンパイ満貫愚形"),
+    ("call_tenpai_3han_good", "副露テンパイ3翻良形"),
+    ("call_tenpai_3han_bad", "副露テンパイ3翻愚形"),
+    ("call_tenpai_2han_good", "副露テンパイ2翻良形"),
+    ("call_tenpai_2han_bad", "副露テンパイ2翻愚形"),
+    ("call_tenpai_1han_good", "副露テンパイ1翻良形"),
+    ("call_tenpai_1han_bad", "副露テンパイ1翻愚形"),
+    ("call_1shanten", "副露後1シャンテン"),
+    ("call_2shanten", "副露後2シャンテン"),
+    ("call_far", "副露後3シャンテン以上"),
+    ("early_no_yaku", "序盤役無しの仕掛け"),
+    ("last_place_locked_call", "ラス確仕掛け"),
+    ("manzu_pon", "萬子からポン"),
+    ("open_daiminkan_from_closed", "門前大明槓"),
+    ("added_kan_behind", "2位以下で加カン"),
+    ("added_kan_big_top", "2万点以上差トップ目で加カン"),
+    ("added_kan_under_riichi", "他家リーチ中の加カン"),
+]
+CALL_QUALITY_SCORE = {
+    "call_tenpai_haneman_good": 10,
+    "call_tenpai_haneman_bad": 7,
+    "call_tenpai_mangan_good": 7,
+    "call_tenpai_mangan_bad": 4,
+    "call_tenpai_3han_good": 3,
+    "call_tenpai_3han_bad": 2,
+    "call_tenpai_2han_good": 2,
+    "call_tenpai_2han_bad": 1,
+    "call_tenpai_1han_good": 0.5,
+    "call_tenpai_1han_bad": -1,
+    "call_1shanten": -1.5,
+    "call_2shanten": -3,
+    "call_far": -5,
+    "early_no_yaku": -5,
+    "last_place_locked_call": -10,
+    "manzu_pon": -3,
+    "open_daiminkan_from_closed": -15,
+    "added_kan_behind": 1,
+    "added_kan_big_top": -3,
+    "added_kan_under_riichi": -3,
+}
+CALL_QUALITY_LABELS = {
+    key: label for key, label in CALL_QUALITY_CATEGORIES
+}
+
 @dataclass
 class PlayerStats:
     games: int = 0
@@ -106,6 +154,9 @@ class PlayerStats:
     top_riichi: int = 0
     riichi_quality_score_sum: int = 0
     riichi_quality_counts: Counter = field(default_factory=Counter)
+    call_quality_events: int = 0
+    call_quality_score_sum: float = 0.0
+    call_quality_counts: Counter = field(default_factory=Counter)
     late_noten_discards: int = 0
     late_noten_houjuu: int = 0
     late_noten_fresh_discards: int = 0
@@ -125,6 +176,12 @@ class PlayerStats:
     opening_shanten_sum: int = 0
     opening_dora_sum: int = 0
     opening_samples: int = 0
+    called_houjuu_rounds: int = 0
+    two_called_rounds: int = 0
+    two_called_hu: int = 0
+    two_called_houjuu_rounds: int = 0
+    first_call_turn_sum: int = 0
+    first_call_count: int = 0
 
 
 RANK_SCORE_OFFSETS = {
@@ -724,6 +781,25 @@ def riichi_quality_breakdown(player_stats):
             parts.append(f"{key}:{count}")
     return "|".join(parts)
 
+def call_quality_top_label(player_stats):
+    if not player_stats.call_quality_counts:
+        return ""
+    key, _count = max(
+        player_stats.call_quality_counts.items(),
+        key=lambda item: (item[1], CALL_QUALITY_SCORE.get(item[0], 0)),
+    )
+    return CALL_QUALITY_LABELS.get(key, key)
+
+def call_quality_breakdown(player_stats):
+    if not player_stats.call_quality_counts:
+        return ""
+    parts = []
+    for key, _label in CALL_QUALITY_CATEGORIES:
+        count = int(player_stats.call_quality_counts.get(key, 0))
+        if count:
+            parts.append(f"{key}:{count}")
+    return "|".join(parts)
+
 def has_top_score(scores, seat):
     if len(scores) < 3 or seat not in {0, 1, 2}:
         return False
@@ -746,6 +822,141 @@ def top_margin(scores, seat):
 
 def is_oorasu(chang, dealer):
     return int(chang) == 1 and int(dealer) == 2
+
+def is_call_tenpai_good_shape(tiles):
+    waits = winning_waits(tiles)
+    if not waits:
+        return False
+    waits = [normalize_tile(wait) for wait in waits]
+    return len(waits) >= 2 and not is_shanpon_wait(tiles, waits)
+
+def is_tanyao_tile(tile):
+    tile = normalize_tile(tile)
+    if len(tile) != 2 or tile.endswith("z"):
+        return False
+    return 2 <= int(tile[0]) <= 8
+
+def estimate_call_fan(tiles, call_tiles, call_type, seat, chang, dealer, dora_indicators):
+    all_tiles = [normalize_tile(tile) for tile in tiles + call_tiles if tile]
+    counts = Counter(all_tiles)
+    fan = 0
+
+    dora_tiles = Counter(next_dora(tile) for tile in dora_indicators)
+    for tile in all_tiles:
+        fan += dora_tiles[normalize_tile(tile)]
+        if str(tile).startswith("0"):
+            fan += 1
+
+    if all_tiles and all(is_tanyao_tile(tile) for tile in all_tiles):
+        fan += 1
+
+    fan += sum(
+        1
+        for tile, count in counts.items()
+        if count >= 3 and is_yakuhai(tile, seat, chang, dealer)
+    )
+
+    suits = {tile[-1] for tile in all_tiles if len(tile) == 2 and tile[-1] in {"m", "p", "s"}}
+    has_honor = any(tile.endswith("z") for tile in all_tiles)
+    suited_count = sum(1 for tile in all_tiles if len(tile) == 2 and tile[-1] in {"m", "p", "s"})
+    if len(suits) == 1 and suited_count >= 7:
+        fan += 3 if not has_honor else 2
+
+    if call_type in {"pon", "daiminkan", "added_kan"}:
+        triplet_like = sum(1 for count in counts.values() if count >= 3)
+        if triplet_like >= 3:
+            fan += 2
+
+    return fan
+
+def call_base_quality_key(fan, good_shape):
+    if fan >= 6:
+        return "call_tenpai_haneman_good" if good_shape else "call_tenpai_haneman_bad"
+    if fan >= 4:
+        return "call_tenpai_mangan_good" if good_shape else "call_tenpai_mangan_bad"
+    if fan >= 3:
+        return "call_tenpai_3han_good" if good_shape else "call_tenpai_3han_bad"
+    if fan >= 2:
+        return "call_tenpai_2han_good" if good_shape else "call_tenpai_2han_bad"
+    return "call_tenpai_1han_good" if good_shape else "call_tenpai_1han_bad"
+
+def estimated_call_point(fan):
+    if fan >= 6:
+        return 12000
+    if fan >= 4:
+        return 8000
+    if fan == 3:
+        return 3900
+    if fan == 2:
+        return 2000
+    return 1000
+
+def classify_call_event(
+    before_tiles,
+    after_tiles,
+    call_tiles,
+    call_type,
+    seat,
+    chang,
+    dealer,
+    dora_indicators,
+    open_melds_before,
+    open_melds_after,
+    turn_count,
+    scores,
+    riichi_seats,
+):
+    categories = []
+    before_shanten = shanten_with_fixed_melds(before_tiles, open_melds_before)
+    after_shanten = shanten_with_fixed_melds(after_tiles, open_melds_after)
+    estimated_fan = estimate_call_fan(
+        after_tiles,
+        call_tiles,
+        call_type,
+        seat,
+        chang,
+        dealer,
+        dora_indicators,
+    )
+    fan = max(1, estimated_fan)
+
+    if after_shanten <= 0:
+        categories.append(call_base_quality_key(fan, is_call_tenpai_good_shape(after_tiles)))
+    elif after_shanten == 1:
+        categories.append("call_1shanten")
+    elif after_shanten == 2:
+        categories.append("call_2shanten")
+    else:
+        categories.append("call_far")
+
+    if turn_count <= 6 and estimated_fan <= 0 and after_shanten > before_shanten:
+        categories.append("early_no_yaku")
+
+    if is_oorasu(chang, dealer) and score_rank(scores, seat) == 3 and len(scores) >= 3:
+        score_list = [int(score) for score in scores[:3]]
+        seat_score = score_list[seat]
+        above_scores = sorted(score for i, score in enumerate(score_list) if i != seat)
+        gap = above_scores[0] - seat_score
+        if 0 < gap < 30000 and estimated_call_point(fan) < gap:
+            categories.append("last_place_locked_call")
+
+    if call_type == "pon" and any(normalize_tile(tile).endswith("m") for tile in call_tiles):
+        categories.append("manzu_pon")
+
+    if call_type == "daiminkan" and open_melds_before == 0:
+        categories.append("open_daiminkan_from_closed")
+
+    if call_type == "added_kan":
+        rank = score_rank(scores, seat)
+        margin = top_margin(scores, seat)
+        if rank is not None and rank >= 2:
+            categories.append("added_kan_behind")
+        if margin is not None and margin >= 20000:
+            categories.append("added_kan_big_top")
+        if any(other != seat for other in riichi_seats):
+            categories.append("added_kan_under_riichi")
+
+    return categories, sum(CALL_QUALITY_SCORE[key] for key in categories)
 
 def is_late_noten_discard(msg, seat, turn_counts, riichi_seats):
     if seat not in {0, 1, 2}:
@@ -992,7 +1203,9 @@ def aggregate_game(uuid, stats, yakuman_details):
     kept_single_top = {0: False, 1: False, 2: False}
     current_hands = {0: [], 1: [], 2: []}
     current_open_melds = {0: 0, 1: 0, 2: 0}
+    current_open_call_melds = {0: 0, 1: 0, 2: 0}
     current_scores = [35000, 35000, 35000]
+    had_two_called = set()
     visible_counts = Counter()
     turn_counts = {0: 0, 1: 0, 2: 0}
     last_discard_late_noten = {0: False, 1: False, 2: False}
@@ -1041,6 +1254,9 @@ def aggregate_game(uuid, stats, yakuman_details):
             player_stats.riichi += int(seat in riichi)
             player_stats.riichi_miss += int(seat in riichi and seat not in riichi_winners)
             player_stats.called += int(seat in called)
+            player_stats.called_houjuu_rounds += int(seat in called and seat in houjuu)
+            player_stats.two_called_rounds += int(seat in had_two_called)
+            player_stats.two_called_houjuu_rounds += int(seat in had_two_called and seat in houjuu)
             player_stats.houjuu += int(seat in houjuu)
             player_stats.first_tenpai += int(first_tenpai_seat == seat)
 
@@ -1105,6 +1321,7 @@ def aggregate_game(uuid, stats, yakuman_details):
             riichi_winners = set()
             called = set()
             houjuu = set()
+            had_two_called = set()
             first_tenpai_seat = None
             opening_hands = {seat: new_round_tiles(msg, seat) for seat in [0, 1, 2]}
             current_hands = {
@@ -1112,6 +1329,7 @@ def aggregate_game(uuid, stats, yakuman_details):
                 for seat in [0, 1, 2]
             }
             current_open_melds = {0: 0, 1: 0, 2: 0}
+            current_open_call_melds = {0: 0, 1: 0, 2: 0}
             visible_counts = Counter()
             turn_counts = {0: 0, 1: 0, 2: 0}
             last_discard_late_noten = {0: False, 1: False, 2: False}
@@ -1217,6 +1435,25 @@ def aggregate_game(uuid, stats, yakuman_details):
             seat = getattr(msg, "seat", None)
             if seat is not None:
                 seat = int(seat)
+                call_record_type = int(getattr(msg, "type", -1))
+                if record_name == ".lq.RecordChiPengGang":
+                    call_type = {0: "chi", 1: "pon", 2: "daiminkan"}.get(call_record_type, "call")
+                else:
+                    call_type = {2: "ankan", 3: "added_kan"}.get(call_record_type, "ankan")
+
+                new_doras = repeated_field_values(msg, "doras")
+                if new_doras:
+                    current_dora_indicators = list(new_doras)
+
+                if call_type == "ankan":
+                    apply_call_tiles(msg, seat)
+                    current_open_melds[seat] += 1
+                    continue
+
+                player_name = seat_to_name.get(seat)
+                before_tiles = list(current_hands[seat])
+                open_melds_before = current_open_melds[seat]
+                was_called = seat in called
                 called.add(seat)
                 call_tiles = [normalize_tile(tile) for tile in repeated_field_values(msg, "tiles")]
                 call_froms = [int(value) for value in repeated_field_values(msg, "froms")]
@@ -1227,9 +1464,43 @@ def aggregate_game(uuid, stats, yakuman_details):
                 else:
                     for tile in call_tiles:
                         visible_counts[tile] += 1
-                removed = apply_call_tiles(msg, seat)
-                if record_name == ".lq.RecordChiPengGang" or removed >= 3:
-                    current_open_melds[seat] += 1
+                if call_type == "added_kan":
+                    for tile in call_tiles:
+                        remove_one_tile(current_hands[seat], tile)
+                    open_melds_after = open_melds_before
+                else:
+                    apply_call_tiles(msg, seat)
+                    open_melds_after = open_melds_before + 1
+                    current_open_melds[seat] = open_melds_after
+                    current_open_call_melds[seat] += 1
+
+                if current_open_call_melds[seat] >= 2:
+                    had_two_called.add(seat)
+
+                if player_name:
+                    player_stats = stats[player_name]
+                    if not was_called:
+                        player_stats.first_call_turn_sum += max(1, turn_counts[seat] + 1)
+                        player_stats.first_call_count += 1
+                    categories, score = classify_call_event(
+                        before_tiles,
+                        list(current_hands[seat]),
+                        call_tiles,
+                        call_type,
+                        seat,
+                        current_chang,
+                        current_dealer,
+                        current_dora_indicators,
+                        open_melds_before,
+                        open_melds_after,
+                        turn_counts[seat] + 1,
+                        current_scores,
+                        riichi,
+                    )
+                    player_stats.call_quality_events += 1
+                    player_stats.call_quality_score_sum += score
+                    for category in categories:
+                        player_stats.call_quality_counts[category] += 1
 
         elif record_name == ".lq.RecordHule":
             if msg is None or not hasattr(msg, "hules"):
@@ -1269,6 +1540,8 @@ def aggregate_game(uuid, stats, yakuman_details):
                 if list(getattr(hule, "ming", [])):
                     player_stats.called_hu += 1
                     player_stats.called_hu_point_sum += income
+                    if hule_meld_count(hule) >= 2:
+                        player_stats.two_called_hu += 1
                 fan_ids = hule_fan_ids(hule)
                 player_stats.open_tanyao_hu += int(12 in fan_ids and bool(list(getattr(hule, "ming", []))))
                 player_stats.chiitoi_hu += int(25 in fan_ids)
@@ -1339,6 +1612,15 @@ def write_summary(stats):
             "called_houjuu_rate",
             "two_called_houjuu_rate",
             "called_haneman_houjuu_rate",
+            "call_after_hu_rate",
+            "call_after_houjuu_rate",
+            "two_called_rate",
+            "two_called_hu_rate",
+            "two_called_after_houjuu_rate",
+            "average_first_call_turn",
+            "call_quality_score",
+            "call_quality_top_category",
+            "call_quality_breakdown",
             "top_keep_rate",
             "first_tenpai_rate",
             "tenpai_keep_rate",
@@ -1390,6 +1672,15 @@ def write_summary(stats):
                 percent(player_stats.called_houjuu, player_stats.rounds),
                 percent(player_stats.two_called_houjuu, player_stats.rounds),
                 percent(player_stats.called_haneman_houjuu, player_stats.rounds),
+                percent(player_stats.called_hu, player_stats.called),
+                percent(player_stats.called_houjuu_rounds, player_stats.called),
+                percent(player_stats.two_called_rounds, player_stats.rounds),
+                percent(player_stats.two_called_hu, player_stats.two_called_rounds),
+                percent(player_stats.two_called_houjuu_rounds, player_stats.two_called_rounds),
+                average(player_stats.first_call_turn_sum, player_stats.first_call_count, 1),
+                average(player_stats.call_quality_score_sum, player_stats.call_quality_events, 2),
+                call_quality_top_label(player_stats),
+                call_quality_breakdown(player_stats),
                 percent(player_stats.top_keep_successes, player_stats.top_keep_chances),
                 percent(player_stats.first_tenpai, player_stats.rounds),
                 percent(player_stats.tenpai_discards, player_stats.discards),
