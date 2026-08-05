@@ -102,10 +102,10 @@ CALL_QUALITY_CATEGORIES = [
 ]
 CALL_QUALITY_SCORE = {
     "call_tenpai_haneman_good": 10,
-    "call_tenpai_haneman_bad": 7,
+    "call_tenpai_haneman_bad": 9,
     "call_tenpai_mangan_good": 7,
-    "call_tenpai_mangan_bad": 4,
-    "call_tenpai_3han_good": 3,
+    "call_tenpai_mangan_bad": 5,
+    "call_tenpai_3han_good": 4,
     "call_tenpai_3han_bad": 2,
     "call_tenpai_2han_good": 2,
     "call_tenpai_2han_bad": 1,
