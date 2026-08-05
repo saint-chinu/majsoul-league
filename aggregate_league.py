@@ -143,10 +143,10 @@ DEAL_IN_QUALITY_CATEGORIES = [
     ("other_deal_in", "その他放銃"),
 ]
 DEAL_IN_QUALITY_SCORE = {
-    "riichi_dora4_good": 5,
-    "riichi_dora3_good": 3,
-    "dealer_good_riichi": 3,
-    "comeback_hand": 2,
+    "riichi_dora4_good": 7,
+    "riichi_dora3_good": 4,
+    "dealer_good_riichi": 4,
+    "comeback_hand": 4,
     "riichi_dora2_good": 1,
     "riichi_dora1_good": 0,
     "chase_riichi_declaration_deal_in": -2,
