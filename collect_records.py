@@ -9,14 +9,14 @@ from pathlib import Path
 from playwright.sync_api import sync_playwright
 
 USER_DATA_DIR = Path("browser-profile")
-RECORD_LIST = Path("admin_paifu_ids.csv")
+DEFAULT_RECORD_LIST = Path("admin_paifu_ids.csv")
 OUT_DIR = Path("records_raw")
 
 method_pattern = re.compile(rb"\.lq\.[A-Za-z0-9_.]+")
 
-def read_records(limit=None):
+def read_records(record_list, limit=None):
     rows = []
-    with RECORD_LIST.open("r", encoding="utf-8-sig", newline="") as f:
+    with record_list.open("r", encoding="utf-8-sig", newline="") as f:
         for row in csv.DictReader(f):
             rows.append(row)
     if limit:
@@ -29,10 +29,23 @@ def frame_id(raw):
     return raw[1] + raw[2] * 256
 
 def main():
-    limit = int(sys.argv[1]) if len(sys.argv) >= 2 else None
-    rows = read_records(limit)
+    record_list = DEFAULT_RECORD_LIST
+    limit = None
+
+    if len(sys.argv) >= 2:
+        first_arg = sys.argv[1]
+        if first_arg.isdigit():
+            limit = int(first_arg)
+        else:
+            record_list = Path(first_arg)
+
+    if len(sys.argv) >= 3:
+        limit = int(sys.argv[2])
+
+    rows = read_records(record_list, limit)
     OUT_DIR.mkdir(exist_ok=True)
 
+    print(f"対象CSV: {record_list}")
     print(f"対象: {len(rows)}件")
 
     with sync_playwright() as p:

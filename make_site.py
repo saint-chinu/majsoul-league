@@ -16,6 +16,11 @@ TEAM_CSV = Path("team_members.csv")
 OUTPUT_HTML = Path("docs") / "index.html"
 RAW_DIR = Path("records_raw")
 SEASON_FILE_RE = re.compile(r"admin_paifu_ids_season(\d+)\.csv$")
+NEW_DATA_DIR = Path("data") / "new"
+NEW_PAIFU_CSV = NEW_DATA_DIR / "admin_paifu_ids.csv"
+NEW_SEASON_FILE_RE = re.compile(r"admin_paifu_ids_new_season(\d+)\.csv$")
+OLD_LEAGUE_FULL_GAMES = 120
+NEW_LEAGUE_FULL_GAMES = 135
 
 
 LABELS = {
@@ -1589,9 +1594,16 @@ def correlation_mermaid(rows: list[dict[str, object]], limit: int = 15) -> str:
     return f"<pre class=\"mermaid\">{chr(10).join(lines)}</pre>"
 
 
-def read_season_paifu_rows() -> list[dict[str, str]]:
+def read_paifu_rows_from_files(
+    canonical_csv: Path,
+    season_glob: str,
+    season_file_re: re.Pattern[str],
+    base_dir: Path = Path("."),
+    incomplete_label: str = "season",
+    allow_partial: bool = False,
+) -> list[dict[str, str]]:
     rows_by_uuid: dict[str, dict[str, str]] = {}
-    canonical_rows = read_csv(PAIFU_CSV)
+    canonical_rows = read_csv(canonical_csv)
     canonical_seasons = {
         int(row["season"])
         for row in canonical_rows
@@ -1619,8 +1631,8 @@ def read_season_paifu_rows() -> list[dict[str, str]]:
 
     add_rows(canonical_rows)
 
-    for path in sorted(Path(".").glob("admin_paifu_ids_season*.csv")):
-        match = SEASON_FILE_RE.match(path.name)
+    for path in sorted(base_dir.glob(season_glob)):
+        match = season_file_re.match(path.name)
         if not match:
             continue
         season = int(match.group(1))
@@ -1640,11 +1652,43 @@ def read_season_paifu_rows() -> list[dict[str, str]]:
             and (RAW_DIR / f"{row['uuid']}_detail.bin").exists()
         ]
         if len(ready) != len(rows):
-            print(f"skip incomplete season {season}: {len(ready)}/{len(rows)} records ready")
-            continue
-        complete_rows.extend(rows)
+            if not allow_partial:
+                print(f"skip incomplete {incomplete_label} {season}: {len(ready)}/{len(rows)} records ready")
+                continue
+            print(f"use partial {incomplete_label} {season}: {len(ready)}/{len(rows)} records ready")
+        complete_rows.extend(ready if allow_partial else rows)
 
     return sorted(complete_rows, key=lambda row: (int(row["season"]), row["uuid"]))
+
+
+def read_season_paifu_rows() -> list[dict[str, str]]:
+    return read_paifu_rows_from_files(
+        PAIFU_CSV,
+        "admin_paifu_ids_season*.csv",
+        SEASON_FILE_RE,
+        incomplete_label="old season",
+    )
+
+
+def read_new_league_paifu_rows() -> list[dict[str, str]]:
+    return read_paifu_rows_from_files(
+        NEW_PAIFU_CSV,
+        "admin_paifu_ids_new_season*.csv",
+        NEW_SEASON_FILE_RE,
+        base_dir=NEW_DATA_DIR,
+        incomplete_label="new season",
+        allow_partial=True,
+    )
+
+
+def group_uuids_by_season(paifu_rows: list[dict[str, str]]) -> dict[int, set[str]]:
+    season_to_uuids: dict[int, set[str]] = defaultdict(set)
+    for row in paifu_rows:
+        season = row.get("season", "")
+        uuid = row.get("uuid", "")
+        if season.isdigit() and uuid:
+            season_to_uuids[int(season)].add(uuid)
+    return season_to_uuids
 
 
 def aggregate_uuids(uuids: set[str]) -> tuple[list[dict[str, str]], list[dict[str, str]], list[dict[str, str]]]:
@@ -1829,6 +1873,7 @@ def build_context(
             "team_rows": [],
             "team_champion_rows": [],
             "season_mvp_rows": [],
+            "is_cumulative": season is None,
         }
 
     total_player_games = sum(int(r["games"]) for r in rows)
@@ -1856,6 +1901,7 @@ def build_context(
         "team_rows": team_rows,
         "team_champion_rows": [],
         "season_mvp_rows": [],
+        "is_cumulative": season is None,
     }
 
 
@@ -1926,8 +1972,12 @@ def player_rank_table(rows: list[dict[str, str]]) -> str:
     return f"<table class=\"player-rank-table\"><thead><tr>{head}</tr></thead><tbody>{''.join(body)}</tbody></table>"
 
 
-def player_analysis(player: str, cumulative_rows: list[dict[str, str]]) -> tuple[str, str, str]:
-    if player in MANUAL_PLAYER_ANALYSIS:
+def player_analysis(
+    player: str,
+    cumulative_rows: list[dict[str, str]],
+    use_manual: bool = True,
+) -> tuple[str, str, str]:
+    if use_manual and player in MANUAL_PLAYER_ANALYSIS:
         return MANUAL_PLAYER_ANALYSIS[player]
 
     row = next((r for r in cumulative_rows if r.get("player") == player), None)
@@ -2014,29 +2064,33 @@ def render_player_panel(
     player: str,
     cumulative_context: dict[str, object],
     season_contexts: list[dict[str, object]],
+    panel_key: str | None = None,
+    title_label: str = "累計",
+    use_manual_analysis: bool = True,
 ) -> str:
+    panel_key = panel_key or f"player-{player}"
     cumulative_rows = list(cumulative_context.get("rows", []))
     cumulative_row = player_row_from(cumulative_context, player)
     if not cumulative_row:
         return (
-            f"<section class=\"tab-panel\" id=\"panel-player-{esc(player)}\" "
-            f"data-panel=\"player-{esc(player)}\"><p class=\"empty\">{esc(player)}の集計データがありません。</p></section>"
+            f"<section class=\"tab-panel\" id=\"panel-{esc(panel_key)}\" "
+            f"data-panel=\"{esc(panel_key)}\"><p class=\"empty\">{esc(player)}の集計データがありません。</p></section>"
         )
 
     season_rows = player_season_rows(player, season_contexts)
     rank_rows = player_metric_rank_rows(player, cumulative_rows)
-    style, strength, advice = player_analysis(player, cumulative_rows)
+    style, strength, advice = player_analysis(player, cumulative_rows, use_manual=use_manual_analysis)
 
     return f"""
-    <section class="tab-panel" id="panel-player-{esc(player)}" data-panel="player-{esc(player)}">
-      <section class="summary" aria-label="{esc(player)} 集計概要">
+    <section class="tab-panel" id="panel-{esc(panel_key)}" data-panel="{esc(panel_key)}">
+      <section class="summary" aria-label="{esc(player)} {esc(title_label)} 集計概要">
         <div><span>対戦数</span><strong>{number(cumulative_row.get("games", ""))}</strong></div>
         <div><span>獲得スコア</span><strong>{number(cumulative_row.get("earned_score", ""), 1)}</strong></div>
         <div><span>平均順位</span><strong>{esc(cumulative_row.get("average_rank", ""))}</strong></div>
         <div><span>役満回数</span><strong>{number(cumulative_row.get("yakuman_count", ""))}</strong></div>
       </section>
 
-      <h2>{esc(player)} 累計成績</h2>
+      <h2>{esc(player)} {esc(title_label)}成績</h2>
       {split_tables(
         [cumulative_row],
         [
@@ -2117,7 +2171,7 @@ def render_stats_panel(context: dict[str, object]) -> str:
     correlation_rows = context["correlation_rows"]
     best_score = context["best_score"]
     best_top = context["best_top"]
-    if context["key"] == "all":
+    if context.get("is_cumulative"):
         team_block_title = "チーム優勝経験"
         team_block = team_champion_section(list(context.get("team_champion_rows", [])))
         rank_columns = CUMULATIVE_RANK_COLUMNS
@@ -2217,75 +2271,148 @@ def render_stats_panel(context: dict[str, object]) -> str:
     """
 
 
-def display_season_label(season: int, latest_season: int, game_count: int) -> str:
-    if season == latest_season and game_count < 120:
-        return f"シーズン{season}（進行中）"
-    return f"シーズン{season}"
+def display_season_label(
+    season: int,
+    latest_season: int,
+    game_count: int,
+    full_games: int = OLD_LEAGUE_FULL_GAMES,
+    prefix: str = "シーズン",
+) -> str:
+    if season == latest_season and game_count < full_games:
+        return f"{prefix}{season}（進行中）"
+    return f"{prefix}{season}"
 
 
-def main() -> None:
-    paifu_rows = read_season_paifu_rows()
-    if not paifu_rows:
-        raise SystemExit("admin_paifu_ids.csv が見つからないか空です。先に牌譜IDを収集してください。")
-
-    season_to_uuids: dict[int, set[str]] = defaultdict(set)
-    for row in paifu_rows:
-        season = row.get("season", "")
-        uuid = row.get("uuid", "")
-        if season.isdigit() and uuid:
-            season_to_uuids[int(season)].add(uuid)
-
-    season_numbers = sorted(season_to_uuids)
-    all_uuids = set().union(*season_to_uuids.values())
-    teams_by_season = read_team_members()
-
+def build_season_contexts(
+    season_to_uuids: dict[int, set[str]],
+    key_prefix: str,
+    label_prefix: str,
+    full_games: int,
+    teams_by_season: dict[int, dict[str, list[str]]] | None = None,
+) -> list[dict[str, object]]:
+    if not season_to_uuids:
+        return []
     season_contexts = []
-    latest_season = max(season_numbers)
-    for season in sorted(season_numbers, reverse=True):
-        label = display_season_label(season, latest_season, len(season_to_uuids[season]))
+    latest_season = max(season_to_uuids)
+    for season in sorted(season_to_uuids, reverse=True):
+        label = display_season_label(
+            season,
+            latest_season,
+            len(season_to_uuids[season]),
+            full_games=full_games,
+            prefix=label_prefix,
+        )
         season_contexts.append(
             build_context(
-                f"season-{season}",
+                f"{key_prefix}-season-{season}",
                 label,
                 season_to_uuids[season],
                 season=season,
                 teams_by_season=teams_by_season,
             )
         )
+    return season_contexts
 
-    cumulative_context = build_context("all", "累計", all_uuids)
-    cumulative_context["team_champion_rows"] = team_champion_rows(season_contexts)
-    cumulative_context["season_mvp_rows"] = season_mvp_rows(season_contexts)
+
+def add_context_awards(
+    context: dict[str, object],
+    season_contexts: list[dict[str, object]],
+) -> None:
+    context["team_champion_rows"] = team_champion_rows(season_contexts)
+    context["season_mvp_rows"] = season_mvp_rows(season_contexts)
     add_cumulative_awards(
-        cumulative_context,
-        list(cumulative_context["season_mvp_rows"]),
-        list(cumulative_context["team_champion_rows"]),
+        context,
+        list(context["season_mvp_rows"]),
+        list(context["team_champion_rows"]),
     )
-    contexts = [cumulative_context] + season_contexts
-    player_names = [
+
+
+def sorted_player_names(context: dict[str, object]) -> list[str]:
+    return [
         row["player"]
         for row in sorted(
-            list(cumulative_context.get("rows", [])),
+            list(context.get("rows", [])),
             key=lambda r: float(r.get("earned_score", 0) or 0),
             reverse=True,
         )
         if row.get("player")
     ]
 
+
+def main() -> None:
+    old_paifu_rows = read_season_paifu_rows()
+    new_paifu_rows = read_new_league_paifu_rows()
+    if not old_paifu_rows and not new_paifu_rows:
+        raise SystemExit("牌譜ID CSV が見つからないか空です。先に牌譜IDを収集してください。")
+
+    old_season_to_uuids = group_uuids_by_season(old_paifu_rows)
+    new_season_to_uuids = group_uuids_by_season(new_paifu_rows)
+    old_uuids = set().union(*old_season_to_uuids.values()) if old_season_to_uuids else set()
+    new_uuids = set().union(*new_season_to_uuids.values()) if new_season_to_uuids else set()
+    lifetime_uuids = old_uuids | new_uuids
+    old_teams_by_season = read_team_members()
+
+    old_season_contexts = build_season_contexts(
+        old_season_to_uuids,
+        "old",
+        "旧シーズン",
+        OLD_LEAGUE_FULL_GAMES,
+        teams_by_season=old_teams_by_season,
+    )
+    new_season_contexts = build_season_contexts(
+        new_season_to_uuids,
+        "new",
+        "新シーズン",
+        NEW_LEAGUE_FULL_GAMES,
+    )
+
+    new_context = build_context("new-league", "新リーグ", new_uuids)
+    old_context = build_context("old-league", "旧リーグ", old_uuids)
+    lifetime_context = build_context("lifetime", "通算", lifetime_uuids)
+    add_context_awards(new_context, new_season_contexts)
+    add_context_awards(old_context, old_season_contexts)
+    add_context_awards(lifetime_context, new_season_contexts + old_season_contexts)
+
+    contexts = [new_context] + new_season_contexts + [lifetime_context, old_context] + old_season_contexts
+    new_player_names = sorted_player_names(new_context)
+    lifetime_player_names = sorted_player_names(lifetime_context)
+
     season_tabs = "\n".join(
         f'<button class="tab-button{" active" if index == 0 else ""}" type="button" data-tab="{esc(context["key"])}">{esc(context["label"])}</button>'
         for index, context in enumerate(contexts)
     )
-    player_tabs = "\n".join(
-        f'<button class="tab-button player-tab" type="button" data-tab="player-{esc(player)}">{esc(player)}</button>'
-        for player in player_names
+    new_player_tabs = "\n".join(
+        f'<button class="tab-button player-tab" type="button" data-tab="new-player-{esc(player)}">{esc(player)}</button>'
+        for player in new_player_names
+    )
+    lifetime_player_tabs = "\n".join(
+        f'<button class="tab-button player-tab" type="button" data-tab="lifetime-player-{esc(player)}">{esc(player)}</button>'
+        for player in lifetime_player_names
     )
     stats_panels = "\n".join(render_stats_panel(context) for context in contexts)
-    player_panels = "\n".join(
-        render_player_panel(player, cumulative_context, season_contexts)
-        for player in player_names
+    new_player_panels = "\n".join(
+        render_player_panel(
+            player,
+            new_context,
+            new_season_contexts,
+            panel_key=f"new-player-{player}",
+            title_label="新リーグ",
+            use_manual_analysis=False,
+        )
+        for player in new_player_names
     )
-    panels = stats_panels + "\n" + player_panels
+    lifetime_player_panels = "\n".join(
+        render_player_panel(
+            player,
+            lifetime_context,
+            new_season_contexts + old_season_contexts,
+            panel_key=f"lifetime-player-{player}",
+            title_label="通算",
+            use_manual_analysis=False,
+        )
+        for player in lifetime_player_names
+    )
+    panels = stats_panels + "\n" + new_player_panels + "\n" + lifetime_player_panels
 
     html_text = f"""<!doctype html>
 <html lang="ja">
@@ -2488,9 +2615,15 @@ def main() -> None:
         </nav>
       </div>
       <div class="tab-group">
-        <h2>プレイヤー別データ</h2>
-        <nav class="tabs" aria-label="プレイヤー別データ" role="tablist">
-          {player_tabs}
+        <h2>新リーグ個人データ</h2>
+        <nav class="tabs" aria-label="新リーグ個人データ" role="tablist">
+          {new_player_tabs}
+        </nav>
+      </div>
+      <div class="tab-group">
+        <h2>通算個人データ</h2>
+        <nav class="tabs" aria-label="通算個人データ" role="tablist">
+          {lifetime_player_tabs}
         </nav>
       </div>
     </section>
