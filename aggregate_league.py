@@ -180,6 +180,8 @@ class PlayerStats:
     chinitsu_hu: int = 0
     houjuu: int = 0
     houjuu_point_sum: int = 0
+    tsumo_loss: int = 0
+    tsumo_loss_point_sum: int = 0
     called_houjuu: int = 0
     two_called_houjuu: int = 0
     called_haneman_houjuu: int = 0
@@ -1775,6 +1777,15 @@ def aggregate_game(uuid, stats, yakuman_details):
 
                 if getattr(hule, "zimo", False):
                     player_stats.tsumo += 1
+                    delta_scores = list(getattr(msg, "delta_scores", []))
+                    for victim_seat, delta in enumerate(delta_scores):
+                        if victim_seat == seat or int(delta) >= 0:
+                            continue
+                        victim_name = seat_to_name.get(victim_seat)
+                        if not victim_name:
+                            continue
+                        stats[victim_name].tsumo_loss += 1
+                        stats[victim_name].tsumo_loss_point_sum += -int(delta)
 
                 for yakuman_name in yakuman_names_from_hule(hule):
                     player_stats.yakuman_count += 1
@@ -1832,6 +1843,8 @@ def write_summary(stats):
             "honitsu_hu_rate",
             "chinitsu_hu_rate",
             "tsumo_rate",
+            "tsumo_loss_rate",
+            "average_tsumo_loss_point",
             "houjuu_rate",
             "average_houjuu_point",
             "noten_houjuu_rate",
@@ -1904,6 +1917,8 @@ def write_summary(stats):
                 percent(player_stats.honitsu_hu, player_stats.hu),
                 percent(player_stats.chinitsu_hu, player_stats.hu),
                 percent(player_stats.tsumo, player_stats.hu),
+                percent(player_stats.tsumo_loss, player_stats.rounds),
+                average(player_stats.tsumo_loss_point_sum, player_stats.tsumo_loss, 1),
                 percent(player_stats.houjuu, player_stats.rounds),
                 average(player_stats.houjuu_point_sum, player_stats.houjuu, 1),
                 percent(player_stats.noten_houjuu, player_stats.deal_in_events),
