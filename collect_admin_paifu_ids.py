@@ -124,7 +124,7 @@ def collect_visible_page(page, *, max_scan_attempts=6):
             # 大会牌譜側ページャーより上だけを拾う。
             in_copy_area = (
                 text == ""
-                and 900 <= box["x"] <= 1450
+                and 900 <= box["x"] <= 1500
                 and -2000 <= box["y"] <= pager_y - 12
                 and 18 <= box["width"] <= 52
                 and 18 <= box["height"] <= 52

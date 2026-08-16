@@ -11,25 +11,31 @@
 - 削除系ボタンには触れない（collect_admin_paifu_ids側の分類・較正・モーダル検知）。
 
 実行の流れ:
-  1. 管理画面へ（ログイン済みbrowser-profileを使用）→ 大会牌譜タブへ自動遷移
+  1. 管理画面へ（ログイン済みbrowser-profileを使用）
+     → シーズンリストの「進行中」バッジが付いた行から大会牌譜タブへ自動遷移
+     （URL中の数字は雀魂システム内部の通し番号であり、サイトの
+     「新リーグ第N シーズン」というラベル=new_season設定とは別物なので、
+     ナビゲーションにのみ使い、new_seasonの値は書き換えない）
   2. 牌譜IDを収集 → data/new/admin_paifu_ids_new_season{N}.csv へ和集合マージ
   3. collect_records.py で不足牌譜バイナリのみ取得（既存はスキップされる）
   4. make_site.py でサイト再生成（タブ別ページ）
   5. 変更があればコミットして main へ push（GitHub Pagesが自動デプロイ）
 
-設定は auto_update_config.json（無ければ既定値で自動生成）。シーズンが変わったら
-new_season の数字を上げるだけでよい。
+設定は auto_update_config.json（無ければ既定値で自動生成）。
 """
 
 from __future__ import annotations
 
 import csv
 import json
+import re
 import shutil
 import subprocess
 import sys
 from datetime import datetime
 from pathlib import Path
+
+SEASON_URL_RE = re.compile(r"/season/(\d+)/record")
 
 ROOT = Path(__file__).resolve().parent
 CONFIG_PATH = ROOT / "auto_update_config.json"
@@ -123,6 +129,50 @@ def looks_logged_out(page) -> bool:
     return password_inputs > 0 and not has_dashboard_text
 
 
+def open_in_progress_season_records(page) -> int | None:
+    """シーズンリストで「進行中」バッジが付いた行の「大会牌譜」ボタンを押し、
+    牌譜一覧タブまで進める。座標決め打ちではなくDOM構造（バッジの近くの行）
+    で探すので、テーブルのレイアウトが少し変わっても崩れにくい。
+    実際に着地したシーズン番号をURL（.../season/{N}/record）から読み取って返す。
+    見つからなければNone。"""
+    clicked = page.evaluate(
+        """
+        () => {
+          const badges = Array.from(document.querySelectorAll('*')).filter(
+            el => el.children.length === 0
+              && (el.innerText || el.textContent || '').trim() === '進行中'
+          );
+          for (const badge of badges) {
+            let row = badge;
+            for (let i = 0; i < 8 && row; i++) {
+              const btn = Array.from(row.querySelectorAll('button,a')).find(
+                el => (el.innerText || el.textContent || '').trim() === '大会牌譜'
+              );
+              if (btn) {
+                btn.click();
+                return true;
+              }
+              row = row.parentElement;
+            }
+          }
+          return false;
+        }
+        """
+    )
+    if not clicked:
+        return None
+
+    page.wait_for_timeout(1500)
+    if "/record" not in page.url:
+        from collect_all_seasons import click_visible_text
+
+        click_visible_text(page, ["大会牌譜"], exact=True)
+        page.wait_for_timeout(1500)
+
+    match = SEASON_URL_RE.search(page.url)
+    return int(match.group(1)) if match else None
+
+
 def collect_ids(config: dict) -> list[dict[str, object]]:
     from playwright.sync_api import sync_playwright
 
@@ -159,15 +209,18 @@ def collect_ids(config: dict) -> list[dict[str, object]]:
                             "一度手動でログインし直してください（browser-profile更新）。"
                         )
 
-                    # 大会牌譜タブへ。見つからなくても既に表示中の可能性があるので続行する。
-                    if not click_game_record_tab(page):
-                        log("大会牌譜タブが見つかりませんでした（表示済みとみなして続行）")
-                    page.wait_for_timeout(1500)
-
-                    if season_click > 0:
-                        if not click_season(page, season_click, auto=True):
-                            log("シーズン選択に失敗しました（現在の表示のまま続行）")
+                    found_season = open_in_progress_season_records(page)
+                    if found_season is not None:
+                        log(f"進行中シーズン（管理画面内部番号 {found_season}）の牌譜タブへ移動しました。")
+                    else:
+                        log("進行中シーズンの行が見つからないため旧方式で試します。")
+                        if not click_game_record_tab(page):
+                            log("大会牌譜タブも見つかりませんでした（表示済みとみなして続行）")
                         page.wait_for_timeout(1500)
+                        if season_click > 0:
+                            if not click_season(page, season_click, auto=True):
+                                log("シーズン選択に失敗しました（現在の表示のまま続行）")
+                            page.wait_for_timeout(1500)
 
                     rows = collect_current_season(page, season, max_pages)
                     if rows:
