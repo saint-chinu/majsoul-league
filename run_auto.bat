@@ -1,6 +1,10 @@
 @echo off
-rem å®Œå…¨è‡ªå‹•æ›´æ–°ï¼ˆã‚¿ã‚¹ã‚¯ã‚¹ã‚±ã‚¸ãƒ¥ãƒ¼ãƒ©ç™»éŒ²ç”¨ï¼‰ã€‚ãƒ­ã‚°ã¯ logs\ ã«æ—¥ä»˜åˆ¥ã§æ®‹ã™ã€‚
+rem Š®‘SŽ©“®XViƒ^ƒXƒNƒXƒPƒWƒ…[ƒ‰“o˜^—pjBƒƒO‚Í logs\ ‚É“ú•t•Ê‚ÅŽc‚·B
 cd /d "%~dp0"
 if not exist logs mkdir logs
 set LOGFILE=logs\auto_%date:~0,4%%date:~5,2%%date:~8,2%.log
-py run_auto_update.py >> "%LOGFILE%" 2>&1
+if exist ".venv\Scripts\python.exe" (
+  ".venv\Scripts\python.exe" run_auto_update.py >> "%LOGFILE%" 2>&1
+) else (
+  py run_auto_update.py >> "%LOGFILE%" 2>&1
+)
