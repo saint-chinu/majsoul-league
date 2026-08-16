@@ -6,7 +6,15 @@
   <title>魚群リーグ</title>
   <script type="module">
     import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
-    mermaid.initialize({ startOnLoad: true, theme: "base", flowchart: { curve: "basis" } });
+    // 図の描画は表示中のタブに限定する。startOnLoad: trueのままだと、
+    // hidden(display:none)のパネル内の図を幅0のまま描画して潰れるうえ、
+    // 初回表示で全タブ分の描画コストがかかる。タブ切替時はactivate()から呼ばれる。
+    mermaid.initialize({ startOnLoad: false, theme: "base", flowchart: { curve: "basis" } });
+    window.renderMermaidIn = (root) => {
+      const nodes = Array.from((root || document).querySelectorAll(".mermaid:not([data-processed])"));
+      if (nodes.length) mermaid.run({ nodes }).catch(() => {});
+    };
+    window.renderMermaidIn(document.querySelector(".tab-panel:not([hidden])"));
   </script>
   <script>
     window.addEventListener("DOMContentLoaded", () => {
@@ -22,6 +30,10 @@
         panels.forEach((panel) => {
           panel.hidden = panel.dataset.panel !== key;
         });
+        // 開いたタブの図をこのタイミングで初描画する（hiddenのまま描画すると潰れる）。
+        // モジュール読込失敗時はrenderMermaidInが未定義なので何もしない（図は生テキスト表示）。
+        const activePanel = panels.find((panel) => panel.dataset.panel === key);
+        if (activePanel && window.renderMermaidIn) window.renderMermaidIn(activePanel);
       }
 
       buttons.forEach((button) => {
@@ -477,7 +489,7 @@
     </section>
     
 
-    <section class="tab-panel" id="panel-new-season-1" data-panel="new-season-1">
+    <section class="tab-panel" hidden id="panel-new-season-1" data-panel="new-season-1">
       <h2>新シーズン1（進行中） ダイジェスト</h2>
       <section class="cards digest-cards">
         
@@ -713,7 +725,7 @@
     </section>
     
 
-    <section class="tab-panel" id="panel-lifetime" data-panel="lifetime">
+    <section class="tab-panel" hidden id="panel-lifetime" data-panel="lifetime">
       <h2>通算 ダイジェスト</h2>
       <section class="cards digest-cards">
         
@@ -1068,7 +1080,7 @@
     </section>
     
 
-    <section class="tab-panel" id="panel-old-league" data-panel="old-league">
+    <section class="tab-panel" hidden id="panel-old-league" data-panel="old-league">
       <h2>旧リーグ ダイジェスト</h2>
       <section class="cards digest-cards">
         
@@ -1360,7 +1372,7 @@
     </section>
     
 
-    <section class="tab-panel" id="panel-new-player-29ちゃん" data-panel="new-player-29ちゃん">
+    <section class="tab-panel" hidden id="panel-new-player-29ちゃん" data-panel="new-player-29ちゃん">
       <section class="summary" aria-label="29ちゃん 新リーグ 集計概要">
         <div><span>対戦数</span><strong>18</strong></div>
         <div><span>獲得スコア</span><strong>193.8</strong></div>
@@ -1449,7 +1461,7 @@
     </section>
     
 
-    <section class="tab-panel" id="panel-new-player-ぬちきち" data-panel="new-player-ぬちきち">
+    <section class="tab-panel" hidden id="panel-new-player-ぬちきち" data-panel="new-player-ぬちきち">
       <section class="summary" aria-label="ぬちきち 新リーグ 集計概要">
         <div><span>対戦数</span><strong>13</strong></div>
         <div><span>獲得スコア</span><strong>130.5</strong></div>
@@ -1538,7 +1550,7 @@
     </section>
     
 
-    <section class="tab-panel" id="panel-new-player-アリスkey" data-panel="new-player-アリスkey">
+    <section class="tab-panel" hidden id="panel-new-player-アリスkey" data-panel="new-player-アリスkey">
       <section class="summary" aria-label="アリスkey 新リーグ 集計概要">
         <div><span>対戦数</span><strong>16</strong></div>
         <div><span>獲得スコア</span><strong>109.2</strong></div>
@@ -1627,7 +1639,7 @@
     </section>
     
 
-    <section class="tab-panel" id="panel-new-player-流れ者金融" data-panel="new-player-流れ者金融">
+    <section class="tab-panel" hidden id="panel-new-player-流れ者金融" data-panel="new-player-流れ者金融">
       <section class="summary" aria-label="流れ者金融 新リーグ 集計概要">
         <div><span>対戦数</span><strong>12</strong></div>
         <div><span>獲得スコア</span><strong>54.6</strong></div>
@@ -1716,7 +1728,7 @@
     </section>
     
 
-    <section class="tab-panel" id="panel-new-player-ルム@魚" data-panel="new-player-ルム@魚">
+    <section class="tab-panel" hidden id="panel-new-player-ルム@魚" data-panel="new-player-ルム@魚">
       <section class="summary" aria-label="ルム@魚 新リーグ 集計概要">
         <div><span>対戦数</span><strong>23</strong></div>
         <div><span>獲得スコア</span><strong>34.6</strong></div>
@@ -1805,7 +1817,7 @@
     </section>
     
 
-    <section class="tab-panel" id="panel-new-player-USAみん" data-panel="new-player-USAみん">
+    <section class="tab-panel" hidden id="panel-new-player-USAみん" data-panel="new-player-USAみん">
       <section class="summary" aria-label="USAみん 新リーグ 集計概要">
         <div><span>対戦数</span><strong>14</strong></div>
         <div><span>獲得スコア</span><strong>-9.7</strong></div>
@@ -1894,7 +1906,7 @@
     </section>
     
 
-    <section class="tab-panel" id="panel-new-player-葡萄海ぶどう" data-panel="new-player-葡萄海ぶどう">
+    <section class="tab-panel" hidden id="panel-new-player-葡萄海ぶどう" data-panel="new-player-葡萄海ぶどう">
       <section class="summary" aria-label="葡萄海ぶどう 新リーグ 集計概要">
         <div><span>対戦数</span><strong>18</strong></div>
         <div><span>獲得スコア</span><strong>-120.0</strong></div>
@@ -1983,7 +1995,7 @@
     </section>
     
 
-    <section class="tab-panel" id="panel-new-player-鯛ofカルピス" data-panel="new-player-鯛ofカルピス">
+    <section class="tab-panel" hidden id="panel-new-player-鯛ofカルピス" data-panel="new-player-鯛ofカルピス">
       <section class="summary" aria-label="鯛ofカルピス 新リーグ 集計概要">
         <div><span>対戦数</span><strong>19</strong></div>
         <div><span>獲得スコア</span><strong>-130.0</strong></div>
@@ -2072,7 +2084,7 @@
     </section>
     
 
-    <section class="tab-panel" id="panel-new-player-ひなんじょ" data-panel="new-player-ひなんじょ">
+    <section class="tab-panel" hidden id="panel-new-player-ひなんじょ" data-panel="new-player-ひなんじょ">
       <section class="summary" aria-label="ひなんじょ 新リーグ 集計概要">
         <div><span>対戦数</span><strong>20</strong></div>
         <div><span>獲得スコア</span><strong>-263.0</strong></div>
@@ -2161,7 +2173,7 @@
     </section>
     
 
-    <section class="tab-panel" id="panel-lifetime-player-流れ者金融" data-panel="lifetime-player-流れ者金融">
+    <section class="tab-panel" hidden id="panel-lifetime-player-流れ者金融" data-panel="lifetime-player-流れ者金融">
       <section class="summary" aria-label="流れ者金融 通算 集計概要">
         <div><span>対戦数</span><strong>609</strong></div>
         <div><span>獲得スコア</span><strong>4,834.9</strong></div>
@@ -2250,7 +2262,7 @@
     </section>
     
 
-    <section class="tab-panel" id="panel-lifetime-player-ひなんじょ" data-panel="lifetime-player-ひなんじょ">
+    <section class="tab-panel" hidden id="panel-lifetime-player-ひなんじょ" data-panel="lifetime-player-ひなんじょ">
       <section class="summary" aria-label="ひなんじょ 通算 集計概要">
         <div><span>対戦数</span><strong>612</strong></div>
         <div><span>獲得スコア</span><strong>927.7</strong></div>
@@ -2339,7 +2351,7 @@
     </section>
     
 
-    <section class="tab-panel" id="panel-lifetime-player-鯛ofカルピス" data-panel="lifetime-player-鯛ofカルピス">
+    <section class="tab-panel" hidden id="panel-lifetime-player-鯛ofカルピス" data-panel="lifetime-player-鯛ofカルピス">
       <section class="summary" aria-label="鯛ofカルピス 通算 集計概要">
         <div><span>対戦数</span><strong>576</strong></div>
         <div><span>獲得スコア</span><strong>589.9</strong></div>
@@ -2428,7 +2440,7 @@
     </section>
     
 
-    <section class="tab-panel" id="panel-lifetime-player-ぬちきち" data-panel="lifetime-player-ぬちきち">
+    <section class="tab-panel" hidden id="panel-lifetime-player-ぬちきち" data-panel="lifetime-player-ぬちきち">
       <section class="summary" aria-label="ぬちきち 通算 集計概要">
         <div><span>対戦数</span><strong>13</strong></div>
         <div><span>獲得スコア</span><strong>130.5</strong></div>
@@ -2517,7 +2529,7 @@
     </section>
     
 
-    <section class="tab-panel" id="panel-lifetime-player-ルム@魚" data-panel="lifetime-player-ルム@魚">
+    <section class="tab-panel" hidden id="panel-lifetime-player-ルム@魚" data-panel="lifetime-player-ルム@魚">
       <section class="summary" aria-label="ルム@魚 通算 集計概要">
         <div><span>対戦数</span><strong>23</strong></div>
         <div><span>獲得スコア</span><strong>34.6</strong></div>
@@ -2606,7 +2618,7 @@
     </section>
     
 
-    <section class="tab-panel" id="panel-lifetime-player-USAみん" data-panel="lifetime-player-USAみん">
+    <section class="tab-panel" hidden id="panel-lifetime-player-USAみん" data-panel="lifetime-player-USAみん">
       <section class="summary" aria-label="USAみん 通算 集計概要">
         <div><span>対戦数</span><strong>14</strong></div>
         <div><span>獲得スコア</span><strong>-9.7</strong></div>
@@ -2695,7 +2707,7 @@
     </section>
     
 
-    <section class="tab-panel" id="panel-lifetime-player-アリスkey" data-panel="lifetime-player-アリスkey">
+    <section class="tab-panel" hidden id="panel-lifetime-player-アリスkey" data-panel="lifetime-player-アリスkey">
       <section class="summary" aria-label="アリスkey 通算 集計概要">
         <div><span>対戦数</span><strong>600</strong></div>
         <div><span>獲得スコア</span><strong>-259.8</strong></div>
@@ -2784,7 +2796,7 @@
     </section>
     
 
-    <section class="tab-panel" id="panel-lifetime-player-29ちゃん" data-panel="lifetime-player-29ちゃん">
+    <section class="tab-panel" hidden id="panel-lifetime-player-29ちゃん" data-panel="lifetime-player-29ちゃん">
       <section class="summary" aria-label="29ちゃん 通算 集計概要">
         <div><span>対戦数</span><strong>657</strong></div>
         <div><span>獲得スコア</span><strong>-1,405.1</strong></div>
@@ -2873,7 +2885,7 @@
     </section>
     
 
-    <section class="tab-panel" id="panel-lifetime-player-葡萄海ぶどう" data-panel="lifetime-player-葡萄海ぶどう">
+    <section class="tab-panel" hidden id="panel-lifetime-player-葡萄海ぶどう" data-panel="lifetime-player-葡萄海ぶどう">
       <section class="summary" aria-label="葡萄海ぶどう 通算 集計概要">
         <div><span>対戦数</span><strong>649</strong></div>
         <div><span>獲得スコア</span><strong>-4,843.0</strong></div>
@@ -2961,7 +2973,7 @@
       </section>
     </section>
     
-    <section class="tab-panel" id="panel-old-season-10" data-panel="old-season-10">
+    <section class="tab-panel" hidden id="panel-old-season-10" data-panel="old-season-10">
       <h2>旧シーズン10 ダイジェスト</h2>
       <section class="cards digest-cards">
         
@@ -3158,7 +3170,7 @@
     </section>
     
 
-    <section class="tab-panel" id="panel-old-season-9" data-panel="old-season-9">
+    <section class="tab-panel" hidden id="panel-old-season-9" data-panel="old-season-9">
       <h2>旧シーズン9 ダイジェスト</h2>
       <section class="cards digest-cards">
         
@@ -3372,7 +3384,7 @@
     </section>
     
 
-    <section class="tab-panel" id="panel-old-season-8" data-panel="old-season-8">
+    <section class="tab-panel" hidden id="panel-old-season-8" data-panel="old-season-8">
       <h2>旧シーズン8 ダイジェスト</h2>
       <section class="cards digest-cards">
         
@@ -3591,7 +3603,7 @@
     </section>
     
 
-    <section class="tab-panel" id="panel-old-season-7" data-panel="old-season-7">
+    <section class="tab-panel" hidden id="panel-old-season-7" data-panel="old-season-7">
       <h2>旧シーズン7 ダイジェスト</h2>
       <section class="cards digest-cards">
         
@@ -3798,7 +3810,7 @@
     </section>
     
 
-    <section class="tab-panel" id="panel-old-season-6" data-panel="old-season-6">
+    <section class="tab-panel" hidden id="panel-old-season-6" data-panel="old-season-6">
       <h2>旧シーズン6 ダイジェスト</h2>
       <section class="cards digest-cards">
         
@@ -4006,7 +4018,7 @@
     </section>
     
 
-    <section class="tab-panel" id="panel-old-season-5" data-panel="old-season-5">
+    <section class="tab-panel" hidden id="panel-old-season-5" data-panel="old-season-5">
       <h2>旧シーズン5 ダイジェスト</h2>
       <section class="cards digest-cards">
         
@@ -4236,7 +4248,7 @@
     </section>
     
 
-    <section class="tab-panel" id="panel-old-season-4" data-panel="old-season-4">
+    <section class="tab-panel" hidden id="panel-old-season-4" data-panel="old-season-4">
       <h2>旧シーズン4 ダイジェスト</h2>
       <section class="cards digest-cards">
         
@@ -4456,7 +4468,7 @@
     </section>
     
 
-    <section class="tab-panel" id="panel-old-season-3" data-panel="old-season-3">
+    <section class="tab-panel" hidden id="panel-old-season-3" data-panel="old-season-3">
       <h2>旧シーズン3 ダイジェスト</h2>
       <section class="cards digest-cards">
         
@@ -4669,7 +4681,7 @@
     </section>
     
 
-    <section class="tab-panel" id="panel-old-season-2" data-panel="old-season-2">
+    <section class="tab-panel" hidden id="panel-old-season-2" data-panel="old-season-2">
       <h2>旧シーズン2 ダイジェスト</h2>
       <section class="cards digest-cards">
         
@@ -4882,7 +4894,7 @@
     </section>
     
 
-    <section class="tab-panel" id="panel-old-season-1" data-panel="old-season-1">
+    <section class="tab-panel" hidden id="panel-old-season-1" data-panel="old-season-1">
       <h2>旧シーズン1 ダイジェスト</h2>
       <section class="cards digest-cards">
         
@@ -5101,7 +5113,7 @@
     </section>
     
 
-    <section class="tab-panel" id="panel-new-player-29ちゃん" data-panel="new-player-29ちゃん">
+    <section class="tab-panel" hidden id="panel-new-player-29ちゃん" data-panel="new-player-29ちゃん">
       <section class="summary" aria-label="29ちゃん 新リーグ 集計概要">
         <div><span>対戦数</span><strong>14</strong></div>
         <div><span>獲得スコア</span><strong>251.5</strong></div>
@@ -5190,7 +5202,7 @@
     </section>
     
 
-    <section class="tab-panel" id="panel-new-player-アリスkey" data-panel="new-player-アリスkey">
+    <section class="tab-panel" hidden id="panel-new-player-アリスkey" data-panel="new-player-アリスkey">
       <section class="summary" aria-label="アリスkey 新リーグ 集計概要">
         <div><span>対戦数</span><strong>15</strong></div>
         <div><span>獲得スコア</span><strong>187.4</strong></div>
@@ -5279,7 +5291,7 @@
     </section>
     
 
-    <section class="tab-panel" id="panel-new-player-ルム@魚" data-panel="new-player-ルム@魚">
+    <section class="tab-panel" hidden id="panel-new-player-ルム@魚" data-panel="new-player-ルム@魚">
       <section class="summary" aria-label="ルム@魚 新リーグ 集計概要">
         <div><span>対戦数</span><strong>16</strong></div>
         <div><span>獲得スコア</span><strong>41.3</strong></div>
@@ -5368,7 +5380,7 @@
     </section>
     
 
-    <section class="tab-panel" id="panel-new-player-流れ者金融" data-panel="new-player-流れ者金融">
+    <section class="tab-panel" hidden id="panel-new-player-流れ者金融" data-panel="new-player-流れ者金融">
       <section class="summary" aria-label="流れ者金融 新リーグ 集計概要">
         <div><span>対戦数</span><strong>6</strong></div>
         <div><span>獲得スコア</span><strong>37.3</strong></div>
@@ -5457,7 +5469,7 @@
     </section>
     
 
-    <section class="tab-panel" id="panel-new-player-ぬちきち" data-panel="new-player-ぬちきち">
+    <section class="tab-panel" hidden id="panel-new-player-ぬちきち" data-panel="new-player-ぬちきち">
       <section class="summary" aria-label="ぬちきち 新リーグ 集計概要">
         <div><span>対戦数</span><strong>5</strong></div>
         <div><span>獲得スコア</span><strong>6.2</strong></div>
@@ -5546,7 +5558,7 @@
     </section>
     
 
-    <section class="tab-panel" id="panel-new-player-USAみん" data-panel="new-player-USAみん">
+    <section class="tab-panel" hidden id="panel-new-player-USAみん" data-panel="new-player-USAみん">
       <section class="summary" aria-label="USAみん 新リーグ 集計概要">
         <div><span>対戦数</span><strong>4</strong></div>
         <div><span>獲得スコア</span><strong>0.6</strong></div>
@@ -5635,7 +5647,7 @@
     </section>
     
 
-    <section class="tab-panel" id="panel-new-player-鯛ofカルピス" data-panel="new-player-鯛ofカルピス">
+    <section class="tab-panel" hidden id="panel-new-player-鯛ofカルピス" data-panel="new-player-鯛ofカルピス">
       <section class="summary" aria-label="鯛ofカルピス 新リーグ 集計概要">
         <div><span>対戦数</span><strong>18</strong></div>
         <div><span>獲得スコア</span><strong>-94.2</strong></div>
@@ -5724,7 +5736,7 @@
     </section>
     
 
-    <section class="tab-panel" id="panel-new-player-葡萄海ぶどう" data-panel="new-player-葡萄海ぶどう">
+    <section class="tab-panel" hidden id="panel-new-player-葡萄海ぶどう" data-panel="new-player-葡萄海ぶどう">
       <section class="summary" aria-label="葡萄海ぶどう 新リーグ 集計概要">
         <div><span>対戦数</span><strong>15</strong></div>
         <div><span>獲得スコア</span><strong>-197.2</strong></div>
@@ -5813,7 +5825,7 @@
     </section>
     
 
-    <section class="tab-panel" id="panel-new-player-ひなんじょ" data-panel="new-player-ひなんじょ">
+    <section class="tab-panel" hidden id="panel-new-player-ひなんじょ" data-panel="new-player-ひなんじょ">
       <section class="summary" aria-label="ひなんじょ 新リーグ 集計概要">
         <div><span>対戦数</span><strong>18</strong></div>
         <div><span>獲得スコア</span><strong>-232.9</strong></div>
@@ -5902,7 +5914,7 @@
     </section>
     
 
-    <section class="tab-panel" id="panel-lifetime-player-流れ者金融" data-panel="lifetime-player-流れ者金融">
+    <section class="tab-panel" hidden id="panel-lifetime-player-流れ者金融" data-panel="lifetime-player-流れ者金融">
       <section class="summary" aria-label="流れ者金融 通算 集計概要">
         <div><span>対戦数</span><strong>603</strong></div>
         <div><span>獲得スコア</span><strong>4,817.6</strong></div>
@@ -5991,7 +6003,7 @@
     </section>
     
 
-    <section class="tab-panel" id="panel-lifetime-player-ひなんじょ" data-panel="lifetime-player-ひなんじょ">
+    <section class="tab-panel" hidden id="panel-lifetime-player-ひなんじょ" data-panel="lifetime-player-ひなんじょ">
       <section class="summary" aria-label="ひなんじょ 通算 集計概要">
         <div><span>対戦数</span><strong>610</strong></div>
         <div><span>獲得スコア</span><strong>957.8</strong></div>
@@ -6080,7 +6092,7 @@
     </section>
     
 
-    <section class="tab-panel" id="panel-lifetime-player-鯛ofカルピス" data-panel="lifetime-player-鯛ofカルピス">
+    <section class="tab-panel" hidden id="panel-lifetime-player-鯛ofカルピス" data-panel="lifetime-player-鯛ofカルピス">
       <section class="summary" aria-label="鯛ofカルピス 通算 集計概要">
         <div><span>対戦数</span><strong>575</strong></div>
         <div><span>獲得スコア</span><strong>625.7</strong></div>
@@ -6169,7 +6181,7 @@
     </section>
     
 
-    <section class="tab-panel" id="panel-lifetime-player-ルム@魚" data-panel="lifetime-player-ルム@魚">
+    <section class="tab-panel" hidden id="panel-lifetime-player-ルム@魚" data-panel="lifetime-player-ルム@魚">
       <section class="summary" aria-label="ルム@魚 通算 集計概要">
         <div><span>対戦数</span><strong>16</strong></div>
         <div><span>獲得スコア</span><strong>41.3</strong></div>
@@ -6258,7 +6270,7 @@
     </section>
     
 
-    <section class="tab-panel" id="panel-lifetime-player-ぬちきち" data-panel="lifetime-player-ぬちきち">
+    <section class="tab-panel" hidden id="panel-lifetime-player-ぬちきち" data-panel="lifetime-player-ぬちきち">
       <section class="summary" aria-label="ぬちきち 通算 集計概要">
         <div><span>対戦数</span><strong>5</strong></div>
         <div><span>獲得スコア</span><strong>6.2</strong></div>
@@ -6347,7 +6359,7 @@
     </section>
     
 
-    <section class="tab-panel" id="panel-lifetime-player-USAみん" data-panel="lifetime-player-USAみん">
+    <section class="tab-panel" hidden id="panel-lifetime-player-USAみん" data-panel="lifetime-player-USAみん">
       <section class="summary" aria-label="USAみん 通算 集計概要">
         <div><span>対戦数</span><strong>4</strong></div>
         <div><span>獲得スコア</span><strong>0.6</strong></div>
@@ -6436,7 +6448,7 @@
     </section>
     
 
-    <section class="tab-panel" id="panel-lifetime-player-アリスkey" data-panel="lifetime-player-アリスkey">
+    <section class="tab-panel" hidden id="panel-lifetime-player-アリスkey" data-panel="lifetime-player-アリスkey">
       <section class="summary" aria-label="アリスkey 通算 集計概要">
         <div><span>対戦数</span><strong>599</strong></div>
         <div><span>獲得スコア</span><strong>-181.6</strong></div>
@@ -6525,7 +6537,7 @@
     </section>
     
 
-    <section class="tab-panel" id="panel-lifetime-player-29ちゃん" data-panel="lifetime-player-29ちゃん">
+    <section class="tab-panel" hidden id="panel-lifetime-player-29ちゃん" data-panel="lifetime-player-29ちゃん">
       <section class="summary" aria-label="29ちゃん 通算 集計概要">
         <div><span>対戦数</span><strong>653</strong></div>
         <div><span>獲得スコア</span><strong>-1,347.4</strong></div>
@@ -6614,7 +6626,7 @@
     </section>
     
 
-    <section class="tab-panel" id="panel-lifetime-player-葡萄海ぶどう" data-panel="lifetime-player-葡萄海ぶどう">
+    <section class="tab-panel" hidden id="panel-lifetime-player-葡萄海ぶどう" data-panel="lifetime-player-葡萄海ぶどう">
       <section class="summary" aria-label="葡萄海ぶどう 通算 集計概要">
         <div><span>対戦数</span><strong>646</strong></div>
         <div><span>獲得スコア</span><strong>-4,920.2</strong></div>

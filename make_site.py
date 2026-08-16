@@ -16,6 +16,28 @@ YAKUMAN_DETAILS_CSV = Path("yakuman_details.csv")
 PAIFU_CSV = Path("admin_paifu_ids.csv")
 TEAM_CSV = Path("team_members.csv")
 OUTPUT_HTML = Path("docs") / "index.html"
+
+def hide_inactive_tab_panels(html_text: str) -> str:
+    """最初のタブ以外の全パネルにhidden属性を焼き込む。
+
+    従来は50枚のタブパネルすべてを表示状態で出力し、DOMContentLoaded後のJSが
+    最初のタブ以外を隠すまで、ブラウザは546個のテーブル（約5.8万DOM要素）を
+    一括レイアウトしていた。PCでは耐えられるがスマホではメモリ不足で白画面や
+    リロードループになる（=「スマホで見れない」の原因）。サーバー側でhiddenを
+    付けておけば初回レイアウトは表示中の1タブ分で済む。section開始タグへの
+    属性追加のみで、集計データ本文には一切触れない。
+    """
+    marker = '<section class="tab-panel"'
+    seen = 0
+
+    def _mark(match: re.Match[str]) -> str:
+        nonlocal seen
+        seen += 1
+        return marker + (" hidden" if seen > 1 else "")
+
+    return re.sub(re.escape(marker), _mark, html_text)
+
+
 RAW_DIR = Path("records_raw")
 SEASON_FILE_RE = re.compile(r"admin_paifu_ids_season(\d+)\.csv$")
 NEW_DATA_DIR = Path("data") / "new"
@@ -2764,7 +2786,15 @@ def main() -> None:
   <title>魚群リーグ</title>
   <script type="module">
     import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
-    mermaid.initialize({{ startOnLoad: true, theme: "base", flowchart: {{ curve: "basis" }} }});
+    // 図の描画は表示中のタブに限定する。startOnLoad: trueのままだと、
+    // hidden(display:none)のパネル内の図を幅0のまま描画して潰れるうえ、
+    // 初回表示で全タブ分の描画コストがかかる。タブ切替時はactivate()から呼ばれる。
+    mermaid.initialize({{ startOnLoad: false, theme: "base", flowchart: {{ curve: "basis" }} }});
+    window.renderMermaidIn = (root) => {{
+      const nodes = Array.from((root || document).querySelectorAll(".mermaid:not([data-processed])"));
+      if (nodes.length) mermaid.run({{ nodes }}).catch(() => {{}});
+    }};
+    window.renderMermaidIn(document.querySelector(".tab-panel:not([hidden])"));
   </script>
   <script>
     window.addEventListener("DOMContentLoaded", () => {{
@@ -2780,6 +2810,10 @@ def main() -> None:
         panels.forEach((panel) => {{
           panel.hidden = panel.dataset.panel !== key;
         }});
+        // 開いたタブの図をこのタイミングで初描画する（hiddenのまま描画すると潰れる）。
+        // モジュール読込失敗時はrenderMermaidInが未定義なので何もしない（図は生テキスト表示）。
+        const activePanel = panels.find((panel) => panel.dataset.panel === key);
+        if (activePanel && window.renderMermaidIn) window.renderMermaidIn(activePanel);
       }}
 
       buttons.forEach((button) => {{
@@ -2987,7 +3021,7 @@ def main() -> None:
 """
 
     OUTPUT_HTML.parent.mkdir(parents=True, exist_ok=True)
-    OUTPUT_HTML.write_text(html_text, encoding="utf-8")
+    OUTPUT_HTML.write_text(hide_inactive_tab_panels(html_text), encoding="utf-8")
     print(f"saved: {OUTPUT_HTML}")
 
 
