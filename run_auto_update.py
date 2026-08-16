@@ -12,6 +12,7 @@
 
 実行の流れ:
   1. 管理画面へ（ログイン済みbrowser-profileを使用）
+     → 大会リスト画面が出ていれば対象大会（既定「テスト」、league_name設定で変更可）を選択
      → シーズンリストの「進行中」バッジが付いた行から大会牌譜タブへ自動遷移
      （URL中の数字は雀魂システム内部の通し番号であり、サイトの
      「新リーグ第N シーズン」というラベル=new_season設定とは別物なので、
@@ -45,6 +46,7 @@ SEASON_COLUMNS = ["season", "page_no", "uuid", "date_key", "paifu_url"]
 
 DEFAULT_CONFIG = {
     "contest_url": "https://tournament.mahjongsoul.com/contest_dashboard/index.html#/contest/48491649",
+    "league_name": "テスト",
     "new_season": 1,
     "max_pages": 60,
     "navigation_attempts": 3,
@@ -129,6 +131,30 @@ def looks_logged_out(page) -> bool:
     return password_inputs > 0 and not has_dashboard_text
 
 
+def maybe_select_league(page, league_name: str) -> None:
+    """ログイン直後は大会が並ぶ「大会リスト」画面に出ることがあるため、
+    対象の大会名（既定「テスト」）のカードが見えていれば選んでおく。
+    既に大会の中に入っている場合はカードが無いので何もしない（素通り）。"""
+    if not league_name:
+        return
+    clicked = page.evaluate(
+        """
+        (name) => {
+          const leaf = Array.from(document.querySelectorAll('*')).find(
+            el => el.children.length === 0
+              && (el.innerText || el.textContent || '').trim() === name
+          );
+          if (!leaf) return false;
+          leaf.click();
+          return true;
+        }
+        """,
+        league_name,
+    )
+    if clicked:
+        page.wait_for_timeout(2000)
+
+
 def open_in_progress_season_records(page) -> int | None:
     """シーズンリストで「進行中」バッジが付いた行の「大会牌譜」ボタンを押し、
     牌譜一覧タブまで進める。座標決め打ちではなくDOM構造（バッジの近くの行）
@@ -187,6 +213,7 @@ def collect_ids(config: dict) -> list[dict[str, object]]:
     max_pages = int(config["max_pages"])
     attempts = max(1, int(config["navigation_attempts"]))
     season_click = int(config.get("click_season_from_bottom") or 0)
+    league_name = config.get("league_name") or ""
 
     with sync_playwright() as p:
         browser = p.chromium.launch_persistent_context(
@@ -208,6 +235,8 @@ def collect_ids(config: dict) -> list[dict[str, object]]:
                             "LOGIN_EXPIRED: 管理画面のログインが切れています。"
                             "一度手動でログインし直してください（browser-profile更新）。"
                         )
+
+                    maybe_select_league(page, league_name)
 
                     found_season = open_in_progress_season_records(page)
                     if found_season is not None:
