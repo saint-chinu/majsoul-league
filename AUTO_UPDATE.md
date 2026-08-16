@@ -6,6 +6,10 @@
 
 ## 初回セットアップ（1回だけ）
 
+**かんたん版: GitHub Desktop で一度 Pull してから、`setup_auto_update.bat` を
+ダブルクリックするだけ。** 最新化 → タスク登録（毎日5:00） → お試し実行まで自動で行う。
+以下は手動でやる場合の手順。
+
 1. いつも通り手動で一度ログインしておく（`browser-profile/` にセッションが残っていればOK）。
 2. 動作確認: PowerShellで `py run_auto_update.py` を1回実行し、最後まで走ることを確認。
    - 初回実行時に `auto_update_config.json` が自動生成される。
