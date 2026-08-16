@@ -8,6 +8,7 @@ from collections import Counter, defaultdict
 from itertools import combinations
 from pathlib import Path
 import re
+import urllib.parse
 
 
 SUMMARY_CSV = Path("summary.csv")
@@ -17,25 +18,190 @@ PAIFU_CSV = Path("admin_paifu_ids.csv")
 TEAM_CSV = Path("team_members.csv")
 OUTPUT_HTML = Path("docs") / "index.html"
 
-def hide_inactive_tab_panels(html_text: str) -> str:
-    """最初のタブ以外の全パネルにhidden属性を焼き込む。
+# ---------------------------------------------------------------------------
+# ページ分割書き出し
+#
+# 以前は全タブを1枚のHTML（約6.5MB・テーブル546個）に収めていたため、
+# スマホでは初回レイアウトでメモリ不足になり白画面/リロードループに陥った
+# （hidden焼き込みで緩和したが、根本対策としてタブごとに独立ページへ分割する）。
+# 集計・パネル描画のロジックには一切触れず、組み立て済みの単一ページHTMLを
+# 純粋に「分割」する後処理として実装してある。こうすることで、再集計できない
+# 環境でも配信済みindex.htmlへ同じ関数を適用でき、生成器と実サイトが
+# 同一コードパスで検証できる。
+# ---------------------------------------------------------------------------
 
-    従来は50枚のタブパネルすべてを表示状態で出力し、DOMContentLoaded後のJSが
-    最初のタブ以外を隠すまで、ブラウザは546個のテーブル（約5.8万DOM要素）を
-    一括レイアウトしていた。PCでは耐えられるがスマホではメモリ不足で白画面や
-    リロードループになる（=「スマホで見れない」の原因）。サーバー側でhiddenを
-    付けておけば初回レイアウトは表示中の1タブ分で済む。section開始タグへの
-    属性追加のみで、集計データ本文には一切触れない。
+MERMAID_PAGE_SCRIPT = """  <script type="module">
+    import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+    mermaid.initialize({ startOnLoad: true, theme: "base", flowchart: { curve: "basis" } });
+  </script>
+"""
+
+METRIC_MODAL_PAGE_SCRIPT = """  <script>
+    window.addEventListener("DOMContentLoaded", () => {
+      const metricModal = document.querySelector("[data-metric-modal]");
+      const metricTitle = metricModal ? metricModal.querySelector("#metric-modal-title") : null;
+      const metricBody = metricModal ? metricModal.querySelector("[data-metric-body]") : null;
+
+      function closeMetricModal() {
+        if (!metricModal) return;
+        metricModal.hidden = true;
+      }
+
+      document.querySelectorAll("[data-metric-title]").forEach((button) => {
+        button.addEventListener("click", () => {
+          if (!metricModal || !metricTitle || !metricBody) return;
+          metricTitle.textContent = button.dataset.metricTitle || "項目説明";
+          if (button.dataset.metricHtml) {
+            metricBody.innerHTML = button.dataset.metricHtml;
+          } else {
+            metricBody.textContent = button.dataset.metricBody || "";
+          }
+          metricModal.hidden = false;
+          const closeButton = metricModal.querySelector(".metric-modal-close");
+          if (closeButton) closeButton.focus();
+        });
+      });
+
+      document.querySelectorAll("[data-metric-close]").forEach((button) => {
+        button.addEventListener("click", closeMetricModal);
+      });
+
+      document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape") closeMetricModal();
+      });
+    });
+  </script>
+"""
+
+METRIC_MODAL_MARKUP = """  <div class="metric-modal" data-metric-modal hidden>
+    <div class="metric-modal-backdrop" data-metric-close></div>
+    <section class="metric-modal-panel" role="dialog" aria-modal="true" aria-labelledby="metric-modal-title">
+      <h2 id="metric-modal-title">項目説明</h2>
+      <div class="metric-modal-body" data-metric-body></div>
+      <button class="metric-modal-close" type="button" data-metric-close>閉じる</button>
+    </section>
+  </div>
+"""
+
+
+def _find_matching_section_end(html_text: str, open_end: int) -> int:
+    """<section ...>の開始タグ終端位置から、対応する</section>の閉じ終端位置を返す。"""
+    depth = 1
+    i = open_end
+    while depth > 0:
+        next_open = html_text.find("<section", i)
+        next_close = html_text.find("</section>", i)
+        if next_close == -1:
+            raise ValueError("unbalanced <section> while splitting site pages")
+        if next_open != -1 and next_open < next_close:
+            depth += 1
+            i = next_open + len("<section")
+        else:
+            depth -= 1
+            i = next_close + len("</section>")
+    return i
+
+
+def page_filename_for(key: str) -> str:
+    """タブキー→出力ファイル名。トップ（新リーグ）だけはindex.htmlのまま。"""
+    return "index.html" if key == "new-league" else f"{key}.html"
+
+
+def split_site_pages(html_text: str) -> dict[str, str]:
+    """組み立て済み単一ページHTMLを、タブごとの独立ページ群へ分割する。
+
+    パネル本文はバイト単位でそのまま移し替える（hidden属性の除去のみ）。
+    同じdata-panelキーを持つ複数セクション（個人ページの「リーグ通算＋
+    シーズン別」の積み重ね表示）は、出現順を保ったまま同じページへ束ねる。
     """
-    marker = '<section class="tab-panel"'
-    seen = 0
+    html_text = html_text.replace('<section class="tab-panel" hidden', '<section class="tab-panel"')
 
-    def _mark(match: re.Match[str]) -> str:
-        nonlocal seen
-        seen += 1
-        return marker + (" hidden" if seen > 1 else "")
+    style_match = re.search(r"<style>.*?</style>", html_text, re.S)
+    if not style_match:
+        raise ValueError("style block not found")
+    style_block = style_match.group(0)
+    # タブをbuttonからリンクに変えるため、リンクでも従来の見た目になるよう最小限の補正を足す。
+    style_block = style_block.replace(
+        "</style>",
+        "    a.tab-button { text-decoration: none; display: inline-block; }\n  </style>",
+    )
 
-    return re.sub(re.escape(marker), _mark, html_text)
+    nav_open = html_text.find('<section class="tab-groups"')
+    if nav_open == -1:
+        raise ValueError("tab-groups nav not found")
+    nav_end = _find_matching_section_end(html_text, html_text.find(">", nav_open) + 1)
+    nav_html = html_text[nav_open:nav_end]
+
+    # タブボタン一覧（キー→表示名、出現順）
+    button_pattern = re.compile(
+        r'<button class="tab-button([^"]*)" type="button" data-tab="([^"]+)">([^<]+)</button>'
+    )
+    labels: dict[str, str] = {}
+    for _, key, label in button_pattern.findall(nav_html):
+        labels.setdefault(key, label)
+
+    # タブパネル本体をキーごとに回収（同一キーは出現順に連結）
+    panels: dict[str, list[str]] = {}
+    order: list[str] = []
+    panel_pattern = re.compile(r'<section class="tab-panel" id="panel-([^"]+)"[^>]*>')
+    for match in panel_pattern.finditer(html_text):
+        key = match.group(1)
+        end = _find_matching_section_end(html_text, match.end())
+        panels.setdefault(key, []).append(html_text[match.start():end])
+        if key not in order:
+            order.append(key)
+
+    def nav_for(current_key: str) -> str:
+        def replace(match: re.Match[str]) -> str:
+            extra_classes, key, label = match.groups()
+            classes = "tab-button" + extra_classes.replace(" active", "")
+            current = ""
+            if key == current_key:
+                classes += " active"
+                current = ' aria-current="page"'
+            href = urllib.parse.quote(page_filename_for(key))
+            return f'<a class="{classes}" href="{href}"{current}>{label}</a>'
+
+        return button_pattern.sub(replace, nav_html)
+
+    pages: dict[str, str] = {}
+    for key in order:
+        label = labels.get(key, key)
+        body_panels = "\n".join(panels[key])
+        title = "魚群リーグ" if key == "new-league" else f"{label} | 魚群リーグ"
+        mermaid_script = MERMAID_PAGE_SCRIPT if 'class="mermaid"' in body_panels else ""
+        pages[page_filename_for(key)] = f"""<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{title}</title>
+{mermaid_script}{METRIC_MODAL_PAGE_SCRIPT}{style_block}
+</head>
+<body>
+  <header>
+    <h1>魚群リーグ</h1>
+  </header>
+  <main>
+    {nav_for(key)}
+    {body_panels}
+  </main>
+{METRIC_MODAL_MARKUP}  <footer>
+    Generated from collected Mahjong Soul records.
+  </footer>
+</body>
+</html>
+"""
+    return pages
+
+
+def write_site_pages(html_text: str) -> None:
+    OUTPUT_HTML.parent.mkdir(parents=True, exist_ok=True)
+    pages = split_site_pages(html_text)
+    for filename, content in pages.items():
+        (OUTPUT_HTML.parent / filename).write_text(content, encoding="utf-8")
+    print(f"saved: {len(pages)} pages under {OUTPUT_HTML.parent}/ (index + {len(pages) - 1} tabs)")
+
 
 
 RAW_DIR = Path("records_raw")
@@ -3020,9 +3186,7 @@ def main() -> None:
 </html>
 """
 
-    OUTPUT_HTML.parent.mkdir(parents=True, exist_ok=True)
-    OUTPUT_HTML.write_text(hide_inactive_tab_panels(html_text), encoding="utf-8")
-    print(f"saved: {OUTPUT_HTML}")
+    write_site_pages(html_text)
 
 
 if __name__ == "__main__":
