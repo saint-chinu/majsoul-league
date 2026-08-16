@@ -11,57 +11,172 @@ OUT = Path("admin_paifu_ids.csv")
 UUID_RE = re.compile(r"\d{6}-[0-9a-fA-F-]{36}")
 STOP_BEFORE = "260406"
 
+# 破壊的ボタン（削除・クリア等）の兆候。class/aria-label/アイコンHTMLのどこかに
+# これが見えたら、そのボタンには絶対に触れない。管理画面には牌譜削除ボタンが
+# あり、座標だけの判定で誤クリックすると大会データが消えるため、判定は
+# 「危険が否定できないものは押さない」方向に倒す。
+DANGER_MARKER_RE = re.compile(
+    r"delete|trash|remove|minus|close|clear|danger|削除|消去|クリア", re.IGNORECASE
+)
+# コピーボタンの兆候（Ant Designのanticon-copy等）。
+COPY_MARKER_RE = re.compile(r"copy|コピー", re.IGNORECASE)
+# 較正後に同じ「コピー列」とみなすx座標の許容ずれ。
+COPY_COLUMN_TOLERANCE_PX = 12
+
+
+def install_dialog_guard(page):
+    """confirm/alert等のネイティブダイアログが出たら常に拒否する。
+    誤って破壊的ボタンに触れても、確認ダイアログで必ず止まるようにする保険。"""
+    if getattr(page, "_cq_dialog_guard", False):
+        return
+    page.on("dialog", lambda dialog: dialog.dismiss())
+    page._cq_dialog_guard = True
+
+
+def dismiss_unexpected_overlay(page) -> bool:
+    """クリック後にモーダル/ポップ確認が出ていたらEscapeで閉じてTrueを返す。
+    コピーボタンはクリップボードへ書くだけでUIは開かないので、何かが開いた=
+    押してはいけないボタンだったサイン。確認ボタンには一切触れずEscapeのみ。"""
+    appeared = page.evaluate(
+        """
+        () => {
+          const selectors = ['.ant-modal-wrap', '.ant-popover:not(.ant-popover-hidden)', '.ant-popconfirm', '.ant-modal-confirm'];
+          for (const selector of selectors) {
+            for (const el of document.querySelectorAll(selector)) {
+              const rect = el.getBoundingClientRect();
+              const style = window.getComputedStyle(el);
+              if (rect.width > 50 && rect.height > 40 && style.display !== 'none' && style.visibility !== 'hidden') {
+                return true;
+              }
+            }
+          }
+          return false;
+        }
+        """
+    )
+    if appeared:
+        page.keyboard.press("Escape")
+        page.wait_for_timeout(500)
+        page.keyboard.press("Escape")
+        page.wait_for_timeout(300)
+    return appeared
+
+
+def classify_button(button) -> tuple[str, str]:
+    """ボタンを 'copy' / 'unknown' / 'danger' に分類する。判定材料も返す。"""
+    try:
+        info = button.evaluate(
+            "(el) => (el.className || '') + ' | ' + (el.getAttribute('aria-label') || '')"
+            " + ' | ' + el.innerHTML.slice(0, 400)"
+        )
+    except Exception:
+        return "unknown", ""
+    if DANGER_MARKER_RE.search(info):
+        return "danger", info[:120]
+    if COPY_MARKER_RE.search(info):
+        return "copy", info[:120]
+    return "unknown", info[:120]
+
+
 def uuid_date_key(uuid):
     return uuid.split("-", 1)[0]
 
-def collect_visible_page(page):
-    page.wait_for_timeout(800)
-    buttons = page.locator("button").all()
-    targets = []
-    pager_y = find_current_pager_y(page)
+def collect_visible_page(page, *, max_scan_attempts=6):
+    """表示中ページの大会牌譜コピーボタンを全て押してUUIDを回収する。
 
-    for i, button in enumerate(buttons):
-        try:
-            text = button.inner_text(timeout=500).strip()
-            box = button.bounding_box(timeout=500)
-        except Exception:
-            continue
-
-        if not box:
-            continue
-
-        # 大会牌譜の右側青ボタンだけ。
-        # 列幅や画面倍率でx座標が少しずれるので広めに拾い、コピー結果がUUIDのものだけ採用する。
-        # ページ下部の役満牌譜にも似たボタンがあるので、大会牌譜側のページャーより上だけ拾う。
-        is_copy_button = (
-            text == ""
-            and 900 <= box["x"] <= 1450
-            and -2000 <= box["y"] <= pager_y - 12
-            and 18 <= box["width"] <= 52
-            and 18 <= box["height"] <= 52
-        )
-
-        if is_copy_button:
-            targets.append((i, button, box))
-
-    targets.sort(key=lambda item: item[2]["y"])
-    print(f"copy button candidates: {len(targets)}")
+    強化点（従来は固定800ms待ち→座標一致のボタンを無差別クリックだった）:
+    - テーブル描画をポーリングで待つ。0件なら軽くスクロールして再スキャン
+      （「読み込みが遅くて0件で終わる」対策）。
+    - ボタンをclass/aria/アイコンで分類し、削除系の兆候があるものは絶対に押さない。
+    - 最初にUUIDが取れたボタンのx座標で「コピー列」を較正し、以後はその列だけ押す。
+    - 較正前にクリップボードへUUIDが入らない不明ボタンを連打しない。
+    - クリック後にモーダル/確認が開いたらEscapeで閉じ、そのボタンは二度と押さない。
+    """
+    install_dialog_guard(page)
 
     uuids = []
     seen_on_page = set()
 
-    for i, button, box in targets:
-        match = copy_uuid_from_button(page, button)
+    for attempt in range(max_scan_attempts):
+        page.wait_for_timeout(800 if attempt == 0 else 1500)
+        if attempt in (2, 4):
+            # 遅延描画・仮想スクロール対策で軽く揺らす。
+            page.mouse.wheel(0, -600)
+            page.wait_for_timeout(300)
+            page.mouse.wheel(0, 600)
+            page.wait_for_timeout(500)
 
-        if not match:
-            continue
+        buttons = page.locator("button").all()
+        targets = []
+        pager_y = find_current_pager_y(page)
 
-        uuid = match.group(0)
-        if uuid in seen_on_page:
-            continue
+        for i, button in enumerate(buttons):
+            try:
+                text = button.inner_text(timeout=500).strip()
+                box = button.bounding_box(timeout=500)
+            except Exception:
+                continue
 
-        seen_on_page.add(uuid)
-        uuids.append(uuid)
+            if not box:
+                continue
+
+            # 大会牌譜の右側コピーボタン想定域。役満牌譜側を避けるため
+            # 大会牌譜側ページャーより上だけを拾う。
+            in_copy_area = (
+                text == ""
+                and 900 <= box["x"] <= 1450
+                and -2000 <= box["y"] <= pager_y - 12
+                and 18 <= box["width"] <= 52
+                and 18 <= box["height"] <= 52
+            )
+            if not in_copy_area:
+                continue
+
+            kind, detail = classify_button(button)
+            if kind == "danger":
+                print(f"  skip danger button at ({box['x']:.0f},{box['y']:.0f}): {detail}")
+                continue
+            targets.append((kind, i, button, box))
+
+        # コピーと確認できたボタンがあればそれだけに絞る（不明ボタンは押さない）。
+        copy_targets = [t for t in targets if t[0] == "copy"]
+        if copy_targets:
+            targets = copy_targets
+        targets.sort(key=lambda item: item[3]["y"])
+        print(f"copy button candidates: {len(targets)} (scan {attempt + 1}/{max_scan_attempts})")
+
+        calibrated_x = None
+        blocked = False
+
+        for kind, i, button, box in targets:
+            if calibrated_x is not None and abs(box["x"] - calibrated_x) > COPY_COLUMN_TOLERANCE_PX:
+                continue
+
+            match = copy_uuid_from_button(page, button)
+
+            if dismiss_unexpected_overlay(page):
+                print(f"  モーダルが開いたため中断・このボタンは押しません ({box['x']:.0f},{box['y']:.0f})")
+                if calibrated_x is None:
+                    blocked = True
+                    break
+                continue
+
+            if not match:
+                # 較正前に「コピー確証のない」ボタンで空振りしたら、列を誤認して
+                # いる可能性があるので連打せず次のスキャンへ回す。
+                if calibrated_x is None and kind != "copy":
+                    break
+                continue
+
+            calibrated_x = box["x"]
+            uuid = match.group(0)
+            if uuid in seen_on_page:
+                continue
+            seen_on_page.add(uuid)
+            uuids.append(uuid)
+
+        if uuids or blocked:
+            break
 
     return uuids
 

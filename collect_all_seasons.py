@@ -251,7 +251,7 @@ def season_candidates(page: Page) -> list[dict[str, object]]:
     return sorted(rows, key=lambda item: (float(item["y"]), float(item["x"])))
 
 
-def click_season(page: Page, season: int) -> bool:
+def click_season(page: Page, season: int, *, auto: bool = False) -> bool:
     # 管理画面では、シーズン1が一覧の一番下、シーズン2が下から2番目。
     # そのため文字の数字ではなく、表示位置の下からN番目でクリックする。
     candidates = season_candidates(page)
@@ -274,7 +274,7 @@ def click_season(page: Page, season: int) -> bool:
     for i, item in enumerate(bottom_order[: min(len(bottom_order), 12)], start=1):
         print(f"  下から{i}: {item['text']} source={item.get('source', '')} y={item['y']}")
 
-    choice = input(
+    choice = "" if auto else input(
         f"シーズン{season}として押す候補。Enter=下から{season} / 数字=下からその番号 / m=手動: "
     ).strip().lower()
 
@@ -420,6 +420,32 @@ def collect_current_season(page: Page, season: int, max_pages: int) -> list[dict
         if dates:
             print(f"date range on page: {min(dates)} - {max(dates)}")
         print(f"visible={len(uuids)} new={new_count} season_total={len(rows)}")
+
+        if not uuids and page_no == 1:
+            # 1ページ目の0件は「表がまだ描画されていない」可能性が高い。
+            # collect_visible_page内のポーリングで拾えなかった場合も、
+            # 少し待ってからもう一度だけ全スキャンをやり直す。
+            print("1ページ目で0件。5秒待って再スキャンします。")
+            page.wait_for_timeout(5000)
+            uuids = collect_visible_page(page)
+            for uuid in uuids:
+                date_key = uuid_date_key(uuid)
+                dates.append(date_key)
+                if date_key < STOP_BEFORE or uuid in seen:
+                    continue
+                seen.add(uuid)
+                new_count += 1
+                rows.append(
+                    {
+                        "season": season,
+                        "page_no": page_no,
+                        "uuid": uuid,
+                        "date_key": date_key,
+                        "paifu_url": f"https://game.mahjongsoul.com/?paipu={uuid}",
+                    }
+                )
+                print(" ", uuid)
+            print(f"再スキャン結果: visible={len(uuids)} new={new_count}")
 
         if not uuids:
             print("このページで牌譜IDが取れないので、このシーズンはここで止めます。")

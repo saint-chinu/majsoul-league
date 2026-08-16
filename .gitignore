@@ -28,3 +28,6 @@ inspect_*.py
 make_summary.py
 parse_round_events.py
 save_login.py
+logs/
+backups/
+auto_update_config.json
