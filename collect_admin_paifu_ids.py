@@ -15,6 +15,7 @@ def uuid_date_key(uuid):
     return uuid.split("-", 1)[0]
 
 def collect_visible_page(page):
+    page.wait_for_timeout(800)
     buttons = page.locator("button").all()
     targets = []
     pager_y = find_current_pager_y(page)
@@ -30,34 +31,27 @@ def collect_visible_page(page):
             continue
 
         # 大会牌譜の右側青ボタンだけ。
+        # 列幅や画面倍率でx座標が少しずれるので広めに拾い、コピー結果がUUIDのものだけ採用する。
         # ページ下部の役満牌譜にも似たボタンがあるので、大会牌譜側のページャーより上だけ拾う。
         is_copy_button = (
             text == ""
-            and 1180 <= box["x"] <= 1240
-            and -1000 <= box["y"] <= pager_y - 20
-            and 20 <= box["width"] <= 40
-            and 20 <= box["height"] <= 40
+            and 900 <= box["x"] <= 1450
+            and -2000 <= box["y"] <= pager_y - 12
+            and 18 <= box["width"] <= 52
+            and 18 <= box["height"] <= 52
         )
 
         if is_copy_button:
             targets.append((i, button, box))
 
     targets.sort(key=lambda item: item[2]["y"])
+    print(f"copy button candidates: {len(targets)}")
 
     uuids = []
     seen_on_page = set()
 
     for i, button, box in targets:
-        pyperclip.copy("")
-
-        try:
-            button.click(force=True, timeout=3000)
-        except Exception:
-            continue
-
-        page.wait_for_timeout(220)
-        copied = pyperclip.paste()
-        match = UUID_RE.search(copied)
+        match = copy_uuid_from_button(page, button)
 
         if not match:
             continue
@@ -70,6 +64,32 @@ def collect_visible_page(page):
         uuids.append(uuid)
 
     return uuids
+
+
+def copy_uuid_from_button(page, button):
+    for method in ("dom", "force", "mouse"):
+        pyperclip.copy("")
+
+        try:
+            if method == "dom":
+                button.evaluate("(el) => el.click()")
+            elif method == "force":
+                button.click(force=True, timeout=3000)
+            else:
+                box = button.bounding_box(timeout=700)
+                if not box:
+                    continue
+                page.mouse.click(box["x"] + box["width"] / 2, box["y"] + box["height"] / 2)
+        except Exception:
+            continue
+
+        page.wait_for_timeout(260)
+        copied = pyperclip.paste()
+        match = UUID_RE.search(copied)
+        if match:
+            return match
+
+    return None
 
 def find_current_pager_y(page):
     links = page.locator("a").all()

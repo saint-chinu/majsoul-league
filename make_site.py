@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import csv
 import html
-from collections import defaultdict
+import json
+import sys
+from collections import Counter, defaultdict
 from itertools import combinations
 from pathlib import Path
 import re
@@ -21,6 +23,8 @@ NEW_PAIFU_CSV = NEW_DATA_DIR / "admin_paifu_ids.csv"
 NEW_SEASON_FILE_RE = re.compile(r"admin_paifu_ids_new_season(\d+)\.csv$")
 OLD_LEAGUE_FULL_GAMES = 120
 NEW_LEAGUE_FULL_GAMES = 135
+OLD_CONTEXT_CACHE = Path("data") / "old_league_contexts.json"
+OLD_CONTEXT_CACHE_VERSION = 2
 
 
 LABELS = {
@@ -2366,19 +2370,86 @@ def sorted_player_names(context: dict[str, object]) -> list[str]:
     ]
 
 
-def main() -> None:
+def save_old_context_cache(
+    old_context: dict[str, object],
+    old_season_contexts: list[dict[str, object]],
+) -> None:
+    OLD_CONTEXT_CACHE.parent.mkdir(parents=True, exist_ok=True)
+    payload = {
+        "version": OLD_CONTEXT_CACHE_VERSION,
+        "old_context": old_context,
+        "old_season_contexts": old_season_contexts,
+    }
+    OLD_CONTEXT_CACHE.write_text(
+        json.dumps(payload, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+
+
+def load_old_context_cache() -> tuple[dict[str, object], list[dict[str, object]]] | None:
+    if not OLD_CONTEXT_CACHE.exists():
+        return None
+    try:
+        payload = json.loads(OLD_CONTEXT_CACHE.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    if payload.get("version") != OLD_CONTEXT_CACHE_VERSION:
+        return None
+    old_context = payload.get("old_context")
+    old_season_contexts = payload.get("old_season_contexts")
+    if not isinstance(old_context, dict) or not isinstance(old_season_contexts, list):
+        return None
+    return old_context, old_season_contexts
+
+
+def build_old_context_from_summary_csv() -> dict[str, object] | None:
+    rows = read_csv(SUMMARY_CSV)
+    if not rows:
+        return None
+
+    total_player_games = sum(parse_int(row.get("games", 0)) for row in rows)
+    total_games = total_player_games // 3
+    total_rounds = sum(parse_int(row.get("rounds", 0)) for row in rows) // 3
+    total_yakuman = sum(parse_int(row.get("yakuman_count", 0)) for row in rows)
+    best_score = max(rows, key=lambda row: parse_float(row.get("earned_score", 0)))
+    best_top = max(rows, key=lambda row: pct_number(row.get("rank1_rate", "")))
+
+    return {
+        "key": "old-league",
+        "label": "旧リーグ",
+        "rows": rows,
+        "yakuman_rows": read_csv(YAKUMAN_CSV),
+        "yakuman_detail_rows": read_csv(YAKUMAN_DETAILS_CSV),
+        "correlation_rows": [],
+        "total_games": total_games,
+        "total_rounds": total_rounds,
+        "total_yakuman": total_yakuman,
+        "best_score": best_score,
+        "best_top": best_top,
+        "team_rows": [],
+        "team_champion_rows": [],
+        "season_mvp_rows": [],
+        "is_cumulative": True,
+    }
+
+
+def build_old_contexts(refresh_cache: bool = False) -> tuple[dict[str, object], list[dict[str, object]]]:
+    cached = None if refresh_cache else load_old_context_cache()
+    if cached is not None:
+        print(f"use old league cache: {OLD_CONTEXT_CACHE}")
+        return cached
+
+    old_context = build_old_context_from_summary_csv()
+    if old_context is not None and not refresh_cache:
+        print("use old league summary csv")
+        save_old_context_cache(old_context, [])
+        return old_context, []
+
+    print("build old league cache...")
     old_paifu_rows = read_season_paifu_rows()
-    new_paifu_rows = read_new_league_paifu_rows()
-    if not old_paifu_rows and not new_paifu_rows:
-        raise SystemExit("牌譜ID CSV が見つからないか空です。先に牌譜IDを収集してください。")
-
     old_season_to_uuids = group_uuids_by_season(old_paifu_rows)
-    new_season_to_uuids = group_uuids_by_season(new_paifu_rows)
     old_uuids = set().union(*old_season_to_uuids.values()) if old_season_to_uuids else set()
-    new_uuids = set().union(*new_season_to_uuids.values()) if new_season_to_uuids else set()
-    lifetime_uuids = old_uuids | new_uuids
     old_teams_by_season = read_team_members()
-
     old_season_contexts = build_season_contexts(
         old_season_to_uuids,
         "old",
@@ -2386,6 +2457,252 @@ def main() -> None:
         OLD_LEAGUE_FULL_GAMES,
         teams_by_season=old_teams_by_season,
     )
+    old_context = build_context("old-league", "旧リーグ", old_uuids)
+    add_context_awards(old_context, old_season_contexts)
+    save_old_context_cache(old_context, old_season_contexts)
+    print(f"saved old league cache: {OLD_CONTEXT_CACHE}")
+    return old_context, old_season_contexts
+
+
+def parse_float(value: object) -> float:
+    try:
+        return float(str(value).replace(",", "").replace("%", ""))
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def parse_int(value: object) -> int:
+    return int(round(parse_float(value)))
+
+
+def pct_count(row: dict[str, str], col: str, denominator: int) -> int:
+    return int(round(pct_number(row.get(col, "")) * denominator / 100))
+
+
+def fmt_pct_count(numerator: int, denominator: int) -> str:
+    if denominator <= 0:
+        return "0.00%"
+    return f"{numerator / denominator * 100:.2f}%"
+
+
+def weighted_average(total: float, denominator: int, digits: int = 1) -> str:
+    if denominator <= 0:
+        return "0"
+    return str(round(total / denominator, digits))
+
+
+def parse_quality_breakdown(value: str) -> Counter:
+    counts = Counter()
+    for part in (value or "").split("|"):
+        if ":" not in part:
+            continue
+        key, raw_count = part.split(":", 1)
+        try:
+            counts[key] += int(raw_count)
+        except ValueError:
+            continue
+    return counts
+
+
+def format_quality_breakdown(counts: Counter) -> str:
+    return "|".join(f"{key}:{count}" for key, count in counts.items() if count)
+
+
+def top_category_from_rows(rows: list[dict[str, str]], count_col: str, label_col: str) -> str:
+    weighted: Counter = Counter()
+    for row in rows:
+        label = row.get(label_col, "")
+        if label:
+            weighted[label] += max(1, parse_int(row.get(count_col, 0)))
+    return weighted.most_common(1)[0][0] if weighted else ""
+
+
+def combine_player_rows(contexts: list[dict[str, object]]) -> list[dict[str, str]]:
+    rows_by_player: dict[str, list[dict[str, str]]] = defaultdict(list)
+    for context in contexts:
+        for row in list(context.get("rows", [])):
+            player = row.get("player", "")
+            if player:
+                rows_by_player[player].append(dict(row))
+
+    combined_rows = []
+    for player, rows in rows_by_player.items():
+        games = sum(parse_int(row.get("games", 0)) for row in rows)
+        rounds = sum(parse_int(row.get("rounds", 0)) for row in rows)
+        hu = sum(pct_count(row, "hu_rate", parse_int(row.get("rounds", 0))) for row in rows)
+        called = sum(pct_count(row, "called_rate", parse_int(row.get("rounds", 0))) for row in rows)
+        riichi = sum(parse_int(row.get("riichi", 0)) for row in rows)
+        houjuu = sum(pct_count(row, "houjuu_rate", parse_int(row.get("rounds", 0))) for row in rows)
+        tsumo_loss = sum(pct_count(row, "tsumo_loss_rate", parse_int(row.get("rounds", 0))) for row in rows)
+        two_called = sum(pct_count(row, "two_called_rate", parse_int(row.get("rounds", 0))) for row in rows)
+        deal_in_events = houjuu
+        riichi_recommended = sum(pct_count(row, "riichi_recommended_rate", parse_int(row.get("riichi", 0))) for row in rows)
+
+        rank_counts = {
+            rank: sum(pct_count(row, f"rank{rank}_rate", parse_int(row.get("games", 0))) for row in rows)
+            for rank in [1, 2, 3]
+        }
+        called_hu = sum(pct_count(row, "call_after_hu_rate", pct_count(row, "called_rate", parse_int(row.get("rounds", 0)))) for row in rows)
+        called_houjuu_rounds = sum(pct_count(row, "call_after_houjuu_rate", pct_count(row, "called_rate", parse_int(row.get("rounds", 0)))) for row in rows)
+        two_called_hu = sum(pct_count(row, "two_called_hu_rate", pct_count(row, "two_called_rate", parse_int(row.get("rounds", 0)))) for row in rows)
+        two_called_houjuu = sum(pct_count(row, "two_called_after_houjuu_rate", pct_count(row, "two_called_rate", parse_int(row.get("rounds", 0)))) for row in rows)
+
+        riichi_breakdown = Counter()
+        call_breakdown = Counter()
+        deal_breakdown = Counter()
+        for row in rows:
+            riichi_breakdown.update(parse_quality_breakdown(row.get("riichi_quality_breakdown", "")))
+            call_breakdown.update(parse_quality_breakdown(row.get("call_quality_breakdown", "")))
+            deal_breakdown.update(parse_quality_breakdown(row.get("deal_in_quality_breakdown", "")))
+
+        combined_rows.append(
+            {
+                "player": player,
+                "games": str(games),
+                "earned_score": str(round(sum(parse_float(row.get("earned_score", 0)) for row in rows), 1)),
+                "rank1_rate": fmt_pct_count(rank_counts[1], games),
+                "rank2_rate": fmt_pct_count(rank_counts[2], games),
+                "rank3_rate": fmt_pct_count(rank_counts[3], games),
+                "last_avoid_rate": fmt_pct_count(rank_counts[1] + rank_counts[2], games),
+                "average_rank": weighted_average(sum(parse_float(row.get("average_rank", 0)) * parse_int(row.get("games", 0)) for row in rows), games, 2),
+                "rounds": str(rounds),
+                "average_hu_point": weighted_average(sum(parse_float(row.get("average_hu_point", 0)) * pct_count(row, "hu_rate", parse_int(row.get("rounds", 0))) for row in rows), hu, 1),
+                "average_called_hu_point": weighted_average(sum(parse_float(row.get("average_called_hu_point", 0)) * pct_count(row, "call_after_hu_rate", pct_count(row, "called_rate", parse_int(row.get("rounds", 0)))) for row in rows), called_hu, 1),
+                "hu_rate": fmt_pct_count(hu, rounds),
+                "open_tanyao_hu_rate": fmt_pct_count(sum(pct_count(row, "open_tanyao_hu_rate", pct_count(row, "hu_rate", parse_int(row.get("rounds", 0)))) for row in rows), hu),
+                "chiitoi_hu_rate": fmt_pct_count(sum(pct_count(row, "chiitoi_hu_rate", pct_count(row, "hu_rate", parse_int(row.get("rounds", 0)))) for row in rows), hu),
+                "honitsu_hu_rate": fmt_pct_count(sum(pct_count(row, "honitsu_hu_rate", pct_count(row, "hu_rate", parse_int(row.get("rounds", 0)))) for row in rows), hu),
+                "chinitsu_hu_rate": fmt_pct_count(sum(pct_count(row, "chinitsu_hu_rate", pct_count(row, "hu_rate", parse_int(row.get("rounds", 0)))) for row in rows), hu),
+                "tsumo_rate": fmt_pct_count(sum(pct_count(row, "tsumo_rate", pct_count(row, "hu_rate", parse_int(row.get("rounds", 0)))) for row in rows), hu),
+                "tsumo_loss_rate": fmt_pct_count(tsumo_loss, rounds),
+                "average_tsumo_loss_point": weighted_average(sum(parse_float(row.get("average_tsumo_loss_point", 0)) * pct_count(row, "tsumo_loss_rate", parse_int(row.get("rounds", 0))) for row in rows), tsumo_loss, 1),
+                "houjuu_rate": fmt_pct_count(houjuu, rounds),
+                "average_houjuu_point": weighted_average(sum(parse_float(row.get("average_houjuu_point", 0)) * pct_count(row, "houjuu_rate", parse_int(row.get("rounds", 0))) for row in rows), houjuu, 1),
+                "noten_houjuu_rate": fmt_pct_count(sum(pct_count(row, "noten_houjuu_rate", pct_count(row, "houjuu_rate", parse_int(row.get("rounds", 0)))) for row in rows), deal_in_events),
+                "two_shanten_houjuu_rate": fmt_pct_count(sum(pct_count(row, "two_shanten_houjuu_rate", pct_count(row, "houjuu_rate", parse_int(row.get("rounds", 0)))) for row in rows), deal_in_events),
+                "riichi_after_houjuu_rate": fmt_pct_count(sum(pct_count(row, "riichi_after_houjuu_rate", pct_count(row, "houjuu_rate", parse_int(row.get("rounds", 0)))) for row in rows), deal_in_events),
+                "vs_riichi_houjuu_rate": fmt_pct_count(sum(pct_count(row, "vs_riichi_houjuu_rate", pct_count(row, "houjuu_rate", parse_int(row.get("rounds", 0)))) for row in rows), deal_in_events),
+                "vs_dama_houjuu_rate": fmt_pct_count(sum(pct_count(row, "vs_dama_houjuu_rate", pct_count(row, "houjuu_rate", parse_int(row.get("rounds", 0)))) for row in rows), deal_in_events),
+                "vs_called_houjuu_rate": fmt_pct_count(sum(pct_count(row, "vs_called_houjuu_rate", pct_count(row, "houjuu_rate", parse_int(row.get("rounds", 0)))) for row in rows), deal_in_events),
+                "vs_two_called_houjuu_rate": fmt_pct_count(sum(pct_count(row, "vs_two_called_houjuu_rate", pct_count(row, "houjuu_rate", parse_int(row.get("rounds", 0)))) for row in rows), deal_in_events),
+                "vs_haneman_houjuu_rate": fmt_pct_count(sum(pct_count(row, "vs_haneman_houjuu_rate", pct_count(row, "houjuu_rate", parse_int(row.get("rounds", 0)))) for row in rows), deal_in_events),
+                "late_noten_houjuu_share": fmt_pct_count(sum(pct_count(row, "late_noten_houjuu_share", pct_count(row, "houjuu_rate", parse_int(row.get("rounds", 0)))) for row in rows), deal_in_events),
+                "deal_in_quality_score": weighted_average(sum(parse_float(row.get("deal_in_quality_score", 0)) * pct_count(row, "houjuu_rate", parse_int(row.get("rounds", 0))) for row in rows), deal_in_events, 2),
+                "deal_in_quality_top_category": top_category_from_rows(rows, "games", "deal_in_quality_top_category"),
+                "deal_in_quality_breakdown": format_quality_breakdown(deal_breakdown),
+                "called_houjuu_rate": fmt_pct_count(sum(pct_count(row, "called_houjuu_rate", parse_int(row.get("rounds", 0))) for row in rows), rounds),
+                "two_called_houjuu_rate": fmt_pct_count(sum(pct_count(row, "two_called_houjuu_rate", parse_int(row.get("rounds", 0))) for row in rows), rounds),
+                "called_haneman_houjuu_rate": fmt_pct_count(sum(pct_count(row, "called_haneman_houjuu_rate", parse_int(row.get("rounds", 0))) for row in rows), rounds),
+                "call_after_hu_rate": fmt_pct_count(called_hu, called),
+                "call_after_houjuu_rate": fmt_pct_count(called_houjuu_rounds, called),
+                "two_called_rate": fmt_pct_count(two_called, rounds),
+                "two_called_hu_rate": fmt_pct_count(two_called_hu, two_called),
+                "two_called_after_houjuu_rate": fmt_pct_count(two_called_houjuu, two_called),
+                "average_first_call_turn": weighted_average(sum(parse_float(row.get("average_first_call_turn", 0)) * pct_count(row, "called_rate", parse_int(row.get("rounds", 0))) for row in rows), called, 1),
+                "call_quality_score": weighted_average(sum(parse_float(row.get("call_quality_score", 0)) * pct_count(row, "called_rate", parse_int(row.get("rounds", 0))) for row in rows), called, 2),
+                "call_quality_top_category": top_category_from_rows(rows, "games", "call_quality_top_category"),
+                "call_quality_breakdown": format_quality_breakdown(call_breakdown),
+                "top_keep_rate": weighted_average(sum(pct_number(row.get("top_keep_rate", "")) * parse_int(row.get("games", 0)) for row in rows), games, 2) + "%",
+                "first_tenpai_rate": fmt_pct_count(sum(pct_count(row, "first_tenpai_rate", parse_int(row.get("rounds", 0))) for row in rows), rounds),
+                "tenpai_keep_rate": weighted_average(sum(pct_number(row.get("tenpai_keep_rate", "")) * parse_int(row.get("rounds", 0)) for row in rows), rounds, 2) + "%",
+                "top_stay_rate": fmt_pct_count(sum(pct_count(row, "top_stay_rate", parse_int(row.get("rounds", 0))) for row in rows), rounds),
+                "second_stay_rate": fmt_pct_count(sum(pct_count(row, "second_stay_rate", parse_int(row.get("rounds", 0))) for row in rows), rounds),
+                "last_stay_rate": fmt_pct_count(sum(pct_count(row, "last_stay_rate", parse_int(row.get("rounds", 0))) for row in rows), rounds),
+                "late_noten_houjuu_rate": weighted_average(sum(pct_number(row.get("late_noten_houjuu_rate", "")) * parse_int(row.get("rounds", 0)) for row in rows), rounds, 2) + "%",
+                "late_noten_fresh_discard_rate": weighted_average(sum(pct_number(row.get("late_noten_fresh_discard_rate", "")) * parse_int(row.get("rounds", 0)) for row in rows), rounds, 2) + "%",
+                "winning_run_points": str(sum(parse_int(row.get("winning_run_points", 0)) for row in rows)),
+                "average_opening_shanten": weighted_average(sum(parse_float(row.get("average_opening_shanten", 0)) * parse_int(row.get("rounds", 0)) for row in rows), rounds, 2),
+                "average_opening_dora": weighted_average(sum(parse_float(row.get("average_opening_dora", 0)) * parse_int(row.get("rounds", 0)) for row in rows), rounds, 2),
+                "called_rate": fmt_pct_count(called, rounds),
+                "riichi": str(riichi),
+                "riichi_rate": fmt_pct_count(riichi, rounds),
+                "riichi_miss_rate": fmt_pct_count(sum(pct_count(row, "riichi_miss_rate", parse_int(row.get("riichi", 0))) for row in rows), riichi),
+                "bad_shape_riichi_rate": fmt_pct_count(sum(pct_count(row, "bad_shape_riichi_rate", parse_int(row.get("riichi", 0))) for row in rows), riichi),
+                "top_riichi_rate": fmt_pct_count(sum(pct_count(row, "top_riichi_rate", parse_int(row.get("riichi", 0))) for row in rows), riichi),
+                "max_final_point": str(max((parse_int(row.get("max_final_point", 0)) for row in rows), default=0)),
+                "min_final_point": str(min((parse_int(row.get("min_final_point", 0)) for row in rows), default=0)),
+                "yakuman_count": str(sum(parse_int(row.get("yakuman_count", 0)) for row in rows)),
+                "riichi_quality_score": weighted_average(sum(parse_float(row.get("riichi_quality_score", 0)) * parse_int(row.get("riichi", 0)) for row in rows), riichi, 2),
+                "riichi_recommended_rate": fmt_pct_count(riichi_recommended, riichi),
+                "riichi_not_recommended_rate": fmt_pct_count(max(riichi - riichi_recommended, 0), riichi),
+                "riichi_quality_top_category": top_category_from_rows(rows, "riichi", "riichi_quality_top_category"),
+                "riichi_quality_breakdown": format_quality_breakdown(riichi_breakdown),
+            }
+        )
+
+    return sorted(combined_rows, key=lambda row: float(row.get("earned_score", 0) or 0), reverse=True)
+
+
+def combine_named_count_rows(contexts: list[dict[str, object]], row_key: str, name_key: str) -> list[dict[str, str]]:
+    grouped: Counter = Counter()
+    for context in contexts:
+        for row in list(context.get(row_key, [])):
+            player = str(row.get("player", ""))
+            name = str(row.get(name_key, ""))
+            if player and name:
+                grouped[(player, name)] += parse_int(row.get("count", 0))
+    return [
+        {"player": player, name_key: name, "count": str(count)}
+        for (player, name), count in sorted(grouped.items())
+    ]
+
+
+def combine_correlation_rows(contexts: list[dict[str, object]]) -> list[dict[str, object]]:
+    grouped: dict[tuple[str, str], dict[str, object]] = {}
+    for context in contexts:
+        for row in list(context.get("correlation_rows", [])):
+            key = (str(row.get("giver", "")), str(row.get("receiver", "")))
+            if not key[0] or not key[1]:
+                continue
+            current = grouped.setdefault(key, {"giver": key[0], "receiver": key[1], "amount": 0, "games": 0})
+            current["amount"] = int(current["amount"]) + parse_int(row.get("amount", 0))
+            current["games"] = int(current["games"]) + parse_int(row.get("games", 0))
+    return sorted(grouped.values(), key=lambda row: int(row["amount"]), reverse=True)
+
+
+def combine_contexts(key: str, label: str, contexts: list[dict[str, object]]) -> dict[str, object]:
+    rows = combine_player_rows(contexts)
+    if not rows:
+        return build_context(key, label, set())
+    total_player_games = sum(parse_int(row.get("games", 0)) for row in rows)
+    total_rounds = sum(parse_int(row.get("rounds", 0)) for row in rows) // 3
+    total_yakuman = sum(parse_int(row.get("yakuman_count", 0)) for row in rows)
+    best_score = max(rows, key=lambda row: parse_float(row.get("earned_score", 0)))
+    best_top = max(rows, key=lambda row: pct_number(row.get("rank1_rate", "")))
+    return {
+        "key": key,
+        "label": label,
+        "rows": rows,
+        "yakuman_rows": combine_named_count_rows(contexts, "yakuman_rows", "yakuman_name"),
+        "yakuman_detail_rows": [
+            dict(row)
+            for context in contexts
+            for row in list(context.get("yakuman_detail_rows", []))
+        ],
+        "correlation_rows": combine_correlation_rows(contexts),
+        "total_games": total_player_games // 3,
+        "total_rounds": total_rounds,
+        "total_yakuman": total_yakuman,
+        "best_score": best_score,
+        "best_top": best_top,
+        "team_rows": [],
+        "team_champion_rows": [],
+        "season_mvp_rows": [],
+        "is_cumulative": True,
+    }
+
+
+def main() -> None:
+    refresh_old_cache = "--refresh-old-cache" in sys.argv
+    old_context, old_season_contexts = build_old_contexts(refresh_cache=refresh_old_cache)
+
+    new_paifu_rows = read_new_league_paifu_rows()
+    if not old_context.get("rows") and not new_paifu_rows:
+        raise SystemExit("牌譜ID CSV が見つからないか空です。先に牌譜IDを収集してください。")
+
+    new_season_to_uuids = group_uuids_by_season(new_paifu_rows)
+    new_uuids = set().union(*new_season_to_uuids.values()) if new_season_to_uuids else set()
+
     new_season_contexts = build_season_contexts(
         new_season_to_uuids,
         "new",
@@ -2394,10 +2711,8 @@ def main() -> None:
     )
 
     new_context = build_context("new-league", "新リーグ", new_uuids)
-    old_context = build_context("old-league", "旧リーグ", old_uuids)
-    lifetime_context = build_context("lifetime", "通算", lifetime_uuids)
     add_context_awards(new_context, new_season_contexts)
-    add_context_awards(old_context, old_season_contexts)
+    lifetime_context = combine_contexts("lifetime", "通算", [old_context, new_context])
     add_context_awards(lifetime_context, new_season_contexts + old_season_contexts)
 
     contexts = [new_context] + new_season_contexts + [lifetime_context, old_context] + old_season_contexts
