@@ -2630,7 +2630,10 @@ def build_old_contexts(refresh_cache: bool = False) -> tuple[dict[str, object], 
     old_context = build_old_context_from_summary_csv()
     if old_context is not None and not refresh_cache:
         print("use old league summary csv")
-        save_old_context_cache(old_context, [])
+        if not OLD_CONTEXT_CACHE.exists():
+            # 既にキャッシュがあるなら、シーズン別内訳を持たないこの簡易版で
+            # 上書きしない（過去に一度これで旧シーズン別ページのデータが失われた）。
+            save_old_context_cache(old_context, [])
         return old_context, []
 
     print("build old league cache...")

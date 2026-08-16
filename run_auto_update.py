@@ -200,6 +200,46 @@ def count_complete_records(rows: list[dict[str, str]]) -> int:
     return count
 
 
+def verify_site_not_shrunk(git: str, min_ratio: float = 0.85) -> None:
+    """サイト再生成で既存ページが消えたり大きく縮んだりしていないか確認する。
+
+    集計キャッシュの破損など何らかの理由でナビや個別ページの中身が
+    まるごと欠落したまま push されてしまう事故が実際に一度起きたため、
+    push 前の最後の砦として必ず通す。"""
+    # -z: 非ASCIIファイル名がクォート・エスケープされて返るのを防ぐ
+    # （日本語プレイヤー名のファイルが多いため、これがないと素通りしてしまう）。
+    raw = subprocess.run(
+        [git, "ls-tree", "-r", "-z", "--name-only", "HEAD", "docs"],
+        cwd=ROOT, check=True, capture_output=True,
+    ).stdout
+    tracked = raw.decode("utf-8").split("\0")
+
+    problems = []
+    for rel_path in tracked:
+        if not rel_path.endswith(".html"):
+            continue
+        old_size = len(
+            subprocess.run(
+                [git, "show", f"HEAD:{rel_path}"],
+                cwd=ROOT, capture_output=True,
+            ).stdout
+        )
+        current = ROOT / rel_path
+        if not current.exists():
+            problems.append(f"消滅: {rel_path}")
+            continue
+        new_size = current.stat().st_size
+        if old_size > 0 and new_size < old_size * min_ratio:
+            problems.append(f"縮小: {rel_path} ({old_size}B -> {new_size}B)")
+
+    if problems:
+        detail = "\n  ".join(problems)
+        raise SystemExit(
+            "ABORT: サイト再生成で既存ページが消えたか大きく縮みました。"
+            "データ破損の疑いがあるため push しません。\n  " + detail
+        )
+
+
 def find_git() -> str | None:
     git = shutil.which("git")
     if git:
@@ -277,6 +317,13 @@ def main() -> None:
         log(f"牌譜バイナリ: {complete} / {len(merged)} 件")
 
     run_step([sys.executable, "make_site.py"])
+
+    git = find_git()
+    if git:
+        verify_site_not_shrunk(git)
+    else:
+        log("git が見つからないためサイズチェックをスキップしました")
+
     commit_and_push(config, csv_path)
     log("=== 自動更新完了 ===")
 
