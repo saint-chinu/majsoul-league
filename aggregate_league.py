@@ -14,22 +14,26 @@ SUMMARY_OUT = Path("summary.csv")
 YAKUMAN_OUT = Path("yakuman_summary.csv")
 YAKUMAN_DETAILS_OUT = Path("yakuman_details.csv")
 
+# 雀魂のfan ID→役満名。実対局ログ（RecordHuleのfansと手牌の突き合わせ）で
+# 確認済み: 35=天和(平凡な手でyiman), 37=大三元, 38=四暗刻, 39=字一色(全字牌),
+# 40=緑一色(2s3s4s6s8s発のみ), 41=清老頭, 42=国士無双, 43=小四喜, 48=四暗刻単騎。
+# 以前の表は39〜51が1つずつズレており、緑一色が字一色と表示される等の誤りがあった。
 YAKUMAN_NAMES = {
+    35: "天和",
+    36: "地和",
     37: "大三元",
     38: "四暗刻",
-    39: "四暗刻単騎",
-    40: "字一色",
+    39: "字一色",
+    40: "緑一色",
     41: "清老頭",
     42: "国士無双",
     43: "小四喜",
-    44: "大四喜",
-    45: "小四喜",
-    46: "緑一色",
-    47: "九蓮宝燈",
+    44: "四槓子",
+    45: "九蓮宝燈",
+    47: "純正九蓮宝燈",
     48: "四暗刻単騎",
-    49: "四槓子",
-    50: "天和",
-    51: "地和",
+    49: "国士無双十三面",
+    50: "大四喜",
 }
 
 RIICHI_QUALITY_CATEGORIES = [
@@ -1268,7 +1272,7 @@ def yakuman_name_from_fan(hule, fan_id):
         return name
 
     name = wind_yakuman_name(hule)
-    if name and fan_id in {43, 44, 45}:
+    if name and fan_id in {43, 50}:
         return name
 
     return YAKUMAN_NAMES.get(fan_id)

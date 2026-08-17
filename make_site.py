@@ -2650,6 +2650,15 @@ def build_old_contexts(refresh_cache: bool = False) -> tuple[dict[str, object], 
     )
     old_context = build_context("old-league", "旧リーグ", old_uuids)
     add_context_awards(old_context, old_season_contexts)
+    if refresh_cache:
+        previous = load_old_context_cache()
+        if previous is not None and previous[0].get("rows") and not old_context.get("rows"):
+            # records_raw に旧リーグの牌譜が無い環境で --refresh-old-cache すると
+            # 空の集計で良いキャッシュを潰してしまうため、その場合は止める。
+            raise SystemExit(
+                "ABORT: 旧リーグの再集計結果が空でした。records_raw に旧リーグの牌譜が"
+                "無い可能性が高いため、既存キャッシュは上書きしません。"
+            )
     save_old_context_cache(old_context, old_season_contexts)
     print(f"saved old league cache: {OLD_CONTEXT_CACHE}")
     return old_context, old_season_contexts

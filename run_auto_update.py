@@ -107,6 +107,63 @@ def merge_season_rows(
     return sorted(rows_by_uuid.values(), key=lambda row: row["uuid"])
 
 
+def sync_canonical_csv() -> Path:
+    """集約側CSV（data/new/admin_paifu_ids.csv）をシーズン別CSVの和集合で
+    作り直して同期する。放置するとシーズン別CSVと件数がズレたまま残り、
+    「なんで件数が違う？」と混乱のもとになるため、自動更新のたびに揃える。"""
+    canonical = NEW_DATA_DIR / "admin_paifu_ids.csv"
+    rows_by_uuid: dict[str, dict[str, str]] = {}
+    for path in sorted(NEW_DATA_DIR.glob("admin_paifu_ids_new_season*.csv")):
+        for row in read_csv_rows(path):
+            uuid = row.get("uuid", "")
+            if uuid:
+                rows_by_uuid.setdefault(
+                    uuid, {key: row.get(key, "") for key in SEASON_COLUMNS}
+                )
+    rows = sorted(
+        rows_by_uuid.values(),
+        key=lambda row: (
+            int(row["season"]) if row.get("season", "").isdigit() else 0,
+            row["uuid"],
+        ),
+    )
+    existing = read_csv_rows(canonical)
+    if len(rows) < len(existing):
+        # 集約側が既に多くのIDを持っているのに縮む状況は異常なので触らない。
+        log(
+            f"集約CSVの同期をスキップ: 和集合({len(rows)})が既存({len(existing)})より少ない"
+        )
+        return canonical
+    write_season_csv(canonical, rows)
+    return canonical
+
+
+def guard_admin_season(config: dict, found_season: int) -> None:
+    """管理画面で着地した「進行中」シーズンの内部番号を設定ファイルに記録し、
+    変わっていたら止める。新シーズン開始後に new_season の設定変更を忘れて
+    実行し、新シーズンの牌譜が前シーズンのCSVへ混ざる事故を防ぐ。"""
+    stored = config.get("admin_internal_season")
+    if stored is None:
+        config["admin_internal_season"] = found_season
+        raw = (
+            json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
+            if CONFIG_PATH.exists()
+            else {}
+        )
+        raw["admin_internal_season"] = found_season
+        CONFIG_PATH.write_text(
+            json.dumps(raw, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+        )
+        log(f"進行中シーズンの内部番号 {found_season} を設定ファイルに記録しました。")
+    elif int(stored) != int(found_season):
+        raise SystemExit(
+            f"SEASON_CHANGED: 管理画面の進行中シーズンが変わっています"
+            f"（記録 {stored} → 現在 {found_season}）。\n"
+            "新シーズンが始まった場合は auto_update_config.json の new_season を"
+            "新しい番号に更新し、admin_internal_season の行を削除してから再実行してください。"
+        )
+
+
 def write_season_csv(path: Path, rows: list[dict[str, str]]) -> None:
     NEW_DATA_DIR.mkdir(parents=True, exist_ok=True)
     if path.exists():
@@ -286,6 +343,7 @@ def collect_ids(config: dict) -> list[dict[str, object]]:
                     found_season = open_in_progress_season_records(page)
                     if found_season is not None:
                         log(f"進行中シーズン（管理画面内部番号 {found_season}）の牌譜タブへ移動しました。")
+                        guard_admin_season(config, found_season)
                     else:
                         log("進行中シーズンの行が見つからないため旧方式で試します。")
                         if not click_game_record_tab(page):
@@ -384,6 +442,11 @@ def commit_and_push(config: dict, season_csv: Path) -> None:
         return
 
     targets = [str(season_csv.relative_to(ROOT))]
+    # 集約側CSVと旧リーグキャッシュも、更新されていれば一緒にコミットして
+    # リポジトリ内の件数ズレ・データずれを残さない。
+    for extra in [NEW_DATA_DIR / "admin_paifu_ids.csv", ROOT / "data" / "old_league_contexts.json"]:
+        if extra.exists():
+            targets.append(str(extra.relative_to(ROOT)))
     targets += [str(p.relative_to(ROOT)) for p in (ROOT / "docs").glob("*.html")]
     subprocess.run([git, "add", *targets], cwd=ROOT, check=True)
 
@@ -433,6 +496,8 @@ def main() -> None:
         else:
             write_season_csv(csv_path, merged)
             log(f"保存: {csv_path}")
+
+    sync_canonical_csv()
 
     run_step([sys.executable, "collect_records.py", str(csv_path)])
     complete = count_complete_records(merged)
