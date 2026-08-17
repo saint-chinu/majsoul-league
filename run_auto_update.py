@@ -155,33 +155,73 @@ def maybe_select_league(page, league_name: str) -> None:
         page.wait_for_timeout(2000)
 
 
+def click_login_button_if_present(page) -> None:
+    """保存済みログイン情報が有効でも、管理画面は最初に「ログイン」ボタンを
+    一度押す工程が挟まる（playwright codegenの実録で確認）。無ければ何もしない。"""
+    from collect_all_seasons import click_visible_text
+
+    if click_visible_text(page, ["ログイン"], exact=True):
+        page.wait_for_timeout(2000)
+
+
+def click_battle_records_tab(page) -> bool:
+    """『大会牌譜』タブを押す。横幅が足りずrc-menu（antdの水平メニュー）の
+    「…」折りたたみに収まっている場合は、まずそれを開いてから探し直す
+    （playwright codegenの実録で `#rc-menu-...-rc-menu-more-popup` の中に
+    あることを確認した。座標や固定viewport幅に頼らず対応するための処理）。"""
+    def find_and_click():
+        return page.evaluate(
+            """
+            () => {
+              const el = Array.from(document.querySelectorAll('*')).find(
+                e => e.children.length === 0 && (e.innerText || e.textContent || '').trim() === '大会牌譜'
+              );
+              if (!el) return false;
+              const rect = el.getBoundingClientRect();
+              if (rect.width === 0 || rect.height === 0) return false;
+              el.click();
+              return true;
+            }
+            """
+        )
+
+    if find_and_click():
+        return True
+
+    opened = page.evaluate(
+        """
+        () => {
+          const trigger = document.querySelector(
+            '[class*="overflow-item-rest"], [class*="rc-menu-overflow-item-rest"], li[aria-haspopup="true"]'
+          );
+          if (!trigger) return false;
+          trigger.click();
+          return true;
+        }
+        """
+    )
+    if not opened:
+        return False
+    page.wait_for_timeout(500)
+    return find_and_click()
+
+
 def open_in_progress_season_records(page) -> int | None:
-    """シーズンリストで「進行中」バッジが付いた行の「大会牌譜」ボタンを押し、
-    牌譜一覧タブまで進める。座標決め打ちではなくDOM構造（バッジの近くの行）
-    で探すので、テーブルのレイアウトが少し変わっても崩れにくい。
-    実際に着地したシーズン番号をURL（.../season/{N}/record）から読み取って返す。
-    見つからなければNone。"""
+    """シーズンリストで「進行中」バッジを直接クリックしてシーズン詳細へ入り、
+    「大会牌譜」タブ（折りたたまれていれば開いてから）を押して牌譜一覧まで
+    進める。実際に着地したシーズン番号をURL（.../season/{N}/record）から
+    読み取って返す。見つからなければNone。"""
     clicked = page.evaluate(
         """
         () => {
-          const badges = Array.from(document.querySelectorAll('*')).filter(
-            el => el.children.length === 0
-              && (el.innerText || el.textContent || '').trim() === '進行中'
+          const el = Array.from(document.querySelectorAll('*')).find(
+            e => e.children.length === 0 && (e.innerText || e.textContent || '').trim() === '進行中'
           );
-          for (const badge of badges) {
-            let row = badge;
-            for (let i = 0; i < 8 && row; i++) {
-              const btn = Array.from(row.querySelectorAll('button,a')).find(
-                el => (el.innerText || el.textContent || '').trim() === '大会牌譜'
-              );
-              if (btn) {
-                btn.click();
-                return true;
-              }
-              row = row.parentElement;
-            }
-          }
-          return false;
+          if (!el) return false;
+          const rect = el.getBoundingClientRect();
+          if (rect.width === 0 || rect.height === 0) return false;
+          el.click();
+          return true;
         }
         """
     )
@@ -190,9 +230,7 @@ def open_in_progress_season_records(page) -> int | None:
 
     page.wait_for_timeout(1500)
     if "/record" not in page.url:
-        from collect_all_seasons import click_visible_text
-
-        click_visible_text(page, ["大会牌譜"], exact=True)
+        click_battle_records_tab(page)
         page.wait_for_timeout(1500)
 
     match = SEASON_URL_RE.search(page.url)
@@ -219,7 +257,11 @@ def collect_ids(config: dict) -> list[dict[str, object]]:
         browser = p.chromium.launch_persistent_context(
             user_data_dir=str(USER_DATA_DIR),
             headless=False,
-            viewport={"width": 1460, "height": 900},
+            # rc-menu（antdの水平メニュー）のタブが「…」に折りたたまれるのを
+            # 避けるため広め（playwright codegenの実録で1460幅では折りたたまれて
+            # いたことを確認）。click_battle_records_tabの折りたたみ対応も
+            # 保険として残す。
+            viewport={"width": 1920, "height": 1000},
         )
         try:
             for attempt in range(1, attempts + 1):
@@ -229,6 +271,9 @@ def collect_ids(config: dict) -> list[dict[str, object]]:
                 try:
                     page.goto(config["contest_url"], wait_until="domcontentloaded")
                     page.wait_for_timeout(4000)
+                    # 保存済みログイン情報があっても、最初に「ログイン」ボタンを
+                    # 押す工程が挟まる（playwright codegenの実録で確認）。
+                    click_login_button_if_present(page)
 
                     if looks_logged_out(page):
                         raise SystemExit(
