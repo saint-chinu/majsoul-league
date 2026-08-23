@@ -676,7 +676,27 @@ def has_bulge_shape(tiles, wait):
         and counts[right] > 0
     )
 
+def is_outer_bulge_shanpon(tiles, waits):
+    """外ぶくれシャンポン: 34445 のように、3枚使いの牌を挟んだ両側2種待ち。"""
+    normalized_waits = sorted(normalize_tile(wait) for wait in waits if wait)
+    if len(normalized_waits) != 2:
+        return False
+    first, second = normalized_waits
+    if first[1] != second[1]:
+        return False
+    first_number = tile_number(first)
+    second_number = tile_number(second)
+    if first_number is None or second_number is None:
+        return False
+    if second_number - first_number != 2:
+        return False
+    middle = f"{first_number + 1}{first[1]}"
+    counts = Counter(normalize_tile(tile) for tile in tiles)
+    return counts[middle] >= 3 and counts[first] >= 1 and counts[second] >= 1
+
 def is_bulge_shanpon(tiles, waits):
+    if is_outer_bulge_shanpon(tiles, waits):
+        return True
     if not is_shanpon_wait(tiles, waits):
         return False
     return any(has_bulge_shape(tiles, wait) for wait in waits)
@@ -711,7 +731,7 @@ def classify_riichi_quality(tiles, waits, visible_counts, seat, chang, dealer, d
 
     visible_remaining = visible_wait_count(tiles, waits, visible_counts)
     counts = Counter(normalize_tile(tile) for tile in tiles)
-    is_shanpon = is_shanpon_wait(tiles, waits)
+    is_shanpon = is_shanpon_wait(tiles, waits) or is_outer_bulge_shanpon(tiles, waits)
     is_tanki = is_tanki_wait(tiles, waits)
     wait = waits[0] if len(waits) == 1 else None
     dora_tiles = riichi_dora_tiles(dora_indicators)
@@ -2075,3 +2095,6 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+
