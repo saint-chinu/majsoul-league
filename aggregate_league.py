@@ -669,7 +669,7 @@ def has_bulge_shape(tiles, wait):
     left = f"{number - 1}{suit}" if number > 1 else None
     right = f"{number + 1}{suit}" if number < 9 else None
     return (
-        counts[wait] >= 1
+        counts[wait] == 3
         and left is not None
         and right is not None
         and counts[left] > 0
