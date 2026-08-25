@@ -7,6 +7,7 @@
 
 from __future__ import annotations
 
+import argparse
 import subprocess
 import sys
 
@@ -36,7 +37,7 @@ def season_csv_path(season: int) -> Path:
     return NEW_DATA_DIR / f"admin_paifu_ids_new_season{season}.csv"
 
 
-def collect_rows(season: int, max_pages: int) -> list[dict[str, object]]:
+def collect_rows(season: int, admin_season: int, max_pages: int) -> list[dict[str, object]]:
     with sync_playwright() as p:
         browser = p.chromium.launch_persistent_context(
             user_data_dir=str(USER_DATA_DIR),
@@ -45,12 +46,15 @@ def collect_rows(season: int, max_pages: int) -> list[dict[str, object]]:
         )
         try:
             page = browser.new_page()
-            page.goto(START_URL, wait_until="domcontentloaded")
-            print()
-            print("ブラウザで管理画面を開きます。")
-            print(f"過去の新リーグ第{season}シーズン -> 大会牌譜の1ページ目を開いてください。")
-            print("ページ送り以降は自動です。")
-            input("開けたら Enter: ")
+            target_url = f"{START_URL}/season/{admin_season}/record"
+            print(f"管理画面の過去シーズン（内部番号 {admin_season}）を開きます。")
+            page.goto(target_url, wait_until="domcontentloaded")
+            page.wait_for_timeout(4000)
+            if "/record" not in page.url:
+                raise SystemExit(
+                    "過去シーズンの牌譜ページを開けませんでした。"
+                    "管理画面で対象シーズンを一度確認してください。"
+                )
             return collect_current_season(page, season, max_pages)
         finally:
             browser.close()
@@ -81,18 +85,19 @@ def commit_and_push() -> None:
 
 
 def main() -> None:
-    print("新リーグの過去シーズンを再取得します。")
-    season_text = input("新リーグ内のシーズン番号。例: 1: ").strip()
-    if not season_text.isdigit() or int(season_text) < 1:
-        raise SystemExit("シーズン番号は1以上の数字で入力してください。")
-    season = int(season_text)
+    parser = argparse.ArgumentParser(description="新リーグの過去シーズンを再取得して公開する")
+    parser.add_argument("--season", type=int, default=1, help="新リーグ内の表示シーズン番号")
+    parser.add_argument("--admin-season", type=int, default=11, help="管理画面の内部シーズン番号")
+    parser.add_argument("--max-pages", type=int, default=14, help="巡回する最大ページ数")
+    parser.add_argument("--expected", type=int, help="これ未満なら保存しない最低対局数")
+    args = parser.parse_args()
+    if args.season < 1 or args.admin_season < 1 or args.max_pages < 1:
+        raise SystemExit("シーズン番号と最大ページ数は1以上にしてください。")
 
-    max_pages_text = input("最大ページ数。空Enterなら14: ").strip()
-    max_pages = int(max_pages_text or "14")
-    expected_text = input("最低限あるはずの対局数。空Enterなら確認なし: ").strip()
-    expected = int(expected_text) if expected_text.isdigit() else None
-
-    collected = collect_rows(season, max_pages)
+    print(f"新リーグ第{args.season}シーズンを再取得します。")
+    collected = collect_rows(args.season, args.admin_season, args.max_pages)
+    season = args.season
+    expected = args.expected
     if expected is not None and len(collected) < expected:
         raise SystemExit(
             f"取得件数が少なすぎます: {len(collected)}件 / 想定 {expected}件。保存せず終了します。"
