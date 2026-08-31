@@ -450,10 +450,13 @@ def commit_and_push(config: dict, season_csv: Path) -> None:
     targets += [str(p.relative_to(ROOT)) for p in (ROOT / "docs").glob("*.html")]
     subprocess.run([git, "add", *targets], cwd=ROOT, check=True)
 
-    status = subprocess.run(
-        [git, "status", "--short"], cwd=ROOT, check=True, text=True, capture_output=True
-    ).stdout.strip()
-    if not status:
+    # 作業用CSVや調査スクリプトの未追跡ファイルは公開対象ではない。
+    # status全体を見ると、それらだけでも空コミットを試みて失敗するため、
+    # 今回addした公開対象にステージ済み差分があるかだけを判定する。
+    staged = subprocess.run(
+        [git, "diff", "--cached", "--quiet"], cwd=ROOT, check=False
+    )
+    if staged.returncode == 0:
         log("変更なし。push は不要です。")
         return
 
