@@ -389,6 +389,7 @@ def collect_current_season(page: Page, season: int, max_pages: int) -> list[dict
     seen = set()
     rows: list[dict[str, object]] = []
     previous_page_uuids: list[str] = []
+    seen_page_signatures: set[tuple[str, ...]] = set()
 
     for page_no in range(1, max_pages + 1):
         print()
@@ -450,6 +451,15 @@ def collect_current_season(page: Page, season: int, max_pages: int) -> list[dict
         if not uuids:
             print("このページで牌譜IDが取れないので、このシーズンはここで止めます。")
             break
+
+        # ページ末尾で別のページャーを誤って押すと、1 -> 2 -> 1 のように
+        # 同じ一覧を往復することがある。隣接ページだけでなく、既に見た
+        # 一覧へ戻った時点でも停止する。
+        page_signature = tuple(uuids)
+        if page_signature in seen_page_signatures:
+            print("既に取得済みの一覧へ戻ったので、このシーズンはここで止めます。")
+            break
+        seen_page_signatures.add(page_signature)
 
         if uuids == previous_page_uuids:
             print("前ページと同じ牌譜IDなので、ページ送り失敗として止めます。")
