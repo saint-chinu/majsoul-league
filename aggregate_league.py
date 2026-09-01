@@ -218,6 +218,10 @@ class PlayerStats:
     yakuman_names: Counter = field(default_factory=Counter)
     top_keep_chances: int = 0
     top_keep_successes: int = 0
+    oorasu_comeback_chances: int = 0
+    oorasu_comebacks: int = 0
+    oorasu_overtaken_chances: int = 0
+    oorasu_overtaken: int = 0
     first_tenpai: int = 0
     discards: int = 0
     tenpai_discards: int = 0
@@ -1403,6 +1407,7 @@ def aggregate_game(uuid, stats, yakuman_details):
     current_dealer = 0
     winning_run_seat = None
     winning_run_start_score = None
+    oorasu_start_scores = None
 
     def observe_scores(scores):
         nonlocal current_scores
@@ -1534,6 +1539,8 @@ def aggregate_game(uuid, stats, yakuman_details):
             current_dora_indicators = list(opening_dora_indicators)
             if msg is not None and hasattr(msg, "scores"):
                 round_start_scores = [int(score) for score in list(msg.scores)[:3]]
+                if oorasu_start_scores is None and is_oorasu(current_chang, current_dealer):
+                    oorasu_start_scores = list(round_start_scores)
                 if (
                     winning_run_seat is None
                     and is_oorasu(current_chang, current_dealer)
@@ -1830,6 +1837,16 @@ def aggregate_game(uuid, stats, yakuman_details):
         if kept_single_top[seat] and detail["rank"] == 1:
             player_stats.top_keep_successes += 1
 
+        if oorasu_start_scores is not None:
+            oorasu_rank = score_rank(oorasu_start_scores, seat)
+            final_rank = int(detail["rank"])
+            if oorasu_rank is not None and oorasu_rank != 1:
+                player_stats.oorasu_comeback_chances += 1
+                player_stats.oorasu_comebacks += int(final_rank < oorasu_rank)
+            if oorasu_rank is not None and oorasu_rank != 3:
+                player_stats.oorasu_overtaken_chances += 1
+                player_stats.oorasu_overtaken += int(final_rank > oorasu_rank)
+
     if winning_run_seat is not None and winning_run_start_score is not None:
         player_name = seat_to_name.get(winning_run_seat)
         detail = player_details.get(winning_run_seat)
@@ -1888,6 +1905,12 @@ def write_summary(stats):
             "call_quality_top_category",
             "call_quality_breakdown",
             "top_keep_rate",
+            "oorasu_comeback_rate",
+            "oorasu_overtaken_rate",
+            "oorasu_comeback_chances",
+            "oorasu_comebacks",
+            "oorasu_overtaken_chances",
+            "oorasu_overtaken",
             "first_tenpai_rate",
             "tenpai_keep_rate",
             "top_stay_rate",
@@ -1962,6 +1985,12 @@ def write_summary(stats):
                 call_quality_top_label(player_stats),
                 call_quality_breakdown(player_stats),
                 percent(player_stats.top_keep_successes, player_stats.top_keep_chances),
+                percent(player_stats.oorasu_comebacks, player_stats.oorasu_comeback_chances),
+                percent(player_stats.oorasu_overtaken, player_stats.oorasu_overtaken_chances),
+                player_stats.oorasu_comeback_chances,
+                player_stats.oorasu_comebacks,
+                player_stats.oorasu_overtaken_chances,
+                player_stats.oorasu_overtaken,
                 percent(player_stats.first_tenpai, player_stats.rounds),
                 percent(player_stats.tenpai_discards, player_stats.discards),
                 percent(player_stats.top_stay_rounds, player_stats.rounds),

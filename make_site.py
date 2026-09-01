@@ -253,6 +253,8 @@ LABELS = {
     "two_called_houjuu_rate": "2副露以上放銃率",
     "called_haneman_houjuu_rate": "鳴き跳満以上放銃率",
     "top_keep_rate": "トップキープ率",
+    "oorasu_comeback_rate": "オーラスまくり率",
+    "oorasu_overtaken_rate": "オーラスまくられ率",
     "first_tenpai_rate": "先制テンパイ率",
     "tenpai_keep_rate": "テンパイ維持率",
     "top_stay_rate": "トップ滞在率",
@@ -303,6 +305,8 @@ METRIC_DESCRIPTIONS = {
     "rank3_rate": "半荘で3位になった割合。",
     "last_avoid_rate": "1位または2位で終えた割合。",
     "top_keep_rate": "単独トップになった半荘を、そのまま1位で終えた割合。",
+    "oorasu_comeback_rate": "オーラス開始時に1位以外だった半荘のうち、最終順位を上げて終えた割合。",
+    "oorasu_overtaken_rate": "オーラス開始時に3位以外だった半荘のうち、最終順位を下げて終えた割合。",
     "first_tenpai_rate": "各局で最初にテンパイした割合。",
     "tenpai_keep_rate": "全打牌のうち、打牌時点でテンパイ状態だった割合。",
     "top_stay_rate": "各局開始時にトップ目だった割合。",
@@ -389,6 +393,8 @@ MAIN_COLUMNS = [
     "two_called_houjuu_rate",
     "called_haneman_houjuu_rate",
     "top_keep_rate",
+    "oorasu_comeback_rate",
+    "oorasu_overtaken_rate",
     "first_tenpai_rate",
     "tenpai_keep_rate",
     "top_stay_rate",
@@ -421,6 +427,8 @@ DETAIL_COLUMNS = [
     "two_called_houjuu_rate",
     "called_haneman_houjuu_rate",
     "top_keep_rate",
+    "oorasu_comeback_rate",
+    "oorasu_overtaken_rate",
     "first_tenpai_rate",
     "tenpai_keep_rate",
     "top_stay_rate",
@@ -460,6 +468,8 @@ PLAYER_MAIN_COLUMNS = [
     "two_called_houjuu_rate",
     "called_haneman_houjuu_rate",
     "top_keep_rate",
+    "oorasu_comeback_rate",
+    "oorasu_overtaken_rate",
     "first_tenpai_rate",
     "tenpai_keep_rate",
     "top_stay_rate",
@@ -544,6 +554,8 @@ PLAYER_RANK_METRICS = [
     ("two_called_houjuu_rate", False, "低い方が上位"),
     ("called_haneman_houjuu_rate", False, "低い方が上位"),
     ("top_keep_rate", True, "高い方が上位"),
+    ("oorasu_comeback_rate", True, "高い方が上位"),
+    ("oorasu_overtaken_rate", False, "低い方が上位"),
     ("first_tenpai_rate", True, "高い方が上位"),
     ("tenpai_keep_rate", True, "高い方が上位"),
     ("top_stay_rate", True, "高い方が上位"),
@@ -575,6 +587,8 @@ MAIN_RANK_COLUMNS = [
     "rank3_rate",
     "last_avoid_rate",
     "top_keep_rate",
+    "oorasu_comeback_rate",
+    "oorasu_overtaken_rate",
     "top_stay_rate",
     "second_stay_rate",
     "last_stay_rate",
@@ -673,6 +687,8 @@ DETAIL_RANK_COLUMNS = [
     "player",
     "rounds",
     "top_keep_rate",
+    "oorasu_comeback_rate",
+    "oorasu_overtaken_rate",
     "top_stay_rate",
     "second_stay_rate",
     "last_stay_rate",
@@ -711,6 +727,8 @@ PLAYER_RANK_COLUMNS = [
     "rank3_rate",
     "last_avoid_rate",
     "top_keep_rate",
+    "oorasu_comeback_rate",
+    "oorasu_overtaken_rate",
     "top_stay_rate",
     "second_stay_rate",
     "last_stay_rate",
@@ -798,6 +816,8 @@ PLAYER_SEASON_RANK_COLUMNS = [
     "average_rank",
     "last_avoid_rate",
     "top_keep_rate",
+    "oorasu_comeback_rate",
+    "oorasu_overtaken_rate",
     "top_stay_rate",
     "second_stay_rate",
     "last_stay_rate",
@@ -2049,6 +2069,18 @@ def aggregate_uuids(uuids: set[str]) -> tuple[list[dict[str, str]], list[dict[st
                     average(player_stats.first_call_turn_sum, player_stats.first_call_count, 1)
                 ),
                 "top_keep_rate": percent(player_stats.top_keep_successes, player_stats.top_keep_chances),
+                "oorasu_comeback_rate": percent(
+                    player_stats.oorasu_comebacks,
+                    player_stats.oorasu_comeback_chances,
+                ),
+                "oorasu_overtaken_rate": percent(
+                    player_stats.oorasu_overtaken,
+                    player_stats.oorasu_overtaken_chances,
+                ),
+                "oorasu_comeback_chances": str(player_stats.oorasu_comeback_chances),
+                "oorasu_comebacks": str(player_stats.oorasu_comebacks),
+                "oorasu_overtaken_chances": str(player_stats.oorasu_overtaken_chances),
+                "oorasu_overtaken": str(player_stats.oorasu_overtaken),
                 "first_tenpai_rate": percent(player_stats.first_tenpai, player_stats.rounds),
                 "tenpai_keep_rate": percent(player_stats.tenpai_discards, player_stats.discards),
                 "top_stay_rate": percent(player_stats.top_stay_rounds, player_stats.rounds),
@@ -2794,6 +2826,10 @@ def combine_player_rows(contexts: list[dict[str, object]]) -> list[dict[str, str
         houjuu = sum(pct_count(row, "houjuu_rate", parse_int(row.get("rounds", 0))) for row in rows)
         tsumo_loss = sum(pct_count(row, "tsumo_loss_rate", parse_int(row.get("rounds", 0))) for row in rows)
         two_called = sum(pct_count(row, "two_called_rate", parse_int(row.get("rounds", 0))) for row in rows)
+        oorasu_comeback_chances = sum(parse_int(row.get("oorasu_comeback_chances", 0)) for row in rows)
+        oorasu_comebacks = sum(parse_int(row.get("oorasu_comebacks", 0)) for row in rows)
+        oorasu_overtaken_chances = sum(parse_int(row.get("oorasu_overtaken_chances", 0)) for row in rows)
+        oorasu_overtaken = sum(parse_int(row.get("oorasu_overtaken", 0)) for row in rows)
         deal_in_events = houjuu
         riichi_recommended = sum(pct_count(row, "riichi_recommended_rate", parse_int(row.get("riichi", 0))) for row in rows)
 
@@ -2862,6 +2898,12 @@ def combine_player_rows(contexts: list[dict[str, object]]) -> list[dict[str, str
                 "call_quality_top_category": top_category_from_rows(rows, "games", "call_quality_top_category"),
                 "call_quality_breakdown": format_quality_breakdown(call_breakdown),
                 "top_keep_rate": weighted_average(sum(pct_number(row.get("top_keep_rate", "")) * parse_int(row.get("games", 0)) for row in rows), games, 2) + "%",
+                "oorasu_comeback_rate": fmt_pct_count(oorasu_comebacks, oorasu_comeback_chances),
+                "oorasu_overtaken_rate": fmt_pct_count(oorasu_overtaken, oorasu_overtaken_chances),
+                "oorasu_comeback_chances": str(oorasu_comeback_chances),
+                "oorasu_comebacks": str(oorasu_comebacks),
+                "oorasu_overtaken_chances": str(oorasu_overtaken_chances),
+                "oorasu_overtaken": str(oorasu_overtaken),
                 "first_tenpai_rate": fmt_pct_count(sum(pct_count(row, "first_tenpai_rate", parse_int(row.get("rounds", 0))) for row in rows), rounds),
                 "tenpai_keep_rate": weighted_average(sum(pct_number(row.get("tenpai_keep_rate", "")) * parse_int(row.get("rounds", 0)) for row in rows), rounds, 2) + "%",
                 "top_stay_rate": fmt_pct_count(sum(pct_count(row, "top_stay_rate", parse_int(row.get("rounds", 0))) for row in rows), rounds),
