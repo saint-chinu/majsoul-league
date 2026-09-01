@@ -222,6 +222,10 @@ class PlayerStats:
     oorasu_comebacks: int = 0
     oorasu_overtaken_chances: int = 0
     oorasu_overtaken: int = 0
+    nanba_comeback_chances: int = 0
+    nanba_comebacks: int = 0
+    nanba_overtaken_chances: int = 0
+    nanba_overtaken: int = 0
     first_tenpai: int = 0
     discards: int = 0
     tenpai_discards: int = 0
@@ -1408,6 +1412,7 @@ def aggregate_game(uuid, stats, yakuman_details):
     winning_run_seat = None
     winning_run_start_score = None
     oorasu_start_scores = None
+    nanba_start_scores = None
 
     def observe_scores(scores):
         nonlocal current_scores
@@ -1539,6 +1544,8 @@ def aggregate_game(uuid, stats, yakuman_details):
             current_dora_indicators = list(opening_dora_indicators)
             if msg is not None and hasattr(msg, "scores"):
                 round_start_scores = [int(score) for score in list(msg.scores)[:3]]
+                if nanba_start_scores is None and current_chang == 1 and current_dealer == 0:
+                    nanba_start_scores = list(round_start_scores)
                 if oorasu_start_scores is None and is_oorasu(current_chang, current_dealer):
                     oorasu_start_scores = list(round_start_scores)
                 if (
@@ -1847,6 +1854,16 @@ def aggregate_game(uuid, stats, yakuman_details):
                 player_stats.oorasu_overtaken_chances += 1
                 player_stats.oorasu_overtaken += int(final_rank > oorasu_rank)
 
+        if nanba_start_scores is not None:
+            nanba_rank = score_rank(nanba_start_scores, seat)
+            final_rank = int(detail["rank"])
+            if nanba_rank is not None and nanba_rank != 1:
+                player_stats.nanba_comeback_chances += 1
+                player_stats.nanba_comebacks += int(final_rank < nanba_rank)
+            if nanba_rank is not None and nanba_rank != 3:
+                player_stats.nanba_overtaken_chances += 1
+                player_stats.nanba_overtaken += int(final_rank > nanba_rank)
+
     if winning_run_seat is not None and winning_run_start_score is not None:
         player_name = seat_to_name.get(winning_run_seat)
         detail = player_details.get(winning_run_seat)
@@ -1911,6 +1928,12 @@ def write_summary(stats):
             "oorasu_comebacks",
             "oorasu_overtaken_chances",
             "oorasu_overtaken",
+            "nanba_comeback_rate",
+            "nanba_overtaken_rate",
+            "nanba_comeback_chances",
+            "nanba_comebacks",
+            "nanba_overtaken_chances",
+            "nanba_overtaken",
             "first_tenpai_rate",
             "tenpai_keep_rate",
             "top_stay_rate",
@@ -1991,6 +2014,12 @@ def write_summary(stats):
                 player_stats.oorasu_comebacks,
                 player_stats.oorasu_overtaken_chances,
                 player_stats.oorasu_overtaken,
+                percent(player_stats.nanba_comebacks, player_stats.nanba_comeback_chances),
+                percent(player_stats.nanba_overtaken, player_stats.nanba_overtaken_chances),
+                player_stats.nanba_comeback_chances,
+                player_stats.nanba_comebacks,
+                player_stats.nanba_overtaken_chances,
+                player_stats.nanba_overtaken,
                 percent(player_stats.first_tenpai, player_stats.rounds),
                 percent(player_stats.tenpai_discards, player_stats.discards),
                 percent(player_stats.top_stay_rounds, player_stats.rounds),
