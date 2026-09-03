@@ -212,7 +212,7 @@ NEW_SEASON_FILE_RE = re.compile(r"admin_paifu_ids_new_season(\d+)\.csv$")
 OLD_LEAGUE_FULL_GAMES = 120
 NEW_LEAGUE_FULL_GAMES = 135
 OLD_CONTEXT_CACHE = Path("data") / "old_league_contexts.json"
-OLD_CONTEXT_CACHE_VERSION = 2
+OLD_CONTEXT_CACHE_VERSION = 3
 
 
 LABELS = {
@@ -385,10 +385,6 @@ MAIN_COLUMNS = [
     "hu_rate",
     "average_hu_point",
     "average_called_hu_point",
-    "open_tanyao_hu_rate",
-    "chiitoi_hu_rate",
-    "honitsu_hu_rate",
-    "chinitsu_hu_rate",
     "houjuu_rate",
     "average_houjuu_point",
     "tsumo_loss_rate",
@@ -464,10 +460,6 @@ PLAYER_MAIN_COLUMNS = [
     "hu_rate",
     "average_hu_point",
     "average_called_hu_point",
-    "open_tanyao_hu_rate",
-    "chiitoi_hu_rate",
-    "honitsu_hu_rate",
-    "chinitsu_hu_rate",
     "houjuu_rate",
     "average_houjuu_point",
     "tsumo_loss_rate",
@@ -507,10 +499,6 @@ PLAYER_SEASON_COLUMNS = [
     "hu_rate",
     "average_hu_point",
     "average_called_hu_point",
-    "open_tanyao_hu_rate",
-    "chiitoi_hu_rate",
-    "honitsu_hu_rate",
-    "chinitsu_hu_rate",
     "houjuu_rate",
     "average_houjuu_point",
     "tsumo_loss_rate",
@@ -542,10 +530,6 @@ PLAYER_RANK_METRICS = [
     ("hu_rate", True, "高い方が上位"),
     ("average_hu_point", True, "高い方が上位"),
     ("average_called_hu_point", True, "高い方が上位"),
-    ("open_tanyao_hu_rate", True, "高い順"),
-    ("chiitoi_hu_rate", True, "高い順"),
-    ("honitsu_hu_rate", True, "高い順"),
-    ("chinitsu_hu_rate", True, "高い順"),
     ("tsumo_rate", True, "高い方が上位"),
     ("tsumo_loss_rate", False, "低い方が上位"),
     ("average_tsumo_loss_point", False, "低い方が上位"),
@@ -635,10 +619,6 @@ MAIN_WIN_COLUMNS = [
     "riichi_miss_rate",
     "bad_shape_riichi_rate",
     "top_riichi_rate",
-    "open_tanyao_hu_rate",
-    "chiitoi_hu_rate",
-    "honitsu_hu_rate",
-    "chinitsu_hu_rate",
     "yakuman_count",
 ]
 
@@ -773,10 +753,6 @@ PLAYER_WIN_COLUMNS = [
     "riichi_miss_rate",
     "bad_shape_riichi_rate",
     "top_riichi_rate",
-    "open_tanyao_hu_rate",
-    "chiitoi_hu_rate",
-    "honitsu_hu_rate",
-    "chinitsu_hu_rate",
     "yakuman_count",
 ]
 
@@ -867,10 +843,6 @@ PLAYER_SEASON_WIN_COLUMNS = [
     "riichi_miss_rate",
     "bad_shape_riichi_rate",
     "top_riichi_rate",
-    "open_tanyao_hu_rate",
-    "chiitoi_hu_rate",
-    "honitsu_hu_rate",
-    "chinitsu_hu_rate",
     "yakuman_count",
 ]
 
@@ -1343,6 +1315,77 @@ def table(
             cells.append(f"<td class=\"{cls}\">{value}</td>")
         body_rows.append("<tr>" + "".join(cells) + "</tr>")
     return f"<table><thead><tr>{head}</tr></thead><tbody>{''.join(body_rows)}</tbody></table>"
+
+
+YAKU_GROUPS = [
+    (
+        "1翻役",
+        [
+            "門前清自摸和", "立直", "一発", "槍槓", "嶺上開花", "海底摸月", "河底撈魚",
+            "役牌:白", "役牌:發", "役牌:中", "役牌:自風牌", "役牌:場風牌", "断幺九", "一盃口", "平和",
+        ],
+    ),
+    (
+        "2翻以上の役",
+        [
+            "混全帯幺九", "一気通貫", "三色同順", "ダブル立直", "三色同刻", "三槓子", "対々和", "三暗刻",
+            "小三元", "混老頭", "七対子", "純全帯幺九", "混一色", "二盃口", "清一色", "八連荘",
+        ],
+    ),
+    (
+        "役満",
+        [
+            "天和", "地和", "大三元", "四暗刻", "四暗刻単騎", "字一色", "緑一色", "清老頭", "国士無双",
+            "国士無双十三面", "小四喜", "大四喜", "四槓子", "九蓮宝燈", "純正九蓮宝燈",
+        ],
+    ),
+]
+
+
+def yaku_stats_sections(rows: list[dict[str, str]], yaku_rows: list[dict[str, str]]) -> str:
+    counts: dict[str, Counter] = defaultdict(Counter)
+    for row in yaku_rows:
+        player = str(row.get("player", ""))
+        yaku_name = str(row.get("yaku_name", ""))
+        if player and yaku_name:
+            counts[player][yaku_name] += parse_int(row.get("count", 0))
+
+    appeared = {name for player_counts in counts.values() for name in player_counts}
+    extras = sorted(appeared - {name for _, names in YAKU_GROUPS for name in names})
+    groups = list(YAKU_GROUPS)
+    if extras:
+        groups.append(("その他の役", extras))
+
+    ranked = sorted(rows, key=lambda row: parse_float(row.get("earned_score", 0)), reverse=True)
+    blocks = []
+    for title, names in groups:
+        visible_names = [name for name in names if name in appeared]
+        if not visible_names:
+            continue
+        head = (
+            '<th class="sticky-rank">順位</th><th class="sticky-name">プレイヤー</th><th>総和了</th>'
+            + "".join(f"<th>{esc(name)}</th>" for name in visible_names)
+        )
+        body = []
+        for rank, row in enumerate(ranked, 1):
+            player = str(row.get("player", ""))
+            total_hu = parse_int(row.get("hu", 0))
+            cells = [
+                f'<td class="sticky-rank">{rank}</td>',
+                f'<td class="name sticky-name">{esc(player)}</td>',
+                f"<td>{total_hu}</td>",
+            ]
+            for name in visible_names:
+                count = counts[player][name]
+                cells.append(f"<td>{count}回 ({percent_text(count, total_hu)})</td>")
+            body.append("<tr>" + "".join(cells) + "</tr>")
+        blocks.append(
+            f'<section class="stat-table-panel"><h3>{esc(title)}</h3><div class="table-wrap">'
+            f"<table><thead><tr>{head}</tr></thead><tbody>{''.join(body)}</tbody></table></div></section>"
+        )
+    if not blocks:
+        return '<p class="empty">和了役のデータがありません。</p>'
+    return '<p class="subnote">各セルは「その役を含む和了回数（総和了に占める割合）」。複数の役を含む和了は、それぞれの役に数えます。ドラ・赤ドラ・裏ドラ・抜きドラは役ではないため除外しています。</p><div class="split-tables">' + "".join(blocks) + "</div>"
 
 
 def riichi_quality_table(rows: list[dict[str, str]]) -> str:
@@ -1996,7 +2039,7 @@ def group_uuids_by_season(paifu_rows: list[dict[str, str]]) -> dict[int, set[str
     return season_to_uuids
 
 
-def aggregate_uuids(uuids: set[str]) -> tuple[list[dict[str, str]], list[dict[str, str]], list[dict[str, str]]]:
+def aggregate_uuids(uuids: set[str]) -> tuple[list[dict[str, str]], list[dict[str, str]], list[dict[str, str]], list[dict[str, str]]]:
     try:
         from aggregate_league import (
             PlayerStats,
@@ -2043,6 +2086,7 @@ def aggregate_uuids(uuids: set[str]) -> tuple[list[dict[str, str]], list[dict[st
                 ),
                 "average_rank": str(average(player_stats.rank_sum, player_stats.games)),
                 "rounds": str(player_stats.rounds),
+                "hu": str(player_stats.hu),
                 "average_hu_point": str(average(player_stats.hu_point_sum, player_stats.hu, 1)),
                 "average_called_hu_point": str(average(player_stats.called_hu_point_sum, player_stats.called_hu, 1)),
                 "hu_rate": percent(player_stats.hu, player_stats.rounds),
@@ -2174,12 +2218,23 @@ def aggregate_uuids(uuids: set[str]) -> tuple[list[dict[str, str]], list[dict[st
                 }
             )
 
+    yaku_rows = []
+    for player_name, player_stats in sorted(stats.items(), key=lambda item: item[0]):
+        for yaku_name, count in sorted(player_stats.yaku_names.items()):
+            yaku_rows.append(
+                {
+                    "player": player_name,
+                    "yaku_name": yaku_name,
+                    "count": str(count),
+                }
+            )
+
     detail_rows = [
         {key: str(value) for key, value in row.items()}
         for row in yakuman_details
     ]
 
-    return summary_rows, yakuman_rows, detail_rows
+    return summary_rows, yakuman_rows, detail_rows, yaku_rows
 
 
 def build_context(
@@ -2189,7 +2244,7 @@ def build_context(
     season: int | None = None,
     teams_by_season: dict[int, dict[str, list[str]]] | None = None,
 ) -> dict[str, object]:
-    rows, yakuman_rows, yakuman_detail_rows = aggregate_uuids(uuids)
+    rows, yakuman_rows, yakuman_detail_rows, yaku_rows = aggregate_uuids(uuids)
     if not rows:
         return {
             "key": key,
@@ -2197,6 +2252,7 @@ def build_context(
             "rows": [],
             "yakuman_rows": [],
             "yakuman_detail_rows": [],
+            "yaku_rows": [],
             "correlation_rows": [],
             "total_games": 0,
             "total_rounds": 0,
@@ -2225,6 +2281,7 @@ def build_context(
         "rows": rows,
         "yakuman_rows": yakuman_rows,
         "yakuman_detail_rows": yakuman_detail_rows,
+        "yaku_rows": yaku_rows,
         "correlation_rows": build_correlation_rows(uuids),
         "total_games": total_games,
         "total_rounds": total_rounds,
@@ -2441,6 +2498,9 @@ def render_player_panel(
         ],
       )}
 
+      <h2>{esc(player)} 和了役スタッツ</h2>
+      {yaku_stats_sections([cumulative_row], [row for row in list(cumulative_context.get("yaku_rows", [])) if row.get("player") == player])}
+
       <h2>{esc(player)} リーチの質</h2>
       <div class="table-wrap">
         {table([cumulative_row], RIICHI_QUALITY_COLUMNS)}
@@ -2510,6 +2570,7 @@ def render_stats_panel(context: dict[str, object]) -> str:
 
     yakuman_rows = context["yakuman_rows"]
     yakuman_detail_rows = context["yakuman_detail_rows"]
+    yaku_rows = context.get("yaku_rows", [])
     correlation_rows = context["correlation_rows"]
     best_score = context["best_score"]
     best_top = context["best_top"]
@@ -2551,6 +2612,9 @@ def render_stats_panel(context: dict[str, object]) -> str:
         rank_by="earned_score",
         reverse=True,
       )}
+
+      <h2>{esc(context['label'])} 和了役スタッツ</h2>
+      {yaku_stats_sections(rows, list(yaku_rows))}
 
       <h2>{esc(context['label'])} リーチの質</h2>
       <div class="table-wrap">
@@ -2731,6 +2795,7 @@ def build_old_context_from_summary_csv() -> dict[str, object] | None:
         "rows": rows,
         "yakuman_rows": read_csv(YAKUMAN_CSV),
         "yakuman_detail_rows": read_csv(YAKUMAN_DETAILS_CSV),
+        "yaku_rows": [],
         "correlation_rows": [],
         "total_games": total_games,
         "total_rounds": total_rounds,
@@ -2771,7 +2836,7 @@ def build_old_contexts(refresh_cache: bool = False) -> tuple[dict[str, object], 
         OLD_LEAGUE_FULL_GAMES,
         teams_by_season=old_teams_by_season,
     )
-    old_context = build_context("old-league", "旧リーグ", old_uuids)
+    old_context = combine_contexts("old-league", "旧リーグ", old_season_contexts)
     add_context_awards(old_context, old_season_contexts)
     if refresh_cache:
         previous = load_old_context_cache()
@@ -2897,6 +2962,7 @@ def combine_player_rows(contexts: list[dict[str, object]]) -> list[dict[str, str
                 "last_avoid_rate": fmt_pct_count(rank_counts[1] + rank_counts[2], games),
                 "average_rank": weighted_average(sum(parse_float(row.get("average_rank", 0)) * parse_int(row.get("games", 0)) for row in rows), games, 2),
                 "rounds": str(rounds),
+                "hu": str(hu),
                 "average_hu_point": weighted_average(sum(parse_float(row.get("average_hu_point", 0)) * pct_count(row, "hu_rate", parse_int(row.get("rounds", 0))) for row in rows), hu, 1),
                 "average_called_hu_point": weighted_average(sum(parse_float(row.get("average_called_hu_point", 0)) * pct_count(row, "call_after_hu_rate", pct_count(row, "called_rate", parse_int(row.get("rounds", 0)))) for row in rows), called_hu, 1),
                 "hu_rate": fmt_pct_count(hu, rounds),
@@ -3017,6 +3083,7 @@ def combine_contexts(key: str, label: str, contexts: list[dict[str, object]]) ->
         "label": label,
         "rows": rows,
         "yakuman_rows": combine_named_count_rows(contexts, "yakuman_rows", "yakuman_name"),
+        "yaku_rows": combine_named_count_rows(contexts, "yaku_rows", "yaku_name"),
         "yakuman_detail_rows": [
             dict(row)
             for context in contexts

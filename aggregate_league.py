@@ -13,6 +13,7 @@ PAIFU_CSV = Path("admin_paifu_ids.csv")
 SUMMARY_OUT = Path("summary.csv")
 YAKUMAN_OUT = Path("yakuman_summary.csv")
 YAKUMAN_DETAILS_OUT = Path("yakuman_details.csv")
+YAKU_OUT = Path("yaku_summary.csv")
 
 # 雀魂のfan ID→役満名。実対局ログ（RecordHuleのfansと手牌の突き合わせ）で
 # 確認済み: 35=天和(平凡な手でyiman), 37=大三元, 38=四暗刻, 39=字一色(全字牌),
@@ -35,6 +36,18 @@ YAKUMAN_NAMES = {
     49: "国士無双十三面",
     50: "大四喜",
 }
+
+# 雀魂のfan ID→和了役名。ドラ類は役ではないため、和了役スタッツからは除外する。
+YAKU_NAMES = {
+    1: "門前清自摸和", 2: "立直", 3: "槍槓", 4: "嶺上開花", 5: "海底摸月",
+    6: "河底撈魚", 7: "役牌:白", 8: "役牌:發", 9: "役牌:中", 10: "役牌:自風牌",
+    11: "役牌:場風牌", 12: "断幺九", 13: "一盃口", 14: "平和", 15: "混全帯幺九",
+    16: "一気通貫", 17: "三色同順", 18: "ダブル立直", 19: "三色同刻", 20: "三槓子",
+    21: "対々和", 22: "三暗刻", 23: "小三元", 24: "混老頭", 25: "七対子",
+    26: "純全帯幺九", 27: "混一色", 28: "二盃口", 29: "清一色", 30: "一発",
+    46: "八連荘",
+}
+BONUS_FAN_IDS = {31, 32, 33, 34}
 
 RIICHI_QUALITY_CATEGORIES = [
     ("ryanmen_many", "リャンメン以上・4面張以上", True),
@@ -182,6 +195,7 @@ class PlayerStats:
     chiitoi_hu: int = 0
     honitsu_hu: int = 0
     chinitsu_hu: int = 0
+    yaku_names: Counter = field(default_factory=Counter)
     houjuu: int = 0
     houjuu_point_sum: int = 0
     tsumo_loss: int = 0
@@ -1314,6 +1328,24 @@ def yakuman_names_from_hule(hule):
 
     return names
 
+
+def yaku_names_from_hule(hule):
+    names = []
+    if not hasattr(hule, "fans"):
+        return names
+
+    for fan in hule.fans:
+        fan_id = int(getattr(fan, "id", 0))
+        if fan_id in BONUS_FAN_IDS:
+            continue
+        if fan_id in YAKUMAN_NAMES:
+            names.append(yakuman_name_from_fan(hule, fan_id) or YAKUMAN_NAMES[fan_id])
+        elif fan_id in YAKU_NAMES:
+            names.append(YAKU_NAMES[fan_id])
+        else:
+            names.append(f"役ID{fan_id}")
+    return names
+
 def hule_fan_ids(hule):
     if not hasattr(hule, "fans"):
         return set()
@@ -1804,6 +1836,8 @@ def aggregate_game(uuid, stats, yakuman_details):
                 player_stats.chiitoi_hu += int(25 in fan_ids)
                 player_stats.honitsu_hu += int(27 in fan_ids)
                 player_stats.chinitsu_hu += int(29 in fan_ids)
+                for yaku_name in yaku_names_from_hule(hule):
+                    player_stats.yaku_names[yaku_name] += 1
 
                 if getattr(hule, "zimo", False):
                     player_stats.tsumo += 1
@@ -2058,6 +2092,21 @@ def write_yakuman_summary(stats):
             for yakuman_name, count in sorted(player_stats.yakuman_names.items()):
                 writer.writerow([player_name, yakuman_name, count])
 
+
+def write_yaku_summary(stats):
+    with YAKU_OUT.open("w", encoding="utf-8-sig", newline="") as f:
+        writer = csv.writer(f)
+        writer.writerow(["player", "total_hu", "yaku_name", "count", "rate"])
+        for player_name, player_stats in sorted(stats.items(), key=lambda item: item[0]):
+            for yaku_name, count in sorted(player_stats.yaku_names.items()):
+                writer.writerow([
+                    player_name,
+                    player_stats.hu,
+                    yaku_name,
+                    count,
+                    percent(count, player_stats.hu),
+                ])
+
 def write_yakuman_details(rows):
     with YAKUMAN_DETAILS_OUT.open("w", encoding="utf-8-sig", newline="") as f:
         writer = csv.DictWriter(
@@ -2137,10 +2186,12 @@ def main():
 
     write_summary(stats)
     write_yakuman_summary(stats)
+    write_yaku_summary(stats)
     write_yakuman_details(yakuman_details)
 
     print(f"saved: {SUMMARY_OUT}")
     print(f"saved: {YAKUMAN_OUT}")
+    print(f"saved: {YAKU_OUT}")
     print(f"saved: {YAKUMAN_DETAILS_OUT}")
 
 if __name__ == "__main__":
