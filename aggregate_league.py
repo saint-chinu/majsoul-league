@@ -196,6 +196,7 @@ class PlayerStats:
     honitsu_hu: int = 0
     chinitsu_hu: int = 0
     yaku_names: Counter = field(default_factory=Counter)
+    kita_count: int = 0
     houjuu: int = 0
     houjuu_point_sum: int = 0
     tsumo_loss: int = 0
@@ -1683,6 +1684,9 @@ def aggregate_game(uuid, stats, yakuman_details):
             seat = getattr(msg, "seat", None)
             if seat is not None:
                 seat = int(seat)
+                player_name = seat_to_name.get(seat)
+                if player_name:
+                    stats[player_name].kita_count += 1
                 remove_one_tile(current_hands[seat], "4z")
                 visible_counts["4z"] += 1
                 if seat not in opening_done:
@@ -1979,6 +1983,7 @@ def write_summary(stats):
             "average_opening_shanten",
             "average_opening_dora",
             "called_rate",
+            "average_kita",
             "riichi",
             "riichi_rate",
             "riichi_miss_rate",
@@ -2065,6 +2070,7 @@ def write_summary(stats):
                 average(player_stats.opening_shanten_sum, player_stats.opening_samples, 2),
                 average(player_stats.opening_dora_sum, player_stats.opening_samples, 2),
                 percent(player_stats.called, player_stats.rounds),
+                average(player_stats.kita_count, player_stats.rounds, 2),
                 player_stats.riichi,
                 percent(player_stats.riichi, player_stats.rounds),
                 percent(player_stats.riichi_miss, player_stats.riichi),

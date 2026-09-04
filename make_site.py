@@ -212,7 +212,7 @@ NEW_SEASON_FILE_RE = re.compile(r"admin_paifu_ids_new_season(\d+)\.csv$")
 OLD_LEAGUE_FULL_GAMES = 120
 NEW_LEAGUE_FULL_GAMES = 135
 OLD_CONTEXT_CACHE = Path("data") / "old_league_contexts.json"
-OLD_CONTEXT_CACHE_VERSION = 3
+OLD_CONTEXT_CACHE_VERSION = 4
 
 
 LABELS = {
@@ -268,6 +268,7 @@ LABELS = {
     "average_opening_shanten": "平均配牌シャンテン",
     "average_opening_dora": "平均配牌ドラ",
     "called_rate": "副露率",
+    "average_kita": "平均抜きドラ",
     "riichi": "リーチ数",
     "riichi_rate": "立直率",
     "riichi_miss_rate": "リーチ空振り率",
@@ -341,6 +342,7 @@ METRIC_DESCRIPTIONS = {
     "two_called_houjuu_rate": "参加局のうち、2副露以上の手へのロン放銃になった割合。",
     "called_haneman_houjuu_rate": "参加局のうち、鳴いた跳満以上の手へのロン放銃になった割合。ロン支払点12,000点以上を跳満以上として集計。",
     "called_rate": "参加局のうち、副露した割合。",
+    "average_kita": "北抜きの総枚数を参加局数で割った、1局あたりの平均抜きドラ枚数。",
     "riichi_rate": "参加局のうち、リーチした割合。",
     "riichi_miss_rate": "リーチした局で、自分が和了できなかった割合。",
     "bad_shape_riichi_rate": "リーチのうち、待ち枚数4枚以下の割合。両ヤオチュウ・役牌シャンポン、字牌・萬子単騎は除外。",
@@ -409,6 +411,7 @@ MAIN_COLUMNS = [
     "average_opening_shanten",
     "average_opening_dora",
     "called_rate",
+    "average_kita",
     "riichi_rate",
     "riichi_miss_rate",
     "bad_shape_riichi_rate",
@@ -482,6 +485,7 @@ PLAYER_MAIN_COLUMNS = [
     "winning_run_points",
     "tsumo_rate",
     "called_rate",
+    "average_kita",
     "riichi_rate",
     "riichi_miss_rate",
     "bad_shape_riichi_rate",
@@ -514,6 +518,7 @@ PLAYER_SEASON_COLUMNS = [
     "last_stay_rate",
     "tsumo_rate",
     "called_rate",
+    "average_kita",
     "riichi_rate",
     "riichi_miss_rate",
     "bad_shape_riichi_rate",
@@ -615,6 +620,7 @@ MAIN_WIN_COLUMNS = [
     "late_noten_houjuu_rate",
     "late_noten_fresh_discard_rate",
     "called_rate",
+    "average_kita",
     "riichi_rate",
     "riichi_miss_rate",
     "bad_shape_riichi_rate",
@@ -710,6 +716,7 @@ DETAIL_WIN_COLUMNS = [
     "late_noten_fresh_discard_rate",
     "average_opening_shanten",
     "average_opening_dora",
+    "average_kita",
 ]
 
 
@@ -749,6 +756,7 @@ PLAYER_WIN_COLUMNS = [
     "late_noten_houjuu_rate",
     "late_noten_fresh_discard_rate",
     "called_rate",
+    "average_kita",
     "riichi_rate",
     "riichi_miss_rate",
     "bad_shape_riichi_rate",
@@ -839,6 +847,7 @@ PLAYER_SEASON_WIN_COLUMNS = [
     "late_noten_houjuu_rate",
     "late_noten_fresh_discard_rate",
     "called_rate",
+    "average_kita",
     "riichi_rate",
     "riichi_miss_rate",
     "bad_shape_riichi_rate",
@@ -976,7 +985,7 @@ def format_cell_value(col: str, value: str | int | float) -> str:
         return number(value, 2)
     if col == "average_first_call_turn":
         return number(value, 1)
-    if col in {"average_opening_shanten", "average_opening_dora"}:
+    if col in {"average_opening_shanten", "average_opening_dora", "average_kita"}:
         return number(value, 2)
     if col in {
         "average_hu_point",
@@ -2178,6 +2187,8 @@ def aggregate_uuids(uuids: set[str]) -> tuple[list[dict[str, str]], list[dict[st
                     average(player_stats.opening_dora_sum, player_stats.opening_samples, 2)
                 ),
                 "called_rate": percent(player_stats.called, player_stats.rounds),
+                "kita_count": str(player_stats.kita_count),
+                "average_kita": str(average(player_stats.kita_count, player_stats.rounds, 2)),
                 "riichi": str(player_stats.riichi),
                 "riichi_rate": percent(player_stats.riichi, player_stats.rounds),
                 "riichi_miss_rate": percent(player_stats.riichi_miss, player_stats.riichi),
@@ -2919,6 +2930,7 @@ def combine_player_rows(contexts: list[dict[str, object]]) -> list[dict[str, str
         rounds = sum(parse_int(row.get("rounds", 0)) for row in rows)
         hu = sum(pct_count(row, "hu_rate", parse_int(row.get("rounds", 0))) for row in rows)
         called = sum(pct_count(row, "called_rate", parse_int(row.get("rounds", 0))) for row in rows)
+        kita_count = sum(parse_int(row.get("kita_count", 0)) for row in rows)
         riichi = sum(parse_int(row.get("riichi", 0)) for row in rows)
         houjuu = sum(pct_count(row, "houjuu_rate", parse_int(row.get("rounds", 0))) for row in rows)
         tsumo_loss = sum(pct_count(row, "tsumo_loss_rate", parse_int(row.get("rounds", 0))) for row in rows)
@@ -3023,6 +3035,12 @@ def combine_player_rows(contexts: list[dict[str, object]]) -> list[dict[str, str
                 "average_opening_shanten": weighted_average(sum(parse_float(row.get("average_opening_shanten", 0)) * parse_int(row.get("rounds", 0)) for row in rows), rounds, 2),
                 "average_opening_dora": weighted_average(sum(parse_float(row.get("average_opening_dora", 0)) * parse_int(row.get("rounds", 0)) for row in rows), rounds, 2),
                 "called_rate": fmt_pct_count(called, rounds),
+                "kita_count": str(kita_count),
+                "average_kita": weighted_average(
+                    sum(parse_float(row.get("average_kita", 0)) * parse_int(row.get("rounds", 0)) for row in rows),
+                    rounds,
+                    2,
+                ),
                 "riichi": str(riichi),
                 "riichi_rate": fmt_pct_count(riichi, rounds),
                 "riichi_miss_rate": fmt_pct_count(sum(pct_count(row, "riichi_miss_rate", parse_int(row.get("riichi", 0))) for row in rows), riichi),
