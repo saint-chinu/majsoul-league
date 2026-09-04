@@ -182,19 +182,35 @@ def collect_visible_page(page, *, max_scan_attempts=6):
 
 
 def copy_uuid_from_button(page, button):
+    if not getattr(page, "_cq_clipboard_permission", False):
+        try:
+            page.context.grant_permissions(
+                ["clipboard-read", "clipboard-write"],
+                origin="https://tournament.mahjongsoul.com",
+            )
+        except Exception:
+            pass
+        page._cq_clipboard_permission = True
+
+    def browser_clipboard_text():
+        try:
+            return page.evaluate(
+                """async () => {
+                    try { return await navigator.clipboard.readText(); }
+                    catch (_) { return ''; }
+                }"""
+            )
+        except Exception:
+            return ""
+
     for method in ("dom", "force", "mouse"):
         # Windowsのクリップボードはブラウザや常駐アプリに一瞬掴まれることがある。
         # ここで落ちると牌譜取得全体が止まるため、短く待って取り直す。
-        cleared = False
-        for _ in range(6):
-            try:
-                pyperclip.copy("")
-                cleared = True
-                break
-            except pyperclip.PyperclipException:
-                page.wait_for_timeout(250)
-        if not cleared:
-            continue
+        try:
+            pyperclip.copy("")
+        except pyperclip.PyperclipException:
+            # pyperclipが掴めない場合でも、ブラウザ側のClipboard APIで読めることがある。
+            pass
 
         try:
             if method == "dom":
@@ -210,6 +226,9 @@ def copy_uuid_from_button(page, button):
             continue
 
         page.wait_for_timeout(260)
+        match = UUID_RE.search(browser_clipboard_text())
+        if match:
+            return match
         for _ in range(6):
             try:
                 copied = pyperclip.paste()
