@@ -33,6 +33,41 @@ def install_dialog_guard(page):
     page._cq_dialog_guard = True
 
 
+def install_clipboard_write_capture(page):
+    """コピーAPIへ渡される文字列をページ内にも記録する。
+
+    Windowsの共有クリップボードがロックされていても、ボタンのコピー処理が
+    渡そうとした牌譜URLをここから取れるため、OS側のClipboardを読めない
+    バックグラウンド実行でも止まらない。
+    """
+    if getattr(page, "_cq_clipboard_capture", False):
+        return
+    page.evaluate(
+        """
+        () => {
+          if (window.__cqClipboardCaptureInstalled) return;
+          window.__cqClipboardCaptureInstalled = true;
+          window.__cqLastCopiedText = '';
+          const remember = (text) => {
+            window.__cqLastCopiedText = String(text || '');
+          };
+          try {
+            const original = navigator.clipboard.writeText.bind(navigator.clipboard);
+            navigator.clipboard.writeText = async (text) => {
+              remember(text);
+              return original(text);
+            };
+          } catch (_) {}
+          document.addEventListener('copy', (event) => {
+            const text = event.clipboardData && event.clipboardData.getData('text/plain');
+            if (text) remember(text);
+          }, true);
+        }
+        """
+    )
+    page._cq_clipboard_capture = True
+
+
 def dismiss_unexpected_overlay(page) -> bool:
     """クリック後にモーダル/ポップ確認が出ていたらEscapeで閉じてTrueを返す。
     コピーボタンはクリップボードへ書くだけでUIは開かないので、何かが開いた=
@@ -93,6 +128,7 @@ def collect_visible_page(page, *, max_scan_attempts=6):
     - クリック後にモーダル/確認が開いたらEscapeで閉じ、そのボタンは二度と押さない。
     """
     install_dialog_guard(page)
+    install_clipboard_write_capture(page)
 
     uuids = []
     seen_on_page = set()
@@ -203,6 +239,12 @@ def copy_uuid_from_button(page, button):
         except Exception:
             return ""
 
+    def captured_copy_text():
+        try:
+            return page.evaluate("() => window.__cqLastCopiedText || ''")
+        except Exception:
+            return ""
+
     for method in ("dom", "force", "mouse"):
         # Windowsのクリップボードはブラウザや常駐アプリに一瞬掴まれることがある。
         # ここで落ちると牌譜取得全体が止まるため、短く待って取り直す。
@@ -210,6 +252,11 @@ def copy_uuid_from_button(page, button):
             pyperclip.copy("")
         except pyperclip.PyperclipException:
             # pyperclipが掴めない場合でも、ブラウザ側のClipboard APIで読めることがある。
+            pass
+
+        try:
+            page.evaluate("() => { window.__cqLastCopiedText = ''; }")
+        except Exception:
             pass
 
         try:
@@ -226,6 +273,9 @@ def copy_uuid_from_button(page, button):
             continue
 
         page.wait_for_timeout(260)
+        match = UUID_RE.search(captured_copy_text())
+        if match:
+            return match
         match = UUID_RE.search(browser_clipboard_text())
         if match:
             return match
