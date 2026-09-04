@@ -183,7 +183,18 @@ def collect_visible_page(page, *, max_scan_attempts=6):
 
 def copy_uuid_from_button(page, button):
     for method in ("dom", "force", "mouse"):
-        pyperclip.copy("")
+        # Windowsのクリップボードはブラウザや常駐アプリに一瞬掴まれることがある。
+        # ここで落ちると牌譜取得全体が止まるため、短く待って取り直す。
+        cleared = False
+        for _ in range(6):
+            try:
+                pyperclip.copy("")
+                cleared = True
+                break
+            except pyperclip.PyperclipException:
+                page.wait_for_timeout(250)
+        if not cleared:
+            continue
 
         try:
             if method == "dom":
@@ -199,10 +210,16 @@ def copy_uuid_from_button(page, button):
             continue
 
         page.wait_for_timeout(260)
-        copied = pyperclip.paste()
-        match = UUID_RE.search(copied)
-        if match:
-            return match
+        for _ in range(6):
+            try:
+                copied = pyperclip.paste()
+            except pyperclip.PyperclipException:
+                page.wait_for_timeout(250)
+                continue
+            match = UUID_RE.search(copied)
+            if match:
+                return match
+            page.wait_for_timeout(120)
 
     return None
 
