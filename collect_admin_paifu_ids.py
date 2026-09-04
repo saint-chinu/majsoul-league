@@ -58,10 +58,20 @@ def install_clipboard_write_capture(page):
               return original(text);
             };
           } catch (_) {}
+          try {
+            const originalExecCommand = document.execCommand.bind(document);
+            document.execCommand = (command, ...args) => {
+              if (String(command).toLowerCase() === 'copy') {
+                remember(window.getSelection ? window.getSelection().toString() : '');
+              }
+              return originalExecCommand(command, ...args);
+            };
+          } catch (_) {}
           document.addEventListener('copy', (event) => {
-            const text = event.clipboardData && event.clipboardData.getData('text/plain');
+            const text = (event.clipboardData && event.clipboardData.getData('text/plain'))
+              || String(window.getSelection ? window.getSelection().toString() : '');
             if (text) remember(text);
-          }, true);
+          });
         }
         """
     )
