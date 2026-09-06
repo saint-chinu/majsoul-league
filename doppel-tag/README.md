@@ -14,7 +14,8 @@
 | [COST_AND_SOLO.md](COST_AND_SOLO.md) | 開発環境の費用、段階ごとの実支出、1 人で作れるかの評価 |
 | [BROWSER_TARGET.md](BROWSER_TARGET.md) | **ブラウザ（PC 含む）を当面の出口とする場合の最新方針。**技術選定、実装の要点 |
 | [MONETIZATION.md](MONETIZATION.md) | 収益化の検討。アクセスパス販売案の評価と、協力ゲームに合う形 |
-| **[GETTING_STARTED.md](GETTING_STARTED.md)** | **着手チェックリスト。**入れるもの、作るアカウント、実装の順番、この段階で作らなくていいもの |
+| **[SETUP.md](SETUP.md)** | **環境構築の手順。**インストール、アカウント、プロジェクト作成、完了チェックリスト |
+| **[GETTING_STARTED.md](GETTING_STARTED.md)** | **着手チェックリスト。**実装の順番、先に決めておく設計方針、この段階で作らなくていいもの |
 
 ## 結論だけ先に
 
