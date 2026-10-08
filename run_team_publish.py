@@ -43,6 +43,7 @@ def commit_and_push(season: int) -> None:
     files = [
         "team_members.csv",
         "docs/index.html",
+        "docs/seating/data.js",
     ]
     existing = [name for name in files if (ROOT / name).exists()]
     if not existing:

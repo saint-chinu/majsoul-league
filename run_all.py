@@ -63,6 +63,7 @@ def commit_and_push() -> None:
         "yakuman_summary.csv",
         "yakuman_details.csv",
         "docs/index.html",
+        "docs/seating/data.js",
         "collect_admin_paifu_ids.py",
         "collect_all_seasons.py",
         "make_site.py",

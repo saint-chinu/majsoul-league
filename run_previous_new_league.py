@@ -72,6 +72,8 @@ def commit_and_push() -> None:
         if path.exists()
     ]
     targets += [str(path.relative_to(ROOT)) for path in (ROOT / "docs").glob("*.html")]
+    if (ROOT / "docs/seating/data.js").exists():
+        targets.append("docs/seating/data.js")
     subprocess.run([git, "add", *targets], cwd=ROOT, check=True)
     staged = subprocess.run(
         [git, "diff", "--cached", "--quiet"], cwd=ROOT, check=False

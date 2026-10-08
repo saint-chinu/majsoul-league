@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>シーズン4 卓組管理 | 魚群リーグ</title>
+  <link rel="stylesheet" href="seating/style.css">
+  <script defer src="seating/vendor/lucide-1.53.0.js"></script>
+  <script defer src="seating/data.js"></script>
+  <script defer src="seating/engine.js"></script>
+  <script defer src="seating/app.js"></script>
+</head>
+<body>
+  <header class="topbar"><a href="index.html" class="brand">魚群リーグ <span>運営</span></a><a href="index.html" class="back"><i data-lucide="arrow-left"></i>成績サイト</a></header>
+  <main>
+    <section class="heading"><div><p class="eyebrow">個人戦 / 6名 / 1人30半荘</p><h1>シーズン4 卓組管理</h1></div><div class="actions">
+      <button id="help" title="配分条件" aria-label="配分条件"><i data-lucide="circle-help"></i></button>
+      <button id="reload" title="最新の公開データを読み込む" aria-label="更新"><i data-lucide="refresh-cw"></i></button>
+      <button id="download" title="残り卓組案をCSV出力" aria-label="残り卓組案をCSV出力" disabled><i data-lucide="download"></i></button>
+      <button id="print" title="印刷" aria-label="印刷"><i data-lucide="printer"></i></button>
+    </div></section>
+    <p id="source" class="source"></p>
+    <div id="notice" role="status" class="notice" hidden></div>
+    <section class="metrics" aria-label="進捗"><div><span>消化半荘</span><strong id="played">—</strong><small>/ 60</small></div><div><span>残り半荘</span><strong id="remaining">—</strong></div><div><span>3人組の基準</span><strong>3<small>回ずつ</small></strong><small>20通り</small></div><div><span>ペア同卓の基準</span><strong>12<small>回ずつ</small></strong><small>15通り</small></div></section>
+    <section class="section"><div class="section-title"><h2>参加者の進捗</h2><span>消化 / 30半荘</span></div><div id="people" class="people"></div></section>
+    <section class="section recommendation"><div class="section-title"><h2>次の卓候補</h2><button id="recalculate" class="text-button"><i data-lucide="calculator"></i>再計算</button></div>
+      <p id="plan-status" role="status" aria-live="polite">計算準備中</p><div id="suggestions"></div><div id="two-tables" class="two-tables" hidden></div>
+    </section>
+    <section class="section"><div class="section-title"><h2>相手ごとの同卓回数</h2><span>実績 / 最終案</span></div><div class="table-scroll"><table id="pair-table" class="pair-table"></table></div></section>
+    <section class="section"><div class="section-title"><h2>組み合わせ別の配分</h2><span>全20通り</span></div><div class="legend"><span class="dot good"></span>3回未満 <span class="dot neutral"></span>3回 <span class="dot warn"></span>3回超過</div><div class="table-scroll"><table class="combination-table"><thead><tr><th>3人組</th><th>消化</th><th>基準差</th><th>残り案</th><th>最終案</th></tr></thead><tbody id="combinations"></tbody></table></div></section>
+    <section class="section"><details><summary>集計対象の対局 <span id="history-count"></span></summary><div class="table-scroll"><table><thead><tr><th>終了日時</th><th>参加者</th><th>牌譜</th></tr></thead><tbody id="history"></tbody></table></div></details></section>
+    <noscript>卓組の計算にはJavaScriptが必要です。</noscript>
+  </main>
+  <footer>魚群リーグ · シーズン4 個人戦 <span>牌譜取得・サイト更新時に反映</span></footer>
+  <dialog id="rules"><div class="section-title"><h2>配分条件</h2><button id="close-help" aria-label="閉じる" title="閉じる"><i data-lucide="x"></i></button></div>
+    <dl><dt>総対局数</dt><dd>6名 × 30半荘 ÷ 3名 = 60半荘。</dd><dt>完全均等</dt><dd>20通りの3人組が各3回。各人30半荘、15通りのペアが各12回同卓。</dd><dt>序盤に偏りがある場合</dt><dd>終了済みの対局は変更せず、各人30半荘を必須条件として残りを配分。ペア同卓の最大偏差、ペア偏差の合計、3人組の偏差の順に小さくする調整案を計算します。</dd><dt>推奨の意味</dt><dd>残り全体の配分案に含まれる卓から、消化数・同卓回数の少ない組を先に表示。唯一の正解ではなく、以後の実績で再計算されます。</dd><dt>未取得・判別不能の対局</dt><dd>成績詳細が足りない、または対象6名以外が含まれる場合は件数を表示し、推奨を保留します。座順・親回数はこの配分の対象外です。</dd></dl>
+  </dialog>
+</body></html>

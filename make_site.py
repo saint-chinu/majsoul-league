@@ -123,7 +123,11 @@ def split_site_pages(html_text: str) -> dict[str, str]:
     # タブをbuttonからリンクに変えるため、リンクでも従来の見た目になるよう最小限の補正を足す。
     style_block = style_block.replace(
         "</style>",
-        "    a.tab-button { text-decoration: none; display: inline-block; }\n  </style>",
+        "    a.tab-button { text-decoration: none; display: inline-block; }\n"
+        "    header { display:flex; align-items:center; justify-content:space-between; gap:12px; }\n"
+        "    .ops-menu { position:relative; font-size:12px; flex-shrink:0; }\n"
+        "    .ops-menu summary { cursor:pointer; color:#49655f; }\n"
+        "    .ops-menu a { position:absolute; right:0; top:28px; width:200px; padding:14px; background:white; border:1px solid #dce3e2; z-index:20; color:#087e79; text-decoration:none; }\n  </style>",
     )
 
     nav_open = html_text.find('<section class="tab-groups"')
@@ -181,6 +185,7 @@ def split_site_pages(html_text: str) -> dict[str, str]:
 <body>
   <header>
     <h1>魚群リーグ</h1>
+    <details class="ops-menu"><summary>運営メニュー</summary><a href="table-manager.html">シーズン4 卓組管理</a></details>
   </header>
   <main>
     {nav_for(key)}
@@ -2692,7 +2697,7 @@ def build_season_contexts(
             season,
             latest_season,
             len(season_to_uuids[season]),
-            full_games=full_games,
+            full_games=60 if key_prefix == "new" and season == 4 else full_games,
             prefix=label_prefix,
         )
         season_contexts.append(
@@ -3406,6 +3411,8 @@ def main() -> None:
 """
 
     write_site_pages(html_text)
+    from build_seating import write_seating_data
+    write_seating_data()
 
 
 if __name__ == "__main__":

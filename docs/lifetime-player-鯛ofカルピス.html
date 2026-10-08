@@ -162,11 +162,16 @@
       h1 { font-size: 26px; }
     }
       a.tab-button { text-decoration: none; display: inline-block; }
+    header { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+    .ops-menu { position:relative; font-size:12px; flex-shrink:0; }
+    .ops-menu summary { cursor:pointer; color:#49655f; }
+    .ops-menu a { position:absolute; right:0; top:28px; width:200px; padding:14px; background:white; border:1px solid #dce3e2; z-index:20; color:#087e79; text-decoration:none; }
   </style>
 </head>
 <body>
   <header>
     <h1>魚群リーグ</h1>
+    <details class="ops-menu"><summary>運営メニュー</summary><a href="table-manager.html">シーズン4 卓組管理</a></details>
   </header>
   <main>
     <section class="tab-groups" aria-label="ページ切り替え">
