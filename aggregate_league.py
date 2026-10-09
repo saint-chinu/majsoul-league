@@ -60,6 +60,7 @@ RIICHI_QUALITY_CATEGORIES = [
     ("yakuhai_simple_shanpon", "役牌＋3～7数牌シャンポン", True),
     ("kanchan_2_8", "2・8待ちカンチャン", True),
     ("dora_bad_shape", "ドラ絡み愚形", True),
+    ("manzu_simple_shanpon", "萬子＋3～7数牌シャンポン（萬子+2・数牌-2）", True),
     ("bad_kanchan_penchan_3_7", "3～7カンチャン・ペンチャン", False),
     ("bad_simple_shanpon", "3～7シャンポン", False),
     ("bad_bulge_shanpon", "中ぶくれ・外ぶくれシャンポン", False),
@@ -79,6 +80,7 @@ RIICHI_QUALITY_SCORE = {
     "yakuhai_simple_shanpon": 2,
     "kanchan_2_8": 1,
     "dora_bad_shape": 0,
+    "manzu_simple_shanpon": 0,
     "bad_kanchan_penchan_3_7": -2,
     "bad_simple_shanpon": -2,
     "bad_bulge_shanpon": -4,
@@ -770,6 +772,10 @@ def classify_riichi_quality(tiles, waits, visible_counts, seat, chang, dealer, d
             return "tanki_0_cut_honor_manzu"
 
     if is_shanpon:
+        if len(waits) == 2 and any(tile.endswith("m") for tile in waits) and any(
+            tile.endswith(("p", "s")) and is_simple_number(tile) for tile in waits
+        ):
+            return "manzu_simple_shanpon"
         if is_double_bulge_shanpon(tiles, waits):
             return "worst_double_bulge_shanpon"
         if all(is_yaochu(wait_tile) for wait_tile in waits):
