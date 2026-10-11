@@ -9,7 +9,7 @@
   <script defer src="seating/vendor/lucide-1.53.0.js"></script>
   <script defer src="seating/data.js"></script>
   <script defer src="seating/engine.js?v=20261011-cap"></script>
-  <script defer src="seating/app.js?v=20261011-cap"></script>
+  <script defer src="seating/app.js?v=20261011-blocked"></script>
   <script defer src="seating/reconcile.js?v=20261011-cap"></script>
   <script defer src="seating/shared.js?v=20261011-cap"></script>
 </head>
@@ -24,6 +24,7 @@
     </div></section>
     <p id="source" class="source"></p>
     <div id="notice" role="status" class="notice" hidden></div>
+    <section id="blocked-section" class="section"><div class="section-title"><h2>これ以上打てない組み合わせ</h2><span id="blocked-count"></span></div><p id="blocked-status"></p><div class="table-scroll"><table><thead><tr><th>メンバー</th><th>計上回数</th><th>次に打つと</th></tr></thead><tbody id="blocked-rows"></tbody></table></div></section>
     <section id="excluded-section" class="section" hidden><div class="section-title"><h2>上限超過・成績から除外した対局</h2><span id="excluded-count"></span></div><p>開始日時順で同じ3人組の4回目以降。補正成績から除外済みです。雀魂側の削除状況は未確認です。</p><p><a href="new-season-4.html">シーズン4の補正成績</a></p><div class="table-scroll"><table><thead><tr><th>開始日時（日本時間）</th><th>メンバー</th><th>同組の回数</th><th>対局ID</th><th>牌譜</th></tr></thead><tbody id="excluded-rows"></tbody></table></div></section>
     <section class="section provisional">
       <div class="section-title"><h2>対局の仮登録</h2></div>

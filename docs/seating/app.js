@@ -21,6 +21,10 @@ window.renderSeating = (d) => {
   window.stopSeatingWorker=()=>{clearTimeout(timer);worker?.terminate();};
   $('notice').hidden=true;
   const excluded=d.excluded||[];
+  const blocked=E.combos.map((members,i)=>({members,count:counts[i]})).filter(r=>r.count>=3);
+  $('blocked-count').textContent=`${blocked.length}組`;
+  $('blocked-status').textContent=(d.provisionalCount?'有効牌譜＋未照合の仮登録で判定。':'有効牌譜で判定。')+'同じ3人組は3回まで。無効試合は回数に含めません。'+(errors.length?' 要確認の登録があるため、確認が済むまで他の組み合わせも実施可能とは確定できません。':'');
+  $('blocked-rows').innerHTML=blocked.length?blocked.map(r=>`<tr><td class="names">${names(r.members)}</td><td>${r.count} / 3回</td><td>${r.count+1}回目・無効</td></tr>`).join(''):'<tr><td colspan="3" class="empty">上限に達した組み合わせはありません</td></tr>';
   $('excluded-section').hidden=!excluded.length;
   $('excluded-count').textContent=`${excluded.length}半荘`;
   $('excluded-rows').innerHTML=excluded.map(r=>`<tr><td>${new Date(r.start*1000).toLocaleString('ja-JP',{timeZone:'Asia/Tokyo'})}</td><td>${esc(r.players.map(id=>d.players.find(p=>p.id===id)?.name||'対象外').join(' / '))}</td><td>${r.occurrence}回目</td><td><code>${esc(r.uuid)}</code></td><td><a href="https://game.mahjongsoul.com/?paipu=${encodeURIComponent(r.uuid)}" target="_blank" rel="noopener">開く</a></td></tr>`).join('');
