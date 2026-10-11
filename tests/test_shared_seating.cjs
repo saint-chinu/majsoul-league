@@ -20,14 +20,12 @@ const {reconcile}=require('../docs/seating/reconcile.js');
   assert.equal(reconcile(data,[{...rows[0],end:now-3600}])[0].status,'review');
   assert.equal(reconcile(data,[{...rows[0],cancelled:true}])[0].status,'cancelled');
   assert.equal(reconcile({...data,records:[record,record]},rows)[0].status,'matched');
-  const crypto=require('node:crypto');
-  globalThis.crypto.subtle.timingSafeEqual=crypto.timingSafeEqual;
   let stored={revision:0,body:'[]'};
-  const env={EDITOR_HASH:crypto.createHash('sha256').update('test-key').digest('hex'), DB:{prepare(sql){return {
+  const env={DB:{prepare(sql){return {
     async first(){return {...stored};},
     bind(body,revision){return {async run(){if(stored.revision!==revision)return {meta:{changes:0}};stored={body,revision:revision+1};return {meta:{changes:1}};}};}
   };}}};
-  const send=x=>worker.fetch(new Request('https://test/season4',{method:'POST',headers:{Authorization:'Bearer test-key','Content-Type':'application/json'},body:JSON.stringify(x)}),env);
+  const send=x=>worker.fetch(new Request('https://test/season4',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(x)}),env);
   const results=await Promise.all([send(input),send({...input,id:'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',end:input.end-120})]);
   assert(results.every(r=>r.status===200));assert.equal(JSON.parse(stored.body).length,2);
   const retryResponse=await send(input);assert.equal(retryResponse.status,200);assert.equal(JSON.parse(stored.body).length,2);

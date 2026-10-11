@@ -11,7 +11,7 @@
   <script defer src="seating/engine.js"></script>
   <script defer src="seating/app.js?v=20261011"></script>
   <script defer src="seating/reconcile.js?v=20261011"></script>
-  <script defer src="seating/shared.js?v=20261011"></script>
+  <script defer src="seating/shared.js?v=20261011-open"></script>
 </head>
 <body>
   <header class="topbar"><a href="index.html" class="brand">魚群リーグ <span>運営</span></a><a href="index.html" class="back"><i data-lucide="arrow-left"></i>成績サイト</a></header>
@@ -25,7 +25,7 @@
     <p id="source" class="source"></p>
     <div id="notice" role="status" class="notice" hidden></div>
     <section class="section provisional">
-      <div class="section-title"><h2>対局の仮登録</h2><button id="edit-key" title="編集キー" aria-label="編集キー"><i data-lucide="key-round"></i></button></div>
+      <div class="section-title"><h2>対局の仮登録</h2></div>
       <p id="shared-status" role="status" aria-live="polite">共有データを確認中</p>
       <form id="draft-form">
         <fieldset id="draft-members"><legend>参加者（3名）</legend></fieldset>
@@ -46,7 +46,6 @@
     <noscript>卓組の計算にはJavaScriptが必要です。</noscript>
   </main>
   <footer>魚群リーグ · シーズン4 個人戦 <span>牌譜取得・サイト更新時に反映</span></footer>
-  <dialog id="key-dialog"><form method="dialog"><div class="section-title"><h2>編集キー</h2><button aria-label="閉じる" title="閉じる"><i data-lucide="x"></i></button></div><label>参加者用キー<input id="key-value" type="password" autocomplete="off"></label><div class="actions"><button id="save-key" type="button">この端末で使用</button><button id="forget-key" type="button">解除</button></div><p id="key-result" role="status"></p></form></dialog>
   <dialog id="rules"><div class="section-title"><h2>配分条件</h2><button id="close-help" aria-label="閉じる" title="閉じる"><i data-lucide="x"></i></button></div>
     <dl><dt>総対局数</dt><dd>6名 × 30半荘 ÷ 3名 = 60半荘。</dd><dt>完全均等</dt><dd>20通りの3人組が各3回。各人30半荘、15通りのペアが各12回同卓。</dd><dt>序盤に偏りがある場合</dt><dd>終了済みの対局は変更せず、各人30半荘を必須条件として残りを配分。ペア同卓の最大偏差、ペア偏差の合計、3人組の偏差の順に小さくする調整案を計算します。</dd><dt>推奨の意味</dt><dd>残り全体の配分案に含まれる卓から、消化数・同卓回数の少ない組を先に表示。唯一の正解ではなく、以後の実績で再計算されます。</dd><dt>未取得・判別不能の対局</dt><dd>成績詳細が足りない、または対象6名以外が含まれる場合は件数を表示し、推奨を保留します。座順・親回数はこの配分の対象外です。</dd></dl>
   </dialog>

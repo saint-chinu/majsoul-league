@@ -35,11 +35,6 @@ export default {
       }
       if (request.method!=='POST') return reply({error:'Method not allowed'},405);
       if (request.headers.get('Origin') && request.headers.get('Origin')!==ORIGIN) return reply({error:'Origin rejected'},403);
-      const token=(request.headers.get('Authorization')||'').replace(/^Bearer /,'');
-      if (token.length>200) return reply({error:'編集キーが違います'},401);
-      const digest=new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(token)));
-      const expected=Uint8Array.from((env.EDITOR_HASH||'').match(/../g)||[],x=>parseInt(x,16));
-      if (expected.length!==32 || !crypto.subtle.timingSafeEqual(digest,expected)) return reply({error:'編集キーが違います'},401);
       const reader=request.body?.getReader(); let length=0,chunks=[];
       if(reader)while(true){const {value,done}=await reader.read();if(done)break;length+=value.length;if(length>2048){await reader.cancel();return reply({error:'入力が大きすぎます'},413);}chunks.push(value);}
       const bytes=new Uint8Array(length);let offset=0;for(const chunk of chunks){bytes.set(chunk,offset);offset+=chunk.length;}
