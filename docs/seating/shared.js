@@ -50,7 +50,6 @@
     if(players.length!==3){$('draft-result').textContent='参加者を3名選んでください';return;}
     const same=r=>[...r.players].sort((a,b)=>a-b).join(',')===[...players].sort((a,b)=>a-b).join(',');
     const current=window.SeatingReconcile.reconcile(d,rows);
-    if(current.some(r=>r.status==='review')){$('draft-result').textContent='要確認の仮登録を確認・訂正してください';return;}
     if(d.records.filter(same).length+current.filter(r=>r.status==='pending'&&same(r)).length>=3 && !confirm('この3人組は推奨の3回に達しています。超過しても有効ですが、登録しますか？'))return;
     const values={action:'add',players,end:Math.floor(Date.parse($('draft-end').value+':00+09:00')/1000),uuid:$('draft-uuid').value.trim()};
     const signature=JSON.stringify(values);

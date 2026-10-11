@@ -2,24 +2,6 @@ const MEMBERS = [101939586, 68348480, 108312204, 101665767, 102159970, 108386176
 const ORIGIN = 'https://saint-chinu.github.io';
 const headers = {'Access-Control-Allow-Origin': ORIGIN, 'Access-Control-Allow-Headers': 'Content-Type, Authorization', 'Access-Control-Allow-Methods': 'GET, POST, OPTIONS', 'Cache-Control': 'no-store', 'Vary': 'Origin'};
 const reply = (body, status=200) => Response.json(body, {status, headers});
-export function checkCap(rows, input, data) {
-  if(input.action!=='add'||rows.some(r=>r.id===input.id))return;
-  const same=(a,b)=>[...a].sort((x,y)=>x-y).join(',')===[...b].sort((x,y)=>x-y).join(',');
-  const actual=[...data.records,...(data.excluded||[])];
-  const matches=d=>actual.filter(r=>same(r.players,d.players)&&(d.uuid?r.uuid===d.uuid:Math.abs(r.end-d.end)<=600));
-  let count=data.records.filter(r=>same(r.players,input.players)).length;
-  const used=new Set();
-  for(const r of rows.filter(r=>!r.cancelled)){
-    const candidates=matches(r);
-    if(candidates.length>1 || candidates.some(x=>used.has(x.uuid)))throw Error('要確認の仮登録を先に確認してください');
-    candidates.forEach(x=>used.add(x.uuid));
-    if(!candidates.length){
-      if(r.end<=Date.parse(data.updated)/1000-900)throw Error('要確認の仮登録を先に確認してください');
-      if(same(r.players,input.players))count++;
-    }
-  }
-  // Three games per combination is advisory; all results remain valid.
-}
 export function mutate(rows, input, now) {
   if (!/^[a-f0-9-]{36}$/.test(input.id || '')) throw Error('登録IDが不正です');
   const old = rows.find(x=>x.id===input.id);
@@ -59,19 +41,10 @@ export default {
       let input;
       try { input=JSON.parse(new TextDecoder().decode(bytes)); } catch {return reply({error:'入力が不正です'},400);}
       if (!input || typeof input!=='object') return reply({error:'入力が不正です'},400);
-      let data;
-      if(input.action==='add'){
-        const response=await fetch('https://saint-chinu.github.io/majsoul-league/seating/data.js',{cache:'no-store'});
-        if(!response.ok)return reply({error:'牌譜データを確認できません。少し待って再試行してください'},503);
-        const source=await response.text();
-        if(!source.startsWith('window.SEATING_DATA = '))return reply({error:'牌譜データが不正です'},503);
-        data=JSON.parse(source.slice('window.SEATING_DATA = '.length).trim().replace(/;$/,''));
-        if(data.season!==4||!Array.isArray(data.records)||data.issues?.length)return reply({error:'牌譜データが未確認です'},503);
-      }
       for(let attempt=0;attempt<5;attempt++) {
         const row=await env.DB.prepare('SELECT revision, body FROM seating WHERE id=4').first();
         let rows;
-        try {const previous=JSON.parse(row.body);rows=mutate(previous,input,Math.floor(Date.now()/1000));checkCap(previous,input,data);} catch(e){return reply({error:e.message},400);}
+        try {const previous=JSON.parse(row.body);rows=mutate(previous,input,Math.floor(Date.now()/1000));} catch(e){return reply({error:e.message},400);}
         const result=await env.DB.prepare('UPDATE seating SET body=?, revision=revision+1 WHERE id=4 AND revision=?').bind(JSON.stringify(rows),row.revision).run();
         if(result.meta.changes===1) return reply({season:4,revision:row.revision+1,rows});
       }
