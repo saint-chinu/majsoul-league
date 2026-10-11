@@ -34,8 +34,8 @@ window.SEATING_DATA = {
     }
   ],
   "source_available": true,
-  "source_count": 39,
-  "updated": "2026-10-12T00:10:49+09:00",
+  "source_count": 40,
+  "updated": "2026-10-12T00:16:37+09:00",
   "records": [
     {
       "uuid": "261008-2f1bde94-01b2-44e4-950a-21bccc9931d7",
@@ -346,6 +346,16 @@ window.SEATING_DATA = {
       ],
       "start": 1791726579,
       "end": 1791727522
+    },
+    {
+      "uuid": "261011-7f2b489f-990d-4d7a-ad2d-a46c0e086120",
+      "players": [
+        68348480,
+        102159970,
+        108386176
+      ],
+      "start": 1791730835,
+      "end": 1791731445
     },
     {
       "uuid": "261011-80857cc9-28fd-4a78-b6c5-1b55bf5b8856",
