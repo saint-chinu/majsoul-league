@@ -21,7 +21,7 @@ const {reconcile}=require('../docs/seating/reconcile.js');
   assert.equal(reconcile(data,[{...rows[0],cancelled:true}])[0].status,'cancelled');
   assert.equal(reconcile({...data,records:[record,record]},rows)[0].status,'matched');
   assert.equal(reconcile({...data,records:[],excluded:[record]},rows)[0].status,'excluded');
-  assert.throws(()=>checkCap([],input,{...data,records:[record,{...record,uuid:'y'},{...record,uuid:'z'}]}));
+  assert.doesNotThrow(()=>checkCap([],input,{...data,records:[record,{...record,uuid:'y'},{...record,uuid:'z'}]}));
   globalThis.fetch=async()=>new Response('window.SEATING_DATA = '+JSON.stringify({...data,season:4,records:[]})+';');
   let stored={revision:0,body:'[]'};
   const env={DB:{prepare(sql){return {
@@ -33,7 +33,7 @@ const {reconcile}=require('../docs/seating/reconcile.js');
   assert(results.every(r=>r.status===200));assert.equal(JSON.parse(stored.body).length,2);
   const retryResponse=await send(input);assert.equal(retryResponse.status,200);assert.equal(JSON.parse(stored.body).length,2);
   const atLimit=await Promise.all([send({...input,id:'cccccccc-cccc-cccc-cccc-cccccccccccc',end:input.end-240}),send({...input,id:'dddddddd-dddd-dddd-dddd-dddddddddddd',end:input.end-360})]);
-  assert.deepEqual(atLimit.map(r=>r.status).sort(),[200,400]);
-  assert.equal(JSON.parse(stored.body).length,3);
+  assert.deepEqual(atLimit.map(r=>r.status).sort(),[200,200]);
+  assert.equal(JSON.parse(stored.body).length,4);
   console.log('shared seating validation, retries, cancellation and reconciliation: OK');
 })();

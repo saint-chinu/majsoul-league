@@ -23,8 +23,8 @@ window.renderSeating = (d) => {
   const excluded=d.excluded||[];
   const blocked=E.combos.map((members,i)=>({members,count:counts[i]})).filter(r=>r.count>=3);
   $('blocked-count').textContent=`${blocked.length}組`;
-  $('blocked-status').textContent=(d.provisionalCount?'有効牌譜＋未照合の仮登録で判定。':'有効牌譜で判定。')+'同じ3人組は3回まで。無効試合は回数に含めません。'+(errors.length?' 要確認の登録があるため、確認が済むまで他の組み合わせも実施可能とは確定できません。':'');
-  $('blocked-rows').innerHTML=blocked.length?blocked.map(r=>`<tr><td class="names">${names(r.members)}</td><td>${r.count} / 3回</td><td>${r.count+1}回目・無効</td></tr>`).join(''):'<tr><td colspan="3" class="empty">上限に達した組み合わせはありません</td></tr>';
+  $('blocked-status').textContent=(d.provisionalCount?'牌譜＋未照合の仮登録で判定。':'牌譜で判定。')+'同じ3人組は3回までを推奨。超過した対局も有効です。'+(errors.length?' 要確認の仮登録があります。':'');
+  $('blocked-rows').innerHTML=blocked.length?blocked.map(r=>`<tr><td class="names">${names(r.members)}</td><td>${r.count}回（推奨3回）</td><td>${r.count+1}回目・非推奨</td></tr>`).join(''):'<tr><td colspan="3" class="empty">推奨回数に達した組み合わせはありません</td></tr>';
   $('excluded-section').hidden=!excluded.length;
   $('excluded-count').textContent=`${excluded.length}半荘`;
   $('excluded-rows').innerHTML=excluded.map(r=>`<tr><td>${new Date(r.start*1000).toLocaleString('ja-JP',{timeZone:'Asia/Tokyo'})}</td><td>${esc(r.players.map(id=>d.players.find(p=>p.id===id)?.name||'対象外').join(' / '))}</td><td>${r.occurrence}回目</td><td><code>${esc(r.uuid)}</code></td><td><a href="https://game.mahjongsoul.com/?paipu=${encodeURIComponent(r.uuid)}" target="_blank" rel="noopener">開く</a></td></tr>`).join('');
@@ -64,7 +64,7 @@ window.renderSeating = (d) => {
     $('suggestions').innerHTML='';$('two-tables').hidden=true;$('download').disabled=true;
     if(errors.length){$('plan-status').textContent='不足・対象外の対局を確認後、再集計してください。';return;}
     $('recalculate').disabled=true;$('plan-status').textContent='残り全体の卓組を計算中…';
-    try {worker=new Worker('seating/worker.js?v=20261011-cap');worker.onmessage=e=>finish(e.data);worker.onerror=()=>finish({error:'計算機能を読み込めませんでした。再計算してください。'});worker.postMessage(counts);timer=setTimeout(()=>finish({error:'計算時間の上限に達しました。再計算してください。'}),12000);}
+    try {worker=new Worker('seating/worker.js?v=20261011-advisory');worker.onmessage=e=>finish(e.data);worker.onerror=()=>finish({error:'計算機能を読み込めませんでした。再計算してください。'});worker.postMessage(counts);timer=setTimeout(()=>finish({error:'計算時間の上限に達しました。再計算してください。'}),12000);}
     catch(_){finish({error:'このブラウザでは計算機能を開始できませんでした。'});}
   }
   $('reload').onclick=()=>location.reload();$('recalculate').onclick=calculate;

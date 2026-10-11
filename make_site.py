@@ -3115,12 +3115,12 @@ def main() -> None:
     seating_data = build_data()
     if 4 in new_season_to_uuids:
         if seating_data['issues']:
-            raise SystemExit('ABORT: シーズン4の詳細不足により上限判定ができません。先に牌譜取得を完了してください。')
+            raise SystemExit('ABORT: シーズン4の詳細不足により参加者の確認ができません。先に牌譜取得を完了してください。')
         classified = {r['uuid'] for r in seating_data['records'] + seating_data['excluded']}
         if classified != new_season_to_uuids[4]:
-            raise SystemExit('ABORT: シーズン4の牌譜一覧が一致しません。補正集計を停止します。')
+            raise SystemExit('ABORT: シーズン4の牌譜一覧が一致しません。集計を停止します。')
         new_season_to_uuids[4] = {r['uuid'] for r in seating_data['records']}
-        print('season4 corrected:', len(seating_data['records']), 'excluded:', len(seating_data['excluded']))
+        print('season4 valid:', len(seating_data['records']), 'excluded:', len(seating_data['excluded']))
     new_uuids = set().union(*new_season_to_uuids.values()) if new_season_to_uuids else set()
 
     new_season_contexts = build_season_contexts(

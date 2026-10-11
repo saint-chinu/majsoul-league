@@ -40,6 +40,15 @@ class SeatingImportTests(unittest.TestCase):
             d=build_data(root,self.loader)
             self.assertEqual(len(d['records']),1); self.assertEqual(d['issues'],[])
 
+    def test_over_recommended_games_remain_valid(self):
+        with tempfile.TemporaryDirectory() as t:
+            root=Path(t)
+            self.make(root,[{'season':'4','uuid':str(i)} for i in range(5)])
+            d=build_data(root,self.loader)
+            self.assertEqual(len(d['records']),5)
+            self.assertEqual(d['excluded'],[])
+            self.assertEqual(len(d['over_recommended']),2)
+
     def test_wrong_season_missing_and_unknown_players(self):
         with tempfile.TemporaryDirectory() as t:
             root=Path(t); self.make(root,[{'season':'3','uuid':'aa'},{'season':'4','uuid':'bb'},{'season':'4','uuid':'cc'}])

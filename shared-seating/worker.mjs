@@ -18,7 +18,7 @@ export function checkCap(rows, input, data) {
       if(same(r.players,input.players))count++;
     }
   }
-  if(count>=3)throw Error('この3人組は3回の上限に達しています');
+  // Three games per combination is advisory; all results remain valid.
 }
 export function mutate(rows, input, now) {
   if (!/^[a-f0-9-]{36}$/.test(input.id || '')) throw Error('登録IDが不正です');

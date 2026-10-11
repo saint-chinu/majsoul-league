@@ -8,10 +8,10 @@
   <link rel="stylesheet" href="seating/shared.css?v=20261011">
   <script defer src="seating/vendor/lucide-1.53.0.js"></script>
   <script defer src="seating/data.js"></script>
-  <script defer src="seating/engine.js?v=20261011-cap"></script>
-  <script defer src="seating/app.js?v=20261011-blocked"></script>
-  <script defer src="seating/reconcile.js?v=20261011-cap"></script>
-  <script defer src="seating/shared.js?v=20261011-cap"></script>
+  <script defer src="seating/engine.js?v=20261011-advisory"></script>
+  <script defer src="seating/app.js?v=20261011-advisory"></script>
+  <script defer src="seating/reconcile.js?v=20261011-advisory"></script>
+  <script defer src="seating/shared.js?v=20261011-advisory"></script>
 </head>
 <body>
   <header class="topbar"><a href="index.html" class="brand">魚群リーグ <span>運営</span></a><a href="index.html" class="back"><i data-lucide="arrow-left"></i>成績サイト</a></header>
@@ -24,7 +24,7 @@
     </div></section>
     <p id="source" class="source"></p>
     <div id="notice" role="status" class="notice" hidden></div>
-    <section id="blocked-section" class="section"><div class="section-title"><h2>これ以上打てない組み合わせ</h2><span id="blocked-count"></span></div><p id="blocked-status"></p><div class="table-scroll"><table><thead><tr><th>メンバー</th><th>計上回数</th><th>次に打つと</th></tr></thead><tbody id="blocked-rows"></tbody></table></div></section>
+    <section id="blocked-section" class="section"><div class="section-title"><h2>今後は避けたい組み合わせ</h2><span id="blocked-count"></span></div><p id="blocked-status"></p><div class="table-scroll"><table><thead><tr><th>メンバー</th><th>計上回数</th><th>次に打つと</th></tr></thead><tbody id="blocked-rows"></tbody></table></div></section>
     <section id="excluded-section" class="section" hidden><div class="section-title"><h2>上限超過・成績から除外した対局</h2><span id="excluded-count"></span></div><p>開始日時順で同じ3人組の4回目以降。補正成績から除外済みです。雀魂側の削除状況は未確認です。</p><p><a href="new-season-4.html">シーズン4の補正成績</a></p><div class="table-scroll"><table><thead><tr><th>開始日時（日本時間）</th><th>メンバー</th><th>同組の回数</th><th>対局ID</th><th>牌譜</th></tr></thead><tbody id="excluded-rows"></tbody></table></div></section>
     <section class="section provisional">
       <div class="section-title"><h2>対局の仮登録</h2></div>
@@ -49,6 +49,6 @@
   </main>
   <footer>魚群リーグ · シーズン4 個人戦 <span>牌譜取得・サイト更新時に反映</span></footer>
   <dialog id="rules"><div class="section-title"><h2>配分条件</h2><button id="close-help" aria-label="閉じる" title="閉じる"><i data-lucide="x"></i></button></div>
-    <dl><dt>総対局数</dt><dd>6名 × 30半荘 ÷ 3名 = 60半荘。</dd><dt>完全均等</dt><dd>20通りの3人組が各3回。各人30半荘、15通りのペアが各12回同卓。</dd><dt>上限</dt><dd>同じ3人組は3半荘まで。開始日時順で4回目以降は無効試合として成績・卓組計算から除外します。保存した牌譜は消しません。</dd><dt>推奨の意味</dt><dd>残り全体の配分案に含まれる卓から、消化数・同卓回数の少ない組を先に表示。唯一の正解ではなく、以後の実績で再計算されます。</dd><dt>未取得・判別不能の対局</dt><dd>成績詳細が足りない、または対象6名以外が含まれる場合は件数を表示し、推奨を保留します。座順・親回数はこの配分の対象外です。</dd></dl>
+    <dl><dt>総対局数</dt><dd>6名 × 30半荘 ÷ 3名 = 60半荘。</dd><dt>完全均等</dt><dd>20通りの3人組が各3回。各人30半荘、15通りのペアが各12回同卓。</dd><dt>推奨回数</dt><dd>同じ3人組は3半荘までを推奨します。超過しても全対局を有効として成績・卓組計算に含めます。</dd><dt>推奨の意味</dt><dd>残り全体の配分案に含まれる卓から、消化数・同卓回数の少ない組を先に表示。唯一の正解ではなく、以後の実績で再計算されます。</dd><dt>未取得・判別不能の対局</dt><dd>成績詳細が足りない、または対象6名以外が含まれる場合は件数を表示し、推奨を保留します。座順・親回数はこの配分の対象外です。</dd></dl>
   </dialog>
 </body></html>

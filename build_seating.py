@@ -70,11 +70,11 @@ def build_data(root=ROOT, loader=read_entry):
         except Exception as e:
             reason = "成績詳細が未取得" if isinstance(e, FileNotFoundError) else str(e)
             issues.append({"uuid": uuid, "reason": reason[:160]})
-    valid, excluded = apply_combination_cap(records)
+    _, over_recommended = apply_combination_cap(records)
     return {"season": 4, "target": 30, "players": PLAYERS,
             "source_available": source.exists(), "source_count": len(seen),
             "updated": datetime.now(timezone(timedelta(hours=9))).isoformat(timespec="seconds"),
-            "records": valid, "excluded": excluded, "issues": issues}
+            "records": records, "excluded": [], "over_recommended": over_recommended, "issues": issues}
 
 
 def write_seating_data(root=ROOT):
