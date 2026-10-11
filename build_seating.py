@@ -3,6 +3,7 @@ from datetime import datetime, timezone, timedelta
 from pathlib import Path
 import csv
 import json
+from collections import Counter
 
 ROOT = Path(__file__).resolve().parent
 PLAYERS = [
@@ -23,6 +24,19 @@ def read_entry(path, uuid):
     if len(entries) != 1:
         raise ValueError("牌譜IDと成績詳細が一致しません")
     return entries[0]
+
+
+def apply_combination_cap(records):
+    counts = Counter()
+    valid, excluded = [], []
+    for record in sorted(records, key=lambda r: (r['start'], r['uuid'])):
+        key = tuple(sorted(record['players']))
+        counts[key] += 1
+        if counts[key] > 3:
+            excluded.append({**record, 'occurrence': counts[key], 'reason': '同じ3人組の4回目以降'})
+        else:
+            valid.append(record)
+    return valid, excluded
 
 
 def build_data(root=ROOT, loader=read_entry):
@@ -49,17 +63,18 @@ def build_data(root=ROOT, loader=read_entry):
             ids = sorted(p.account_id for p in entry.players)
             if len(ids) != 3 or len(set(ids)) != 3 or not set(ids) <= allowed:
                 raise ValueError("対象6名以外の参加者、または3人卓ではない対局")
-            if not entry.end_time:
-                raise ValueError("終了時刻のない対局")
+            if not entry.start_time or not entry.end_time:
+                raise ValueError("開始・終了時刻のない対局")
             records.append({"uuid": uuid, "players": ids, "start": entry.start_time,
                             "end": entry.end_time})
         except Exception as e:
             reason = "成績詳細が未取得" if isinstance(e, FileNotFoundError) else str(e)
             issues.append({"uuid": uuid, "reason": reason[:160]})
+    valid, excluded = apply_combination_cap(records)
     return {"season": 4, "target": 30, "players": PLAYERS,
             "source_available": source.exists(), "source_count": len(seen),
             "updated": datetime.now(timezone(timedelta(hours=9))).isoformat(timespec="seconds"),
-            "records": sorted(records, key=lambda r: (r["end"], r["uuid"])), "issues": issues}
+            "records": valid, "excluded": excluded, "issues": issues}
 
 
 def write_seating_data(root=ROOT):

@@ -2,7 +2,8 @@
 ((root)=>{
   function reconcile(data, drafts) {
     const same=(a,b)=>[...a].sort((x,y)=>x-y).join(',')===[...b].sort((x,y)=>x-y).join(',');
-    const actual=[...new Map(data.records.map(r=>[r.uuid,r])).values()];
+    const invalid=new Set((data.excluded||[]).map(r=>r.uuid));
+    const actual=[...new Map([...data.records,...(data.excluded||[])].map(r=>[r.uuid,r])).values()];
     const cutoff=Date.parse(data.updated)/1000-900;
     const rows=drafts.map(d=>{
       if(d.cancelled)return {...d,status:'cancelled',candidates:[]};
@@ -12,6 +13,7 @@
     const used=new Map();
     for(const d of rows)if(d.status!=='cancelled')for(const uuid of d.candidates)used.set(uuid,(used.get(uuid)||0)+1);
     for(const d of rows)if(d.candidates.some(uuid=>used.get(uuid)>1))d.status='review';
+    for(const d of rows)if(d.status==='matched'&&invalid.has(d.candidates[0]))d.status='excluded';
     return rows;
   }
   root.SeatingReconcile={reconcile};

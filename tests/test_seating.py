@@ -3,7 +3,7 @@ from pathlib import Path
 import tempfile
 from types import SimpleNamespace
 import unittest
-from build_seating import PLAYERS, build_data
+from build_seating import PLAYERS, build_data, apply_combination_cap
 
 
 class SeatingImportTests(unittest.TestCase):
@@ -22,6 +22,17 @@ class SeatingImportTests(unittest.TestCase):
             root=Path(t); (root/'admin_paifu_ids_season4.csv').write_text('old')
             d=build_data(root,self.loader)
             self.assertFalse(d['source_available']); self.assertEqual(d['records'],[])
+
+    def test_cap_uses_start_not_end_or_input_order(self):
+        records = [{'uuid': str(i), 'players': [3, 1, 2], 'start': i, 'end': 100-i}
+                   for i in [5, 2, 4, 1, 3]]
+        valid, excluded = apply_combination_cap(records)
+        self.assertEqual([r['uuid'] for r in valid], ['1', '2', '3'])
+        self.assertEqual([r['uuid'] for r in excluded], ['4', '5'])
+        self.assertEqual([r['occurrence'] for r in excluded], [4, 5])
+        valid2, excluded2 = apply_combination_cap(records + [{'uuid':'6','players':[1,2,4],'start':6,'end':7}])
+        self.assertEqual(len(valid2), 4)
+        self.assertEqual(len(excluded2), 2)
 
     def test_deduplicate_and_match_by_account(self):
         with tempfile.TemporaryDirectory() as t:

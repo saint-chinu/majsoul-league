@@ -17,7 +17,7 @@
     if(include&&!online)issues.push({reason:'共有仮登録が未確認'});
     if(include&&review.length)issues.push({reason:`仮登録の要確認 ${review.length}件`});
     window.renderSeating({...d,records:[...d.records,...additions],issues,confirmedCount:d.records.length,provisionalCount:additions.length});
-    const labels={pending:'仮・牌譜待ち',matched:'一致・計上済み',review:'要確認',cancelled:'取消済み'};
+    const labels={pending:'仮・牌譜待ち',matched:'一致・計上済み',review:'要確認',excluded:'上限超過・無効',cancelled:'取消済み'};
     $('draft-rows').innerHTML=checked.length?[...checked].reverse().map(x=>`<tr><td>${stamp(x.end)}</td><td>${esc(x.players.map(id=>d.players.find(p=>p.id===id)?.name||'対象外').join(' / '))}</td><td class="draft-${x.status}">${labels[x.status]}${x.status==='matched'?` <a href="https://game.mahjongsoul.com/?paipu=${encodeURIComponent(x.candidates[0])}" target="_blank" rel="noopener">牌譜</a>`:''}</td><td>${x.status==='cancelled'?'—':`<button data-cancel="${esc(x.id)}" title="仮登録を取り消す" aria-label="仮登録を取り消す" ${!online||saving?'disabled':''}><i data-lucide="trash-2"></i></button>`}</td></tr>`).join(''):'<tr><td colspan="4" class="empty">仮登録はありません</td></tr>';
     $('draft-submit').disabled=!online||saving;
     $('shared-status').textContent=online?`共有済み · 仮 ${pending.length}件 / 一致 ${checked.filter(x=>x.status==='matched').length}件 / 要確認 ${review.length}件`:'共有データ未確認。通信を確認してください。';
@@ -48,6 +48,10 @@
   $('draft-form').onsubmit=async e=>{
     e.preventDefault();const players=[...$('draft-members').querySelectorAll('input:checked')].map(x=>Number(x.value));
     if(players.length!==3){$('draft-result').textContent='参加者を3名選んでください';return;}
+    const same=r=>[...r.players].sort((a,b)=>a-b).join(',')===[...players].sort((a,b)=>a-b).join(',');
+    const current=window.SeatingReconcile.reconcile(d,rows);
+    if(current.some(r=>r.status==='review')){$('draft-result').textContent='要確認の仮登録を確認・訂正してください';return;}
+    if(d.records.filter(same).length+current.filter(r=>r.status==='pending'&&same(r)).length>=3){$('draft-result').textContent='この3人組は3回の上限に達しています';return;}
     const values={action:'add',players,end:Math.floor(Date.parse($('draft-end').value+':00+09:00')/1000),uuid:$('draft-uuid').value.trim()};
     const signature=JSON.stringify(values);
     if(!retry||retry.signature!==signature)retry={signature,id:crypto.randomUUID()};

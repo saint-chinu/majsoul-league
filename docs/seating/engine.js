@@ -16,37 +16,14 @@
   }
   function validate(counts, plan) {
     return plan.length === 20 && plan.every(n => Number.isInteger(n) && n >= 0) &&
-      stats(counts.map((n, i) => n + plan[i])).people.every(n => n === 30);
+      counts.every((n,i)=>n+plan[i]<=3) && stats(counts.map((n, i) => n + plan[i])).people.every(n => n === 30);
   }
   function solve(counts, solver) {
     const s = stats(counts), remaining = s.people.map(n => 30 - n), games = 60 - s.total;
+    if (counts.some(n=>n>3)) return {error:'同じ3人組は3回が上限です。超過した仮登録を確認してください。'};
     if (remaining.some(n => n < 0)) return {error: '30半荘を超えている参加者がいます。対象牌譜を確認してください。'};
     if (remaining.some(n => n > games)) return {error: '現在の消化数から全員30半荘に揃えることはできません。対局数の条件を見直す必要があります。'};
     if (counts.every(n => n <= 3)) return result(counts, counts.map(n => 3 - n), true);
-    // Lexicographic weighting: worst pair gap, total pair gaps, then triple gaps.
-    const m = {optimize: 'cost', opType: 'min', constraints: {}, variables: {worst: {cost: 100000}}, ints: {}, options: {timeout: 5000}};
-    remaining.forEach((n, i) => { m.constraints['p'+i] = {equal: n}; });
-    combos.forEach((c, i) => {
-      const v = {cost: 0}; c.forEach(p => { v['p'+p] = 1; });
-      m.variables['x'+i] = v; m.ints['x'+i] = 1;
-    });
-    function deviation(prefix, indices, current, ideal, cost, worst) {
-      m.constraints[prefix+'lo'] = {min: ideal-current};
-      m.constraints[prefix+'hi'] = {max: ideal-current};
-      indices.forEach(i => { m.variables['x'+i][prefix+'lo'] = 1; m.variables['x'+i][prefix+'hi'] = 1; });
-      m.variables[prefix+'gap'] = {cost, [prefix+'lo']: 1, [prefix+'hi']: -1};
-      if (worst) {
-        m.constraints[prefix+'cap'] = {max: 0};
-        m.variables[prefix+'gap'][prefix+'cap'] = 1;
-        m.variables.worst[prefix+'cap'] = -1;
-      }
-    }
-    pairs.forEach((pair, j) => deviation('pair'+j, combos.map((c,i) => pair.every(p => c.includes(p)) ? i : -1).filter(i => i >= 0), s.together[j], 12, 1000, true));
-    counts.forEach((n, i) => deviation('triple'+i, [i], n, 3, 1, false));
-    const solved = solver.Solve(m);
-    const plan = counts.map((_, i) => Math.round(solved['x'+i] || 0));
-    if (!solved.feasible || !validate(counts, plan)) return {error: '有効な残り卓組を計算できませんでした。再計算してください。'};
-    return result(counts, plan, false);
   }
   function result(counts, plan, exact) {
     const final = stats(counts.map((n,i) => n+plan[i]));

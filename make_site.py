@@ -2582,6 +2582,7 @@ def render_stats_panel(context: dict[str, object]) -> str:
 
     return f"""
     <section class="tab-panel" id="panel-{esc(context['key'])}" data-panel="{esc(context['key'])}">
+      {('<p class="subnote">補正成績：新シーズン4の上限超過 ' + str(context['excluded_games']) + ' 半荘を除外済み。<a href="table-manager.html#excluded-section">除外対象の対局ID・日時・メンバー</a></p>') if context.get('excluded_games') else ''}
       <h2>{esc(context['label'])} ダイジェスト</h2>
       <section class="cards digest-cards">
         {digest_cards(rows)}
@@ -3110,6 +3111,16 @@ def main() -> None:
         raise SystemExit("牌譜ID CSV が見つからないか空です。先に牌譜IDを収集してください。")
 
     new_season_to_uuids = group_uuids_by_season(new_paifu_rows)
+    from build_seating import build_data
+    seating_data = build_data()
+    if 4 in new_season_to_uuids:
+        if seating_data['issues']:
+            raise SystemExit('ABORT: シーズン4の詳細不足により上限判定ができません。先に牌譜取得を完了してください。')
+        classified = {r['uuid'] for r in seating_data['records'] + seating_data['excluded']}
+        if classified != new_season_to_uuids[4]:
+            raise SystemExit('ABORT: シーズン4の牌譜一覧が一致しません。補正集計を停止します。')
+        new_season_to_uuids[4] = {r['uuid'] for r in seating_data['records']}
+        print('season4 corrected:', len(seating_data['records']), 'excluded:', len(seating_data['excluded']))
     new_uuids = set().union(*new_season_to_uuids.values()) if new_season_to_uuids else set()
 
     new_season_contexts = build_season_contexts(
@@ -3123,6 +3134,8 @@ def main() -> None:
     add_context_awards(new_context, new_season_contexts)
     lifetime_context = combine_contexts("lifetime", "通算", [old_context, new_context])
     add_context_awards(lifetime_context, new_season_contexts + old_season_contexts)
+    for context in [new_context, lifetime_context] + [c for c in new_season_contexts if c['key'] == 'new-season-4']:
+        context['excluded_games'] = len(seating_data['excluded'])
 
     contexts = [new_context] + new_season_contexts + [lifetime_context, old_context] + old_season_contexts
     new_player_names = sorted_player_names(new_context)

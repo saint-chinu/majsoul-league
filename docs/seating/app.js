@@ -20,6 +20,10 @@ window.renderSeating = (d) => {
   let plan=null, worker=null, timer=null;
   window.stopSeatingWorker=()=>{clearTimeout(timer);worker?.terminate();};
   $('notice').hidden=true;
+  const excluded=d.excluded||[];
+  $('excluded-section').hidden=!excluded.length;
+  $('excluded-count').textContent=`${excluded.length}半荘`;
+  $('excluded-rows').innerHTML=excluded.map(r=>`<tr><td>${new Date(r.start*1000).toLocaleString('ja-JP',{timeZone:'Asia/Tokyo'})}</td><td>${esc(r.players.map(id=>d.players.find(p=>p.id===id)?.name||'対象外').join(' / '))}</td><td>${r.occurrence}回目</td><td><code>${esc(r.uuid)}</code></td><td><a href="https://game.mahjongsoul.com/?paipu=${encodeURIComponent(r.uuid)}" target="_blank" rel="noopener">開く</a></td></tr>`).join('');
   $('played').textContent=state.total; $('remaining').textContent=Math.max(0,60-state.total);
   $('source').textContent=`公開データ更新 ${date(d.updated)} JST · 牌譜 ${d.confirmedCount ?? state.total}件 / 未照合の仮 ${d.provisionalCount || 0}件`;
   if(!d.source_available){$('notice').hidden=false; $('notice').textContent='シーズン4の牌譜は未取得です。以下は0半荘からの初期配分案です。';}
@@ -56,7 +60,7 @@ window.renderSeating = (d) => {
     $('suggestions').innerHTML='';$('two-tables').hidden=true;$('download').disabled=true;
     if(errors.length){$('plan-status').textContent='不足・対象外の対局を確認後、再集計してください。';return;}
     $('recalculate').disabled=true;$('plan-status').textContent='残り全体の卓組を計算中…';
-    try {worker=new Worker('seating/worker.js');worker.onmessage=e=>finish(e.data);worker.onerror=()=>finish({error:'計算機能を読み込めませんでした。再計算してください。'});worker.postMessage(counts);timer=setTimeout(()=>finish({error:'計算時間の上限に達しました。再計算してください。'}),12000);}
+    try {worker=new Worker('seating/worker.js?v=20261011-cap');worker.onmessage=e=>finish(e.data);worker.onerror=()=>finish({error:'計算機能を読み込めませんでした。再計算してください。'});worker.postMessage(counts);timer=setTimeout(()=>finish({error:'計算時間の上限に達しました。再計算してください。'}),12000);}
     catch(_){finish({error:'このブラウザでは計算機能を開始できませんでした。'});}
   }
   $('reload').onclick=()=>location.reload();$('recalculate').onclick=calculate;

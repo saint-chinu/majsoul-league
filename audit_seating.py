@@ -8,7 +8,8 @@ API = 'https://majsoul-seating.doppel-tag.workers.dev/season4'
 
 
 def reconcile(data, drafts):
-    actual = {r['uuid']: r for r in data['records']}.values()
+    excluded = {r['uuid'] for r in data.get('excluded', [])}
+    actual = {r['uuid']: r for r in data['records'] + data.get('excluded', [])}.values()
     cutoff = datetime.fromisoformat(data['updated']).timestamp() - 900
     result = []
     for draft in drafts:
@@ -25,6 +26,8 @@ def reconcile(data, drafts):
     for row in result:
         if any(uses[uuid] > 1 for uuid in row['candidates']):
             row['status'] = 'review'
+        elif row['status'] == 'matched' and row['candidates'][0] in excluded:
+            row['status'] = 'excluded'
     return result
 
 
@@ -40,7 +43,7 @@ def audit(data, root):
         rows = reconcile(data, shared['rows'])
         report = {'checked_at': data['updated'], 'revision': shared['revision'], 'rows': rows,
                   'counts': {status: sum(r['status'] == status for r in rows)
-                             for status in ('matched', 'pending', 'review', 'cancelled')}}
+                             for status in ('matched', 'pending', 'review', 'excluded', 'cancelled')}}
         active = [r for r in rows if r['status'] != 'cancelled']
         matched = {uuid for r in active for uuid in r['candidates']}
         start = min((r['end'] for r in active), default=float('inf'))
