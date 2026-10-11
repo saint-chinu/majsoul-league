@@ -1,0 +1,8 @@
+{
+  "name": "majsoul-seating",
+  "main": "worker.mjs",
+  "compatibility_date": "2026-10-11",
+  "d1_databases": [{"binding":"DB","database_name":"majsoul-seating","database_id":"2475ea73-407a-4a2d-9d43-e82a47af4171"}],
+  "observability": {"enabled":true,"traces":{"enabled":true,"head_sampling_rate":0.1}},
+  "workers_dev": true
+}

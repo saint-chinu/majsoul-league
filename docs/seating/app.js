@@ -1,6 +1,7 @@
 'use strict';
-(() => {
-  const d = window.SEATING_DATA, E = window.Seating, $ = id => document.getElementById(id);
+window.renderSeating = (d) => {
+  window.stopSeatingWorker?.();
+  const E = window.Seating, $ = id => document.getElementById(id);
   if (!d || !E) { $('notice').hidden=false; $('notice').textContent='集計データを読み込めませんでした。再読込してください。'; return; }
   const esc = s => String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const counts=Array(20).fill(0), errors=[...d.issues], ids=new Set();
@@ -17,8 +18,10 @@
   const simpleNames = c => c.map(i=>d.players[i].name).join(' / ');
   const date = t => new Date(t).toLocaleString('ja-JP',{timeZone:'Asia/Tokyo',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
   let plan=null, worker=null, timer=null;
+  window.stopSeatingWorker=()=>{clearTimeout(timer);worker?.terminate();};
+  $('notice').hidden=true;
   $('played').textContent=state.total; $('remaining').textContent=Math.max(0,60-state.total);
-  $('source').textContent=`公開データ更新 ${date(d.updated)} JST · 対局結果 ${state.total}件`;
+  $('source').textContent=`公開データ更新 ${date(d.updated)} JST · 牌譜 ${d.confirmedCount ?? state.total}件 / 未照合の仮 ${d.provisionalCount || 0}件`;
   if(!d.source_available){$('notice').hidden=false; $('notice').textContent='シーズン4の牌譜は未取得です。以下は0半荘からの初期配分案です。';}
   if(errors.length){$('notice').hidden=false; $('notice').textContent=`未集計 ${errors.length}件。${errors.map(x=>x.reason).filter((x,i,a)=>a.indexOf(x)===i).join(' / ')}。推奨卓は保留中です。`;}
   $('people').innerHTML=d.players.map((p,i)=>`<div class="person ${state.people[i]>30?'over':''}"><div class="person-heading"><strong title="${esc(p.account_name)}">${esc(p.name)}</strong><span>${state.people[i]}<small> / 30</small></span></div><progress max="30" value="${Math.min(state.people[i],30)}" aria-label="${esc(p.name)}の消化数"></progress><p>${state.people[i]>30?'超過 '+(state.people[i]-30):'残り '+(30-state.people[i])}半荘</p></div>`).join('');
@@ -32,7 +35,7 @@
     }).join('')+'</tr>').join('')+'</tbody>';
   }
   $('history-count').textContent=`${state.total}半荘`;
-  $('history').innerHTML=d.records.length?[...d.records].reverse().map(r=>`<tr><td>${date(r.end*1000)}</td><td>${esc(r.players.map(id=>d.players.find(p=>p.id===id)?.name||'対象外').join(' / '))}</td><td><a href="https://game.mahjongsoul.com/?paipu=${encodeURIComponent(r.uuid)}" target="_blank" rel="noopener">開く</a></td></tr>`).join(''):'<tr><td colspan="3" class="empty">集計済みの対局はありません</td></tr>';
+  $('history').innerHTML=d.records.length?[...d.records].sort((a,b)=>b.end-a.end).map(r=>`<tr><td>${date(r.end*1000)}</td><td>${esc(r.players.map(id=>d.players.find(p=>p.id===id)?.name||'対象外').join(' / '))}</td><td>${r.temporary?'仮':`<a href="https://game.mahjongsoul.com/?paipu=${encodeURIComponent(r.uuid)}" target="_blank" rel="noopener">開く</a>`}</td></tr>`).join(''):'<tr><td colspan="3" class="empty">集計済みの対局はありません</td></tr>';
   function finish(result){
     clearTimeout(timer); if(worker)worker.terminate(); worker=null;
     $('recalculate').disabled=false; $('download').disabled=true;
@@ -65,4 +68,4 @@
     const url=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8;'})),a=document.createElement('a');a.href=url;a.download='season4-remaining-tables.csv';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
   };
   window.lucide?.createIcons(); tables(); calculate();
-})();
+};

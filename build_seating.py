@@ -69,6 +69,8 @@ def write_seating_data(root=ROOT):
     output.write_text("window.SEATING_DATA = " + json.dumps(data, ensure_ascii=False, indent=2)
                       + ";\n", encoding="utf-8")
     print(f"seating: {len(data['records'])} games, {len(data['issues'])} unresolved")
+    from audit_seating import audit
+    audit(data, root)
 
 
 if __name__ == "__main__":
