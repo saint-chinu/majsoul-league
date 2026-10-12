@@ -2184,6 +2184,8 @@ def main():
     if uuids is None:
         uuids = [path.name.removesuffix("_record.bin") for path in sorted(RAW_DIR.glob("*_record.bin"))]
 
+    from invalid_games import is_invalid
+    uuids = [uuid for uuid in uuids if not is_invalid(uuid)]
     print(f"records: {len(uuids)}")
 
     for index, uuid in enumerate(uuids, start=1):

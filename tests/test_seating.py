@@ -4,6 +4,8 @@ import tempfile
 from types import SimpleNamespace
 import unittest
 from build_seating import PLAYERS, build_data, apply_combination_cap
+from invalid_games import INVALID_GAMES
+from collect_records import read_records
 
 
 class SeatingImportTests(unittest.TestCase):
@@ -48,6 +50,20 @@ class SeatingImportTests(unittest.TestCase):
             self.assertEqual(len(d['records']),5)
             self.assertEqual(d['excluded'],[])
             self.assertEqual(len(d['over_recommended']),2)
+
+    def test_explicit_invalid_skipped_without_raw_files(self):
+        with tempfile.TemporaryDirectory() as t:
+            root=Path(t)
+            self.make(root,[{'season':'4','uuid':u} for u in INVALID_GAMES] + [{'season':'4','uuid':'abcdef'}])
+            def loader(path,uuid):
+                self.assertNotIn(uuid, INVALID_GAMES)
+                return self.loader(path,uuid)
+            d=build_data(root,loader)
+            self.assertEqual(len(d['records']),1)
+            self.assertEqual(len(d['excluded']),4)
+            self.assertEqual(d['issues'],[])
+            rows=read_records(root/'data/new/admin_paifu_ids_new_season4.csv')
+            self.assertEqual([r['uuid'] for r in rows],['abcdef'])
 
     def test_wrong_season_missing_and_unknown_players(self):
         with tempfile.TemporaryDirectory() as t:

@@ -5,6 +5,7 @@ import re
 import sys
 import time
 from pathlib import Path
+from invalid_games import is_invalid
 
 from playwright.sync_api import sync_playwright
 
@@ -18,6 +19,9 @@ def read_records(record_list, limit=None):
     rows = []
     with record_list.open("r", encoding="utf-8-sig", newline="") as f:
         for row in csv.DictReader(f):
+            if is_invalid(row.get("uuid", "")):
+                print(f"skip invalid {row['uuid']}")
+                continue
             rows.append(row)
     if limit:
         rows = rows[:limit]

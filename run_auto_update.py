@@ -505,13 +505,17 @@ def main() -> None:
     sync_canonical_csv()
 
     run_step([sys.executable, "collect_records.py", str(csv_path)])
-    complete = count_complete_records(merged)
-    log(f"牌譜バイナリ: {complete} / {len(merged)} 件")
-    if complete < len(merged):
+    from invalid_games import is_invalid
+    eligible = [r for r in merged if not is_invalid(r.get("uuid", ""))]
+    complete = count_complete_records(eligible)
+    log(f"牌譜バイナリ: {complete} / {len(eligible)} 件（無効 {len(merged)-len(eligible)} 件は取得対象外）")
+    if complete < len(eligible):
         log("不足分があるため collect_records.py をもう一度実行します。")
         run_step([sys.executable, "collect_records.py", str(csv_path)])
-        complete = count_complete_records(merged)
-        log(f"牌譜バイナリ: {complete} / {len(merged)} 件")
+        complete = count_complete_records(eligible)
+        log(f"牌譜バイナリ: {complete} / {len(eligible)} 件")
+    if complete < len(eligible):
+        raise SystemExit("ABORT: 有効対局の取得不足により公開を停止します。")
 
     run_step([sys.executable, "make_site.py"])
 

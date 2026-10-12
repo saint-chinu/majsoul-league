@@ -4,6 +4,7 @@ from pathlib import Path
 import csv
 import json
 from collections import Counter
+from invalid_games import INVALID_GAMES
 
 ROOT = Path(__file__).resolve().parent
 PLAYERS = [
@@ -45,7 +46,7 @@ def build_data(root=ROOT, loader=read_entry):
     if source.exists():
         with source.open(encoding="utf-8-sig", newline="") as f:
             rows = list(csv.DictReader(f))
-    records, issues, seen = [], [], set()
+    records, issues, seen, excluded = [], [], set(), []
     allowed = {p["id"] for p in PLAYERS}
     for row in rows:
         uuid = row.get("uuid", "")
@@ -57,6 +58,9 @@ def build_data(root=ROOT, loader=read_entry):
         seen.add(uuid)
         if row.get("season") != "4":
             issues.append({"uuid": uuid, "reason": "シーズン番号が4ではありません"})
+            continue
+        if uuid in INVALID_GAMES:
+            excluded.append({"uuid": uuid, **INVALID_GAMES[uuid], "reason": "ユーザー指定の無効対局"})
             continue
         try:
             entry = loader(root / "records_raw" / f"{uuid}_detail.bin", uuid)
@@ -74,7 +78,7 @@ def build_data(root=ROOT, loader=read_entry):
     return {"season": 4, "target": 30, "players": PLAYERS,
             "source_available": source.exists(), "source_count": len(seen),
             "updated": datetime.now(timezone(timedelta(hours=9))).isoformat(timespec="seconds"),
-            "records": records, "excluded": [], "over_recommended": over_recommended, "issues": issues}
+            "records": records, "excluded": excluded, "over_recommended": over_recommended, "issues": issues}
 
 
 def write_seating_data(root=ROOT):

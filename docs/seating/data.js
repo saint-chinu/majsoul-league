@@ -35,7 +35,7 @@ window.SEATING_DATA = {
   ],
   "source_available": true,
   "source_count": 49,
-  "updated": "2026-10-13T00:11:08+09:00",
+  "updated": "2026-10-13T00:23:45+09:00",
   "records": [
     {
       "uuid": "261008-2f1bde94-01b2-44e4-950a-21bccc9931d7",
@@ -168,16 +168,6 @@ window.SEATING_DATA = {
       "end": 1791556717
     },
     {
-      "uuid": "261009-2ba8c271-6f7c-4902-9d06-326a8e358b06",
-      "players": [
-        68348480,
-        101939586,
-        108386176
-      ],
-      "start": 1791561187,
-      "end": 1791561989
-    },
-    {
       "uuid": "261009-526e5052-6ec3-409f-b415-ff3f2fcb7813",
       "players": [
         68348480,
@@ -228,16 +218,6 @@ window.SEATING_DATA = {
       "end": 1791558965
     },
     {
-      "uuid": "261009-ca826183-2165-481c-bf27-686455ccc9f3",
-      "players": [
-        101665767,
-        101939586,
-        108312204
-      ],
-      "start": 1791556200,
-      "end": 1791557366
-    },
-    {
       "uuid": "261009-e01f859d-e438-4d7f-999b-6dca8865bd79",
       "players": [
         68348480,
@@ -256,16 +236,6 @@ window.SEATING_DATA = {
       ],
       "start": 1791475222,
       "end": 1791476794
-    },
-    {
-      "uuid": "261010-3faa9290-8d23-431b-89b8-7390eb73b9f2",
-      "players": [
-        68348480,
-        101665767,
-        108312204
-      ],
-      "start": 1791639681,
-      "end": 1791640486
     },
     {
       "uuid": "261010-5dfbeea2-30e6-44cb-beec-46f2f98827db",
@@ -306,16 +276,6 @@ window.SEATING_DATA = {
       ],
       "start": 1791638956,
       "end": 1791639629
-    },
-    {
-      "uuid": "261010-e3255290-ba38-4fc8-ad01-4af1e8deb650",
-      "players": [
-        68348480,
-        101665767,
-        108312204
-      ],
-      "start": 1791640548,
-      "end": 1791641687
     },
     {
       "uuid": "261010-f8951d95-12b0-4d92-9e4c-16440b61d906",
@@ -528,20 +488,7 @@ window.SEATING_DATA = {
       "end": 1791811353
     }
   ],
-  "excluded": [],
-  "over_recommended": [
-    {
-      "uuid": "261009-ca826183-2165-481c-bf27-686455ccc9f3",
-      "players": [
-        101665767,
-        101939586,
-        108312204
-      ],
-      "start": 1791556200,
-      "end": 1791557366,
-      "occurrence": 4,
-      "reason": "同じ3人組の4回目以降"
-    },
+  "excluded": [
     {
       "uuid": "261009-2ba8c271-6f7c-4902-9d06-326a8e358b06",
       "players": [
@@ -552,7 +499,19 @@ window.SEATING_DATA = {
       "start": 1791561187,
       "end": 1791561989,
       "occurrence": 4,
-      "reason": "同じ3人組の4回目以降"
+      "reason": "ユーザー指定の無効対局"
+    },
+    {
+      "uuid": "261009-ca826183-2165-481c-bf27-686455ccc9f3",
+      "players": [
+        101665767,
+        101939586,
+        108312204
+      ],
+      "start": 1791556200,
+      "end": 1791557366,
+      "occurrence": 4,
+      "reason": "ユーザー指定の無効対局"
     },
     {
       "uuid": "261010-3faa9290-8d23-431b-89b8-7390eb73b9f2",
@@ -564,7 +523,7 @@ window.SEATING_DATA = {
       "start": 1791639681,
       "end": 1791640486,
       "occurrence": 4,
-      "reason": "同じ3人組の4回目以降"
+      "reason": "ユーザー指定の無効対局"
     },
     {
       "uuid": "261010-e3255290-ba38-4fc8-ad01-4af1e8deb650",
@@ -576,8 +535,9 @@ window.SEATING_DATA = {
       "start": 1791640548,
       "end": 1791641687,
       "occurrence": 5,
-      "reason": "同じ3人組の4回目以降"
+      "reason": "ユーザー指定の無効対局"
     }
   ],
+  "over_recommended": [],
   "issues": []
 };
