@@ -34,8 +34,8 @@ window.SEATING_DATA = {
     }
   ],
   "source_available": true,
-  "source_count": 57,
-  "updated": "2026-10-14T07:51:24+09:00",
+  "source_count": 59,
+  "updated": "2026-10-14T22:58:09+09:00",
   "records": [
     {
       "uuid": "261008-2f1bde94-01b2-44e4-950a-21bccc9931d7",
@@ -566,6 +566,26 @@ window.SEATING_DATA = {
       ],
       "start": 1791896172,
       "end": 1791897673
+    },
+    {
+      "uuid": "261014-9c5abb7c-20e8-48ec-a2f0-53cec9a5eb76",
+      "players": [
+        68348480,
+        101939586,
+        102159970
+      ],
+      "start": 1791985144,
+      "end": 1791985835
+    },
+    {
+      "uuid": "261014-d809ee16-6af3-4228-a2a9-198250ad522e",
+      "players": [
+        101939586,
+        102159970,
+        108312204
+      ],
+      "start": 1791984251,
+      "end": 1791985042
     }
   ],
   "excluded": [
