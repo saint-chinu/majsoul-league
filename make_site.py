@@ -2698,7 +2698,7 @@ def build_season_contexts(
             season,
             latest_season,
             len(season_to_uuids[season]),
-            full_games=60 if key_prefix == "new" and season == 4 else full_games,
+            full_games=({4: 60, 5: 50}.get(season, full_games) if key_prefix == "new" else full_games),
             prefix=label_prefix,
         )
         season_contexts.append(
