@@ -13,6 +13,44 @@
     select.value = document.documentElement.dataset.theme;
     select.addEventListener('change', () => { document.documentElement.dataset.theme = select.value; try { localStorage.setItem('gyogun-theme', select.value); } catch (_) {} });
     control.append(select); document.querySelector('header')?.append(control);
+    const legacyNav = document.querySelector('.tab-groups');
+    if (legacyNav) {
+      const links = [...legacyNav.querySelectorAll('a[href]')];
+      const filename = a => decodeURIComponent(a.getAttribute('href'));
+      const current = links.find(a => a.getAttribute('aria-current') === 'page');
+      const seasonLinks = links.filter(a => /^(new|old)-season-\d+\.html$/.test(filename(a)));
+      const latest = seasonLinks.filter(a => filename(a).startsWith('new-')).sort((a,b) => Number(filename(b).match(/\d+/)[0])-Number(filename(a).match(/\d+/)[0]))[0];
+      const nav = el('nav', 'compact-nav'); nav.setAttribute('aria-label','成績メニュー');
+      const primary = el('div','compact-primary');
+      const addLink = (a, title) => { if (!a) return; const link=a.cloneNode(true); link.className='compact-link'; link.textContent=title; if(a===current)link.classList.add('selected');primary.append(link); };
+      if(latest) addLink(latest, latest.textContent.includes('進行中') ? latest.textContent : latest.textContent+'（最新）');
+      [['index.html','新リーグ累計'],['old-league.html','旧リーグ累計'],['lifetime.html','合算累計']].forEach(([file,title])=>addLink(links.find(a=>filename(a)===file),title));
+      const tools=el('div','compact-tools');
+      function menu(title, groups, isPlayers) {
+        const trigger=el('button','compact-menu-button',title+' ▾');trigger.type='button';trigger.setAttribute('aria-haspopup','dialog');tools.append(trigger);
+        const modal=el('dialog','drill-dialog navigation-dialog');modal.setAttribute('aria-label',title);document.body.append(modal);
+        const head=el('div','drill-head'),close=el('button','drill-close','×');close.type='button';close.setAttribute('aria-label','閉じる');close.onclick=()=>modal.close();head.append(el('h2','',title),close);
+        const field=el('label','nav-scope','表示対象'),scope=el('select');scope.setAttribute('aria-label',title+'のリーグ');
+        groups.forEach(g=>{const o=el('option','',g.title);o.value=g.id;scope.append(o);});field.append(scope);
+        if(current){const match=groups.find(g=>g.links.includes(current));if(match)scope.value=match.id;}
+        const search=el('input','nav-search');search.type='search';search.placeholder='選手名で検索';search.setAttribute('aria-label','選手名で検索');
+        const list=el('div','nav-choices');
+        function render(){list.replaceChildren();const group=groups.find(g=>g.id===scope.value);const matches=group.links.filter(a=>!isPlayers||a.textContent.toLocaleLowerCase().includes(search.value.toLocaleLowerCase()));matches.forEach(a=>{const link=a.cloneNode(true);link.className='nav-choice';if(a===current)link.classList.add('selected');const name=el('span','',a.textContent),arrow=el('span','','→');arrow.setAttribute('aria-hidden','true');link.replaceChildren(name,arrow);list.append(link);});if(!matches.length)list.append(el('p','nav-empty','該当する選手がいません。'));}
+        modal.append(head,field);if(isPlayers)modal.append(search);modal.append(list);scope.onchange=render;search.oninput=render;render();
+        trigger.onclick=()=>{modal.showModal();};modal.addEventListener('close',()=>trigger.focus());modal.addEventListener('click',e=>{const r=modal.getBoundingClientRect();if(e.target===modal&&(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom))modal.close();});
+      }
+      menu('シーズンを選ぶ',[
+        {id:'new',title:'新リーグ',links:seasonLinks.filter(a=>filename(a).startsWith('new-'))},
+        {id:'old',title:'旧リーグ',links:seasonLinks.filter(a=>filename(a).startsWith('old-'))}
+      ],false);
+      menu('選手を選ぶ',[
+        {id:'new',title:'新リーグ個人成績',links:links.filter(a=>filename(a).startsWith('new-player-'))},
+        {id:'lifetime',title:'合算個人成績',links:links.filter(a=>filename(a).startsWith('lifetime-player-'))}
+      ],true);
+      const location=el('p','compact-location');
+      if(current){const file=filename(current); const prefix=file.startsWith('lifetime-player-')?'合算個人成績 / ':file.startsWith('new-player-')?'新リーグ個人成績 / ':'';location.textContent=prefix+(file==='index.html'?'新リーグ累計':file==='lifetime.html'?'合算累計':file==='old-league.html'?'旧リーグ累計':current.textContent);location.setAttribute('aria-label','現在のページ');}
+      nav.append(primary,tools,location); legacyNav.before(nav);legacyNav.classList.add('nav-legacy');legacyNav.hidden=true;
+    }
     const dialog = el('dialog', 'drill-dialog'); dialog.setAttribute('aria-labelledby', 'drill-title'); document.body.append(dialog);
     let opener;
     dialog.addEventListener('close', () => opener?.focus());

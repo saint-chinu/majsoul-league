@@ -181,8 +181,8 @@ def split_site_pages(html_text: str) -> dict[str, str]:
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{title}</title>
 {mermaid_script}{METRIC_MODAL_PAGE_SCRIPT}{style_block}
-  <link rel="stylesheet" href="league-ui.css?v=2">
-  <script src="league-ui.js?v=1"></script>
+  <link rel="stylesheet" href="league-ui.css?v=3">
+  <script src="league-ui.js?v=2"></script>
   <script src="league-trends.js?v=1" defer></script>
 </head>
 <body>
