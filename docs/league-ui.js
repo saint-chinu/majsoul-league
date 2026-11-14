@@ -319,8 +319,31 @@
     // Move existing sections intact so every table, explanation and listener is retained.
     document.querySelectorAll('.tab-panel').forEach(panel=>{
       const isOverview=!!panel.querySelector('.digest-cards');
+      const trend=panel.querySelector('.season-trends');
+      const isPlayer=!isOverview&&!!trend;
+      if(isPlayer){
+        const metrics=new Map();
+        const firstHeading=panel.querySelector(':scope > h2');
+        for(let n=firstHeading?.nextElementSibling;n&&n.tagName!=='H2';n=n.nextElementSibling){
+          n.querySelectorAll('table').forEach(table=>{
+            const headers=[...table.querySelectorAll('thead th')],row=table.querySelector('tbody tr');
+            if(!row)return;
+            headers.forEach((h,i)=>{const label=h.querySelector('[data-metric-title]')?.dataset.metricTitle||h.textContent.replace(/\s*\?\s*$/,'').trim();if(row.cells[i])metrics.set(label,{text:row.cells[i].textContent.trim(),cell:row.cells[i]});});
+          });
+        }
+        const overview=el('section','personal-overview');overview.setAttribute('aria-label','主要成績');overview.append(el('h2','','主要成績'));
+        const grid=el('div','personal-key-stats');
+        ['半荘数','スコア','平均順位','1位率','和了率','放銃率','平均和了点','放銃平均打点'].forEach(label=>{
+          const metric=metrics.get(label);if(!metric)return;
+          const button=el('button','personal-stat');button.type='button';button.setAttribute('aria-label',label+'の詳細を見る');button.append(el('span','',label),el('strong','',metric.text));
+          button.onclick=()=>{const fold=metric.cell.closest('.stats-fold');if(fold)fold.open=true;const target=metric.cell.closest('.stat-table-panel')||metric.cell.closest('table');target.scrollIntoView({block:'start'});target.tabIndex=-1;target.focus({preventScroll:true});};grid.append(button);
+        });
+        overview.append(grid);trend.prepend(el('h2','','シーズン推移'));panel.prepend(overview,trend);
+        const oldSummary=panel.querySelector(':scope > .summary');
+        if(oldSummary){const fold=el('details','stats-fold');fold.append(el('summary','','集計概要'));oldSummary.before(fold);fold.append(oldSummary);}
+      }
       [...panel.children].filter(n=>n.tagName==='H2').forEach(heading=>{
-        if(!isOverview&&!/和了役スタッツ|リーチの質|鳴きの質|放銃の質/.test(heading.textContent))return;
+        if(!isOverview&&!isPlayer&&!/和了役スタッツ|リーチの質|鳴きの質|放銃の質/.test(heading.textContent))return;
         const nodes=[];for(let n=heading.nextElementSibling;n&&n.tagName!=='H2'&&!n.classList.contains('ranking-grid');n=n.nextElementSibling)nodes.push(n);
         const fold=el('details','stats-fold'),summary=el('summary');heading.before(fold);summary.append(heading);fold.append(summary,...nodes);
       });

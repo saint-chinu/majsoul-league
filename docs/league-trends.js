@@ -44,15 +44,16 @@
     ['スコア','平均順位','和了率','放銃率','リーチ質スコア'].filter(m=>metrics.includes(m)).forEach(m=>{ const b=el('button','',m); b.type='button'; b.onclick=()=>{select.value=m;render();}; quick.append(b); });
     const stats=el('div','trend-stats'), scroll=el('div','trend-scroll'), plot=el('div','trend-plot'), note=el('p','trend-note'); scroll.append(plot);
     section.append(toolbar,quick,stats,scroll,note); heading.after(section);
-    const dialog=el('dialog','drill-dialog season-dialog'); dialog.setAttribute('aria-label','シーズン成績の内訳'); document.body.append(dialog); let opener;
-    dialog.addEventListener('close',()=>opener?.focus());
-    dialog.addEventListener('click',e=>{const r=dialog.getBoundingClientRect();if(e.target===dialog&&(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom))dialog.close();});
+    const dialog=el('section','season-dialog season-inline-detail'); dialog.setAttribute('aria-label','シーズン成績の内訳');dialog.hidden=true;section.append(dialog);let opener;
+    const closeSeason=()=>{dialog.hidden=true;opener?.focus({preventScroll:true});};
+    dialog.addEventListener('keydown',e=>{if(e.key==='Escape'){closeSeason();e.stopPropagation();}});
     const openSeason=(season,trigger)=>{
-      opener=trigger;dialog.replaceChildren();const head=el('div','drill-head'), title=el('h2','',season.label), close=el('button','drill-close','×'); close.type='button';close.setAttribute('aria-label','閉じる');close.onclick=()=>dialog.close();head.append(title,close);dialog.append(el('p','drill-kicker',heading.textContent.replace(' シーズン別推移','')),head);
+      opener=trigger;dialog.replaceChildren();const head=el('div','drill-head'), title=el('h2','',season.label), close=el('button','drill-close','×'); close.type='button';close.setAttribute('aria-label','シーズン内訳を閉じる');close.onclick=closeSeason;head.append(title,close);dialog.append(el('p','drill-kicker',heading.textContent.replace(' シーズン別推移','')),head);
       season.groups.forEach((group,i)=>{const d=el('details','drill-section');d.open=i===0;d.append(el('summary','',group.title));const dl=el('dl'); group.items.forEach(item=>{dl.append(el('dt','',item.name));const dd=el('dd','',item.text);dl.append(dd);if(item.detail){const detail=el('details','trend-quality');detail.append(el('summary','',item.name+'の分類内訳'));const body=el('div');body.innerHTML=item.detail;detail.append(body);dd.append(detail);}});d.append(dl);dialog.append(d);});
-      const n=season.label.match(/\d+/)?.[0]; if(n){const link=el('a','drill-link','シーズン全員の成績へ →');link.href=(season.label.startsWith('旧')?'old':'new')+'-season-'+n+'.html';dialog.append(link);}dialog.showModal();
+      const n=season.label.match(/\d+/)?.[0]; if(n){const link=el('a','drill-link','シーズン全員の成績へ →');link.href=(season.label.startsWith('旧')?'old':'new')+'-season-'+n+'.html';dialog.append(link);}dialog.hidden=false;title.tabIndex=-1;title.focus({preventScroll:true});dialog.scrollIntoView({block:'start'});
     };
     function render(){
+      dialog.hidden=true;
       const chosen=rows.filter(r=>range.value==='all'||(range.value==='old')===r.label.startsWith('旧'));
       const key=select.value, values=chosen.map(r=>r.metrics.get(key)?.value ?? null), valid=values.filter(v=>v!==null);
       quick.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',String(b.textContent===key)));
