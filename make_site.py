@@ -3,7 +3,9 @@ from __future__ import annotations
 import csv
 import html
 import json
+import math
 import sys
+from datetime import datetime, timedelta, timezone
 from collections import Counter, defaultdict
 from itertools import combinations
 from pathlib import Path
@@ -168,22 +170,24 @@ def split_site_pages(html_text: str) -> dict[str, str]:
 
         return button_pattern.sub(replace, nav_html)
 
+    meta_script = metric_directions_script()
+    generated_at = datetime.now(timezone(timedelta(hours=9))).strftime("%Y-%m-%d %H:%M JST")
     pages: dict[str, str] = {}
     for key in order:
         label = labels.get(key, key)
         body_panels = "\n".join(panels[key])
         title = "魚群リーグ" if key == "new-league" else f"{label} | 魚群リーグ"
-        mermaid_script = MERMAID_PAGE_SCRIPT if 'class="mermaid"' in body_panels else ""
+        # Diagrams are rendered by league-ui.js when their section is opened.
         pages[page_filename_for(key)] = f"""<!doctype html>
 <html lang="ja">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{title}</title>
-{mermaid_script}{METRIC_MODAL_PAGE_SCRIPT}{style_block}
-  <link rel="stylesheet" href="league-ui.css?v=6">
-  <script src="league-ui.js?v=5"></script>
-  <script src="league-trends.js?v=2" defer></script>
+{METRIC_MODAL_PAGE_SCRIPT}{style_block}
+{meta_script}  <link rel="stylesheet" href="league-ui.css?v=7">
+  <script src="league-ui.js?v=6"></script>
+  <script src="league-trends.js?v=3" defer></script>
 </head>
 <body>
   <header>
@@ -195,7 +199,7 @@ def split_site_pages(html_text: str) -> dict[str, str]:
     {body_panels}
   </main>
 {METRIC_MODAL_MARKUP}  <footer>
-    Generated from collected Mahjong Soul records.
+    Generated from collected Mahjong Soul records.<span class="generated-at"> 最終更新: {generated_at}</span>
   </footer>
 </body>
 </html>
@@ -586,6 +590,32 @@ PLAYER_RANK_METRICS = [
 ]
 
 
+MIN_GAMES_RATIO = 0.3
+COUNT_METRICS = {"earned_score", "games", "rounds", "yakuman_count", "mvp_count", "team_champion_count", "riichi", "winning_run_points"}
+EXTRA_METRIC_DIRECTIONS = {
+    "半荘数": "high-plain", "3位率": "low", "リーチ質スコア": "high",
+    "リーチ可率": "high", "非推奨リーチ率": "low",
+    "最高終了時持ち点": "high", "最低終了時持ち点": "high",
+    "MVP回数": "high", "チーム優勝回数": "high",
+}
+
+
+def metric_directions_script() -> str:
+    directions = {
+        LABELS[col]: "high-plain" if direction == "高い順" else "high" if reverse else "low"
+        for col, reverse, direction in PLAYER_RANK_METRICS
+    }
+    for label, direction in EXTRA_METRIC_DIRECTIONS.items():
+        directions.setdefault(label, direction)
+    payload = {
+        "directions": directions,
+        "minGamesRatio": MIN_GAMES_RATIO,
+        "countMetrics": sorted(LABELS[c] for c in COUNT_METRICS if c in LABELS),
+    }
+    data = json.dumps(payload, ensure_ascii=False).replace("</", "<\\/")
+    return f'  <script type="application/json" id="league-meta">{data}</script>\n'
+
+
 MAIN_RANK_COLUMNS = [
     "player",
     "games",
@@ -693,6 +723,7 @@ DIGEST_METRICS = [
 
 DETAIL_RANK_COLUMNS = [
     "player",
+    "average_rank",
     "rounds",
     "top_keep_rate",
     "oorasu_comeback_rate",
@@ -975,16 +1006,32 @@ def format_cell_value(col: str, value: str | int | float) -> str:
     return esc(value)
 
 
-def metric_rank(rows: list[dict[str, str]], player: str, col: str, reverse: bool) -> tuple[int, int]:
-    ranked_values = sorted(
-        {metric_value(row, col) for row in rows},
-        reverse=reverse,
-    )
+def min_games_for(rows: list[dict[str, str]]) -> int:
+    most = max((int(r.get("games", 0) or 0) for r in rows), default=0)
+    return math.ceil(most * MIN_GAMES_RATIO)
+
+
+def is_qualified(row: dict[str, str], rows: list[dict[str, str]]) -> bool:
+    return int(row.get("games", 0) or 0) >= min_games_for(rows)
+
+
+def displayed_metric_value(row: dict[str, str], col: str) -> float:
+    text = html.unescape(format_cell_value(col, row.get(col, "")))
+    try:
+        return float(text.replace(",", "").removesuffix("%"))
+    except ValueError:
+        return 0.0
+
+
+def metric_rank(rows: list[dict[str, str]], player: str, col: str, reverse: bool,
+                qualified_only: bool = False) -> tuple[int, int]:
+    if qualified_only and col not in COUNT_METRICS:
+        rows = [row for row in rows if is_qualified(row, rows)]
     player_row = next((row for row in rows if row.get("player") == player), None)
     if not player_row:
         return 0, len(rows)
-    value = metric_value(player_row, col)
-    rank = ranked_values.index(value) + 1 if value in ranked_values else 0
+    value = displayed_metric_value(player_row, col)
+    rank = 1 + sum(displayed_metric_value(row, col) > value if reverse else displayed_metric_value(row, col) < value for row in rows)
     return rank, len(rows)
 
 
@@ -1276,6 +1323,8 @@ def table(
 ) -> str:
     if rank_by:
         ranked = sorted(rows, key=lambda r: float(r.get(rank_by, "0") or 0), reverse=reverse)
+        if rank_by not in COUNT_METRICS:
+            ranked.sort(key=lambda row: not is_qualified(row, rows))
     else:
         ranked = rows
 
@@ -1284,7 +1333,8 @@ def table(
     for i, row in enumerate(ranked, 1):
         cells = []
         if rank_by:
-            cells.append(f"<td class=\"sticky-rank\">{i}</td>")
+            rank, _ = metric_rank(rows, row.get("player", ""), rank_by, reverse, qualified_only=True)
+            cells.append(f"<td class=\"sticky-rank\">{rank if rank else '参考'}</td>")
         for col in columns:
             value = row.get(col, "")
             cls = "name sticky-name" if col == "player" else ""
@@ -1665,12 +1715,12 @@ def digest_cards(rows: list[dict[str, str]]) -> str:
         name = row.get("player", "")
         metric_rows = []
         for col, reverse in DIGEST_METRICS:
-            rank, _total = metric_rank(rows, name, col, reverse)
+            rank, _total = metric_rank(rows, name, col, reverse, qualified_only=True)
             metric_rows.append(
                 "<div class=\"digest-metric\">"
                 f"<span>{esc(LABELS[col])}</span>"
                 f"<strong>{format_cell_value(col, row.get(col, ''))}</strong>"
-                f"<em>{rank}位</em>"
+                f"<em>{str(rank) + '位' if rank else '参考'}</em>"
                 "</div>"
             )
         cards.append(
@@ -1820,15 +1870,15 @@ def yakuman_ranking_table(rows: list[dict[str, object]], payment_label: str) -> 
             "<tr>"
             f"<td class=\"sticky-rank\">{i}</td>"
             f"<td class=\"name sticky-name\">{esc(row['player'])}</td>"
+            f"<td>{number(row['payment'])}</td>"
             f"<td>{esc(row['count'])}</td>"
             f"<td class=\"roles\">{esc(row['roles'])}</td>"
-            f"<td>{number(row['payment'])}</td>"
             "</tr>"
         )
 
     return (
         "<table class=\"yakuman-rank-table\">"
-        f"<thead><tr><th class=\"sticky-rank\">順位</th><th class=\"sticky-name\">プレイヤー</th><th>回数</th><th>役</th><th>{esc(payment_label)}</th></tr></thead>"
+        f"<thead><tr><th class=\"sticky-rank\">順位</th><th class=\"sticky-name\">プレイヤー</th><th>{esc(payment_label)}</th><th>回数</th><th>役</th></tr></thead>"
         f"<tbody>{''.join(body)}</tbody></table>"
     )
 
@@ -2307,15 +2357,20 @@ def player_metric_rank_rows(player: str, cumulative_rows: list[dict[str, str]]) 
 
     rank_rows = []
     for col, reverse, direction in PLAYER_RANK_METRICS:
-        rank, total = metric_rank(cumulative_rows, player, col, reverse)
+        rank, total = metric_rank(cumulative_rows, player, col, reverse, qualified_only=True)
+        eligible = [r for r in cumulative_rows if col in COUNT_METRICS or is_qualified(r, cumulative_rows)]
+        values = [displayed_metric_value(r, col) for r in eligible]
+        distinct = len(set(values)) > 1
+        judged = direction != "高い順"
+        worst = (min(values) if reverse else max(values)) if values else None
         rank_rows.append(
             {
                 "metric": LABELS[col],
                 "value": format_cell_value(col, row.get(col, "")),
-                "rank_text": f"{rank} / {total}",
+                "rank_text": f"{rank} / {total}" if rank else f"参考（規定{min_games_for(cumulative_rows)}半荘未満）",
                 "direction": direction,
-                "is_best": "1" if rank == 1 else "",
-                "is_worst": "1" if total > 1 and rank == total else "",
+                "is_best": "1" if judged and distinct and rank == 1 else "",
+                "is_worst": "1" if judged and distinct and rank and displayed_metric_value(row, col) == worst else "",
             }
         )
     return rank_rows
@@ -2568,7 +2623,7 @@ def render_stats_panel(context: dict[str, object]) -> str:
     yaku_rows = context.get("yaku_rows", [])
     correlation_rows = context["correlation_rows"]
     best_score = context["best_score"]
-    best_top = context["best_top"]
+    best_top = max((r for r in rows if is_qualified(r, rows)), key=lambda r: pct_number(r["rank1_rate"]))
     if context.get("is_cumulative"):
         team_block_title = "チーム優勝経験"
         team_block = team_champion_section(list(context.get("team_champion_rows", [])))
@@ -2599,6 +2654,7 @@ def render_stats_panel(context: dict[str, object]) -> str:
       </section>
 
       <h2>{esc(context['label'])} 個人成績ランキング</h2>
+      <p class="subnote sort-note">並び: スコア順</p>
       {split_tables(
         rows,
         [
@@ -2613,16 +2669,19 @@ def render_stats_panel(context: dict[str, object]) -> str:
       {yaku_stats_sections(rows, list(yaku_rows))}
 
       <h2>{esc(context['label'])} リーチの質</h2>
+      <p class="subnote sort-note">並び: リーチ質スコア順</p>
       <div class="table-wrap">
         {riichi_quality_table(rows)}
       </div>
 
       <h2>{esc(context['label'])} 鳴きの質</h2>
+      <p class="subnote sort-note">並び: 鳴き質スコア順</p>
       <div class="table-wrap">
         {call_quality_table(rows)}
       </div>
 
       <h2>{esc(context['label'])} 放銃の質</h2>
+      <p class="subnote sort-note">並び: 放銃質スコア順</p>
       <div class="table-wrap">
         {deal_in_quality_table(rows)}
       </div>
@@ -2632,6 +2691,7 @@ def render_stats_panel(context: dict[str, object]) -> str:
       {mvp_block}
 
       <h2>詳細スタッツ</h2>
+      <p class="subnote sort-note">並び: 平均順位順</p>
       {split_tables(
         rows,
         [
@@ -2642,23 +2702,25 @@ def render_stats_panel(context: dict[str, object]) -> str:
       )}
 
       <h2>許されない相関図</h2>
-      <p class="subnote">矢印は「左のプレイヤーが右のプレイヤーへ、同卓時の最終持ち点差でネット献上」。ラベルは 献上点棒 / 直接対戦数。</p>
+      <p class="subnote">矢印は「矢印の根元のプレイヤーが先のプレイヤーへ、同卓時の最終持ち点差でネット献上」。ラベルは 献上点棒 / 直接対戦数。図は上位{min(15, len(correlation_rows))}本、一覧は献上点棒の多い順。</p>
       {correlation_mermaid(correlation_rows)}
       <div class="table-wrap">
         {correlation_table(correlation_rows)}
       </div>
 
-      <p class="generated-note">1位率トップ: {esc(best_top["player"])} ({esc(best_top["rank1_rate"])})</p>
+      <p class="generated-note">1位率トップ: {esc(best_top["player"])} ({esc(best_top["rank1_rate"])}、規定{min_games_for(rows)}半荘以上)</p>
 
       <div class="ranking-grid">
         <section class="ranking-panel">
           <h3>役満被害者ランキング</h3>
+          <p class="subnote sort-note">並び: 支払点数順</p>
           <div class="table-wrap">
             {yakuman_victim_ranking(yakuman_detail_rows)}
           </div>
         </section>
         <section class="ranking-panel">
           <h3>役満加害者ランキング</h3>
+          <p class="subnote sort-note">並び: 獲得点数順</p>
           <div class="table-wrap">
             {yakuman_attacker_ranking(yakuman_detail_rows)}
           </div>
@@ -3328,7 +3390,7 @@ def main() -> None:
     .digest-metric strong {{ font-size: 15px; }}
     .digest-metric em {{ font-style: normal; color: var(--accent); font-size: 12px; font-weight: 800; white-space: nowrap; }}
     .table-wrap {{ position: relative; max-width: 100%; overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; -webkit-overflow-scrolling: touch; isolation: isolate; }}
-    table {{ border-collapse: separate; border-spacing: 0; width: 100%; min-width: 920px; font-size: 14px; }}
+    table {{ border-collapse: separate; border-spacing: 0; width: 100%; font-size: 14px; }}
     th, td {{ border-bottom: 1px solid var(--line); padding: 8px 9px; text-align: right; white-space: nowrap; background: #fff; }}
     th {{ background: var(--fill); font-weight: 700; color: #30363d; }}
     tr:last-child td {{ border-bottom: 0; }}

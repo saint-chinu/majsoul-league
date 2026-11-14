@@ -66,15 +66,20 @@
       note.textContent='各点・シーズン名から内訳を表示。未参加シーズンは省略し、欠損値は線でつなぎません。';
       if(key==='平均順位')note.textContent+=' 平均順位は低いほど上位。';
       if(!valid.length){plot.append(el('p','','この期間には数値データがありません。'));return;}
-      const width=Math.max(560,scroll.clientWidth-2,chosen.length*95+80),height=290,left=60,right=55,top=30,bottom=55;
+      const left=60,right=55,top=30,bottom=55,padX=30,height=290;
+      const width=Math.max(scroll.clientWidth-2,left+right+padX*2+(chosen.length-1)*80);
       plot.style.width=width+'px'; plot.style.minWidth='0'; plot.style.height=height+'px';
       let min=Math.min(...valid),max=Math.max(...valid);const pad=(max-min)*.15||Math.max(Math.abs(max)*.1,1);min-=pad;max+=pad;
-      const x=i=>chosen.length===1?width/2:left+i*(width-left-right)/(chosen.length-1), y=v=>top+(max-v)/(max-min)*(height-top-bottom);
+      const raw=(max-min)/4,mag=10**Math.floor(Math.log10(raw)),f=raw/mag,step=(f<=1?1:f<=2?2:f<=2.5?2.5:f<=5?5:10)*mag;
+      min=Math.floor(min/step)*step;max=Math.ceil(max/step)*step;
+      const digits=Math.max(0,-Math.floor(Math.log10(step)+1e-9)+(Math.round(step/mag*10)%10?1:0));
+      const x=i=>chosen.length===1?(left+width-right)/2:left+padX+i*(width-left-right-padX*2)/(chosen.length-1), y=v=>top+(max-v)/(max-min)*(height-top-bottom);
       const ns='http://www.w3.org/2000/svg', svg=document.createElementNS(ns,'svg');svg.setAttribute('viewBox',`0 0 ${width} ${height}`);svg.setAttribute('aria-hidden','true');
       const shape=(tag,attrs)=>{const n=document.createElementNS(ns,tag);Object.entries(attrs).forEach(([k,v])=>n.setAttribute(k,String(v)));svg.append(n);return n;};
-      for(let i=0;i<5;i++){const value=min+(max-min)*i/4, yy=y(value);shape('line',{x1:left,y1:yy,x2:width-right,y2:yy,class:'trend-grid'});shape('text',{x:left-8,y:yy+4,'text-anchor':'end',class:'trend-axis'}).textContent=Number(value.toFixed(2)).toLocaleString('ja-JP');}
+      for(let value=min;value<=max+step/2;value+=step){const yy=y(value);shape('line',{x1:left,y1:yy,x2:width-right,y2:yy,class:'trend-grid'});shape('text',{x:left-8,y:yy+4,'text-anchor':'end',class:'trend-axis'}).textContent=(Math.abs(value)<step/1e6?0:value).toLocaleString('ja-JP',{minimumFractionDigits:digits,maximumFractionDigits:digits});}
       chosen.forEach((r,i)=>{if(i&&values[i]!==null&&values[i-1]!==null&&order(r.label)[0]===order(chosen[i-1].label)[0]&&order(r.label)[1]===order(chosen[i-1].label)[1]+1)shape('line',{x1:x(i-1),y1:y(values[i-1]),x2:x(i),y2:y(values[i]),class:'trend-line'});});plot.append(svg);
       chosen.forEach((r,i)=>{const v=values[i];if(v!==null){const b=el('button','trend-point');b.type='button';b.style.left=x(i)+'px';b.style.top=y(v)+'px';b.setAttribute('aria-label',r.label+' '+key+' '+r.metrics.get(key).text+' 内訳');b.title=r.label+' / '+r.metrics.get(key).text;b.onclick=()=>openSeason(r,b);plot.append(b);const text=el('span','trend-value',r.metrics.get(key).text);text.style.left=x(i)+'px';text.style.top=(y(v)-25)+'px';plot.append(text);}const b=el('button','trend-season',r.label.replace('（進行中）',' *'));b.type='button';b.style.left=x(i)+'px';b.onclick=()=>openSeason(r,b);plot.append(b);});
+      scroll.scrollLeft=scroll.scrollWidth;
     }
     select.onchange=render;range.onchange=render;render();
   });
