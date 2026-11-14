@@ -178,6 +178,7 @@
       const panel=digest.closest('.tab-panel');
       const names=[...digest.querySelectorAll('.player-card h3')].map(h=>h.textContent.trim());
       const categories=new Map();
+      const metricSources=new Map();
       // Compare the already-rendered values; no separate aggregation or rounding of source data.
       panel.querySelectorAll('.table-wrap').forEach(wrap=>{
         const table=wrap.querySelector('table');if(!table)return;
@@ -197,7 +198,9 @@
           if(['順位','プレイヤー'].includes(label))return;
           const values=new Map(names.map(name=>[name,rows.get(name)?.cells[index]?.textContent.trim() || '—']));
           if(metrics.has(label) && names.every(name=>metrics.get(label).get(name)===values.get(name)))return;
-          metrics.set(metrics.has(label)?label+'（詳細）':label,values);
+          const key=metrics.has(label)?label+'（詳細）':label;
+          metrics.set(key,values);
+          if(!metricSources.has(key))metricSources.set(key,{header,cells:new Map(names.map(name=>[name,rows.get(name)?.cells[index]]))});
         });
       });
       if(names.length>1 && categories.size) {
@@ -209,26 +212,71 @@
         const low=new Set(['平均順位','3位率','放銃率','放銃平均打点','オーラスまくられ率','南場まくられ率','ラス滞在率','リーチ空振り率','非推奨リーチ率']);
         const numeric=text=>{const clean=text.replace(/,/g,'');return /^[+-]?\d+(?:\.\d+)?%?$/.test(clean)?Number(clean.replace('%','')):null;};
         let ordering='スコア';
-        const compare=el('button','compact-menu-button','全員比較');compare.type='button';
-        document.querySelector('.compact-tools')?.prepend(compare);
-        const comparison=el('section','comparison-panel');comparison.id='player-comparison';comparison.hidden=true;
-        compare.id='comparison-toggle';compare.setAttribute('aria-controls',comparison.id);compare.setAttribute('aria-expanded','false');comparison.setAttribute('aria-labelledby',compare.id);
-        const navigation=document.querySelector('.compact-nav');navigation.append(comparison);
-        const hideComparison=(focus=false)=>{comparison.hidden=true;compare.setAttribute('aria-expanded','false');if(focus)compare.focus();};
-        navigation.addEventListener('nav-disclosure-change',e=>{if(e.detail!=='comparison')hideComparison();});
-        comparison.addEventListener('keydown',e=>{if(e.key==='Escape'){hideComparison(true);e.stopPropagation();}});
-        compare.onclick=()=>{
-          if(!comparison.hidden){hideComparison();return;}
-          navigation.dispatchEvent(new CustomEvent('nav-disclosure-change',{detail:'comparison'}));
-          comparison.hidden=false;compare.setAttribute('aria-expanded','true');
-          if(comparison.childElementCount)return;
-          const head=el('div','league-disclosure-head'),close=el('button','league-disclosure-close','×');close.type='button';close.setAttribute('aria-label','全員比較を閉じる');close.onclick=()=>hideComparison(true);
-          head.append(el('h2','',document.querySelector('.compact-location')?.textContent+' / 全員比較'),close);comparison.append(head);
+        const comparison=el('section','comparison-panel comparison-home');comparison.id='player-comparison';comparison.setAttribute('aria-label','全員比較');
+        const firstHeading=panel.querySelector('h2');firstHeading.before(comparison);
+        {
+          const head=el('div','league-disclosure-head');
+          head.append(el('h2','',document.querySelector('.compact-location')?.textContent+' / 全員比較'));comparison.append(head);
           const controls=el('div','matrix-controls');
           const label=el('label','','比較項目'),category=el('select');category.setAttribute('aria-label','比較項目');
           views.forEach((_,key)=>{const option=el('option','',key);option.value=key;category.append(option);});label.append(category);controls.append(label);
           const orderStatus=el('span','matrix-order');controls.append(orderStatus);
           const body=el('div','comparison-content');body.tabIndex=0;body.setAttribute('role','region');body.setAttribute('aria-label','全員比較表');
+          const detail=el('section','matrix-detail');detail.id='comparison-detail';detail.hidden=true;
+          let detailKey=null,detailOpener=null;
+          const clearDetail=(focus=false)=>{
+            const previousKey=detailKey;
+            detail.hidden=true;detailKey=null;
+            comparison.querySelectorAll('[aria-controls="comparison-detail"]').forEach(b=>b.setAttribute('aria-expanded','false'));
+            if(focus&&detailOpener?.isConnected)detailOpener.focus({preventScroll:true});
+            else if(focus)[...body.querySelectorAll('[data-detail-key]')].find(b=>b.dataset.detailKey===previousKey)?.focus({preventScroll:true});
+          };
+          function openDetail(key,title,trigger){
+            if(detailKey===key&&!detail.hidden){clearDetail();return false;}
+            clearDetail();detailKey=key;detailOpener=trigger;trigger.setAttribute('aria-expanded','true');
+            detail.replaceChildren();detail.hidden=false;
+            comparison.querySelectorAll('[data-detail-key]').forEach(b=>b.setAttribute('aria-expanded',String(b.dataset.detailKey===key)));
+            const heading=el('div','league-disclosure-head'),h=el('h3','',title),close=el('button','league-disclosure-close','×');
+            h.id='comparison-detail-title';detail.setAttribute('aria-labelledby',h.id);h.tabIndex=-1;
+            close.type='button';close.setAttribute('aria-label','比較の詳細を閉じる');close.onclick=()=>clearDetail(true);heading.append(h,close);detail.append(heading);
+            h.focus({preventScroll:true});detail.scrollIntoView({block:'nearest'});return true;
+          }
+          const drillButton=(label,cls,key,callback)=>{
+            const button=el('button',cls,label);button.type='button';button.dataset.detailKey=key;button.setAttribute('aria-controls',detail.id);button.setAttribute('aria-expanded',String(detailKey===key&&!detail.hidden));button.onclick=()=>callback(button);return button;
+          };
+          const addRichDetail=(host,label,player)=>{
+            const source=metricSources.get(label)?.cells.get(player)?.querySelector('[data-metric-html]');
+            if(!source)return;
+            const d=el('details','drill-section'),content=el('div','rich-metric-detail');d.append(el('summary','',label+'の分類内訳'));
+            content.innerHTML=source.dataset.metricHtml;d.append(content);host.append(d);
+          };
+          function showPlayer(player,trigger){
+            if(!openDetail('player:'+player,player+' / '+document.querySelector('.compact-location')?.textContent,trigger))return;
+            const stats=el('dl','player-drill-summary');
+            ['半荘数','スコア','平均順位','1位率','和了率','放銃率'].forEach(label=>{const value=allMetrics.get(label)?.get(player);if(value!==undefined){const box=el('div');box.append(el('dt','',label),el('dd','',value));stats.append(box);}});detail.append(stats);
+            categories.forEach((metrics,title)=>{
+              const group=el('details','drill-section');group.append(el('summary','',title));const dl=el('dl');
+              metrics.forEach((values,label)=>{dl.append(el('dt','',label),el('dd','',values.get(player)));});group.append(dl);
+              metrics.forEach((_,label)=>addRichDetail(group,label,player));detail.append(group);
+            });
+            const prefix=location.pathname.includes('lifetime')||location.pathname.includes('old-')?'lifetime-player-':'new-player-';
+            const a=[...document.querySelectorAll('.nav-legacy a.player-tab')].find(a=>a.textContent.trim()===player&&a.getAttribute('href').startsWith(prefix));
+            if(a){const link=el('a','drill-link',player+'の個人ページ・シーズン推移 →');link.href=a.href;detail.append(link);}
+            detail.scrollIntoView({block:'start'});
+          }
+          function showMetric(label,trigger){
+            if(!openDetail('metric:'+label,label+' / 全員の内訳',trigger))return;
+            const source=metricSources.get(label)?.header.querySelector('[data-metric-title]');
+            if(source?.dataset.metricBody)detail.append(el('p','metric-description',source.dataset.metricBody));
+            if(source?.dataset.metricHtml){const rules=el('details','drill-section'),content=el('div','rich-metric-detail');rules.append(el('summary','','定義・採点基準'));content.innerHTML=source.dataset.metricHtml;rules.append(content);detail.append(rules);}
+            const list=el('div','metric-player-list');allMetrics.get(label).forEach((text,player)=>{
+              const row=el('div','metric-player-row'),button=drillButton(player,'matrix-player','player:'+player,b=>showPlayer(player,b));row.append(button,el('strong','',text));addRichDetail(row,label,player);list.append(row);
+            });detail.append(list);
+            const matching=[...categories].find(([,metrics])=>metrics.has(label));
+            if(matching){const more=el('button','metric-category-link',matching[0]+'で全員を比較 →');more.type='button';more.onclick=()=>{category.value=matching[0];clearDetail();renderComparison();comparison.scrollIntoView({block:'start'});category.focus({preventScroll:true});};detail.append(more);}
+            detail.scrollIntoView({block:'start'});
+          }
+          detail.addEventListener('keydown',e=>{if(e.key==='Escape'){clearDetail(true);e.stopPropagation();}});
           function renderComparison(){
             const sorted=[...names];const orderValues=allMetrics.get(ordering);
             if(orderValues)sorted.sort((a,b)=>{
@@ -238,15 +286,16 @@
             orderStatus.textContent=ordering+'順 / '+names.length+'人';
             const table=el('table','comparison-table'),thead=el('thead'),tr=el('tr');
             table.style.setProperty('--players',names.length);
-            ['項目',...sorted].forEach(text=>{const th=el('th','',text);th.scope='col';tr.append(th);});thead.append(tr);table.append(thead);
+            ['項目',...sorted].forEach((text,index)=>{const th=el('th');th.scope='col';if(index)th.append(drillButton(text,'matrix-player','player:'+text,b=>showPlayer(text,b)));else th.textContent=text;tr.append(th);});thead.append(tr);table.append(thead);
             const tbody=el('tbody');
             views.get(category.value).forEach((values,label)=>{
               const row=el('tr'),name=el('th');name.scope='row';row.append(name);
               const ranked=high.has(label)||low.has(label);
+              name.append(drillButton(label,'matrix-metric','metric:'+label,b=>showMetric(label,b)));
               if(ranked){
-                const button=el('button','matrix-sort',label+(low.has(label)?' ↓':' ↑'));button.type='button';button.title=label+'順に並べ替え';button.setAttribute('aria-label',button.title);button.setAttribute('aria-pressed',String(ordering===label));
+                const button=el('button','matrix-sort',low.has(label)?'↓':'↑');button.type='button';button.title=label+'順に並べ替え';button.setAttribute('aria-label',button.title);button.setAttribute('aria-pressed',String(ordering===label));
                 button.onclick=()=>{ordering=label;renderComparison();body.querySelectorAll('.matrix-sort').forEach(b=>{if(b.title===button.title)b.focus({preventScroll:true});});};name.append(button);
-              }else name.textContent=label;
+              }
               const numbers=sorted.map(n=>numeric(values.get(n))).filter(n=>n!==null);
               const best=low.has(label)?Math.min(...numbers):Math.max(...numbers),worst=low.has(label)?Math.max(...numbers):Math.min(...numbers);
               sorted.forEach(player=>{
@@ -261,11 +310,21 @@
             });
             table.append(tbody);body.replaceChildren(table);
           }
-          category.onchange=renderComparison;
-          comparison.append(controls,el('p','comparison-note','順位は表示値で比較。↑は高い順、↓は低い順。1位を色付き、最下位を薄いグレーで表示。同値は同順位。'),body);
+          category.onchange=()=>{clearDetail();renderComparison();};
+          comparison.append(controls,el('p','comparison-note','順位は表示値で比較。↑は高い順、↓は低い順。1位を色付き、最下位を薄いグレーで表示。同値は同順位。'),body,detail);
           renderComparison();
-        };
+        }
       }
     }
+    // Move existing sections intact so every table, explanation and listener is retained.
+    document.querySelectorAll('.tab-panel').forEach(panel=>{
+      const isOverview=!!panel.querySelector('.digest-cards');
+      [...panel.children].filter(n=>n.tagName==='H2').forEach(heading=>{
+        if(!isOverview&&!/和了役スタッツ|リーチの質|鳴きの質|放銃の質/.test(heading.textContent))return;
+        const nodes=[];for(let n=heading.nextElementSibling;n&&n.tagName!=='H2'&&!n.classList.contains('ranking-grid');n=n.nextElementSibling)nodes.push(n);
+        const fold=el('details','stats-fold'),summary=el('summary');heading.before(fold);summary.append(heading);fold.append(summary,...nodes);
+      });
+      if(isOverview)panel.querySelectorAll(':scope > .ranking-grid').forEach(grid=>{const fold=el('details','stats-fold');fold.append(el('summary','','役満の被害・獲得ランキング'));grid.before(fold);fold.append(grid);});
+    });
   });
 })();
