@@ -185,8 +185,8 @@ def split_site_pages(html_text: str) -> dict[str, str]:
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{title}</title>
 {METRIC_MODAL_PAGE_SCRIPT}{style_block}
-{meta_script}  <link rel="stylesheet" href="league-ui.css?v=7">
-  <script src="league-ui.js?v=6"></script>
+{meta_script}  <link rel="stylesheet" href="league-ui.css?v=8">
+  <script src="league-ui.js?v=7"></script>
   <script src="league-trends.js?v=3" defer></script>
 </head>
 <body>
@@ -2640,7 +2640,6 @@ def render_stats_panel(context: dict[str, object]) -> str:
 
     return f"""
     <section class="tab-panel" id="panel-{esc(context['key'])}" data-panel="{esc(context['key'])}">
-      {('<p class="subnote">補正成績：新シーズン4の上限超過 ' + str(context['excluded_games']) + ' 半荘を除外済み。<a href="table-manager.html#excluded-section">除外対象の対局ID・日時・メンバー</a></p>') if context.get('excluded_games') else ''}
       <h2>{esc(context['label'])} ダイジェスト</h2>
       <section class="cards digest-cards">
         {digest_cards(rows)}

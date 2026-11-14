@@ -6,13 +6,15 @@
   document.documentElement.dataset.theme = themes[theme] ? theme : 'white';
   document.addEventListener('DOMContentLoaded', () => {
     const el = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; };
-    const control = el('label', 'theme-control', 'テーマ');
+    const control = el('label', 'theme-control', 'デザイン');
     const dot = el('span', 'theme-dot'); dot.setAttribute('aria-hidden', 'true'); control.prepend(dot);
-    const select = el('select'); select.setAttribute('aria-label', '表示テーマ');
+    const select = el('select'); select.setAttribute('aria-label', 'デザイン');
     Object.entries(themes).forEach(([value, label]) => { const o = el('option', '', label); o.value = value; select.append(o); });
     select.value = document.documentElement.dataset.theme;
     select.addEventListener('change', () => { document.documentElement.dataset.theme = select.value; try { localStorage.setItem('gyogun-theme', select.value); } catch (_) {} });
-    control.append(select); (document.querySelector('footer') || document.querySelector('header'))?.append(control);
+    control.append(select);
+    const header = document.querySelector('header'), ops = header?.querySelector('.ops-menu');
+    if (ops) ops.before(control); else header?.append(control);
     const legacyNav = document.querySelector('.tab-groups');
     if (legacyNav) {
       const links = [...legacyNav.querySelectorAll('a[href]')];

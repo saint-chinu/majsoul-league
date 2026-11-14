@@ -24,8 +24,6 @@ table{min-width:0}
 pre.mermaid{overflow-x:auto;text-align:left}
 pre.mermaid:not([data-processed]):empty{min-height:120px}
 .sort-note{margin:4px 0 10px}
-footer .theme-control{margin:14px 0 0;width:auto;justify-content:flex-start}
-footer .theme-control select{flex:0 1 auto;max-width:220px}
 .generated-at{display:inline-block}
 .season-inline-detail{border-top:2px solid var(--accent);margin-top:18px;padding-top:16px;scroll-margin-top:12px}.season-inline-detail[hidden]{display:none}.season-inline-detail .drill-head{padding-bottom:12px;margin-bottom:10px}.season-inline-detail .drill-kicker{margin-top:0}
 .personal-overview{margin:0 0 18px}.personal-overview h2,.season-trends>h2{font-size:18px;border:0;padding:0;margin:0 0 14px}.personal-key-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:0 20px}.personal-stat{display:flex;flex-direction:column;align-items:flex-start;gap:6px;min-width:0;border:0;border-bottom:1px solid var(--line);background:transparent;color:var(--ink);padding:12px 0;font:inherit;cursor:pointer}.personal-stat span{font-size:12px;color:var(--muted)}.personal-stat strong{font-size:23px;font-variant-numeric:tabular-nums}.personal-stat:hover strong{color:var(--accent)}.personal-stat:focus-visible{outline:2px solid var(--accent);outline-offset:2px}.personal-overview+.season-trends{margin-top:0}.personal-overview+.season-trends .trend-stats{margin:12px 0}.personal-overview+.season-trends .trend-presets{margin:12px 0}@media(max-width:600px){.personal-key-stats{grid-template-columns:repeat(2,minmax(0,1fr));gap:0 16px}.personal-stat{padding:10px 0;gap:4px}.personal-stat strong{font-size:20px}}
