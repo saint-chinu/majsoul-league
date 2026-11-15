@@ -105,6 +105,13 @@ select,.nav-search,.compact-menu-button,.drill-close{border-radius:2px!important
 .drill-dialog{border-radius:0;border:0;border-top:4px solid var(--rule)}
 footer{border-top:1px solid var(--line);font-size:11.5px;color:var(--muted)}
 main:has(.report-lead) .compact-location{display:none}
+.comparison-home .comparison-content{max-height:none}
+.mobile-comparison,.matrix-pager{display:none}
+.trend-mobile-pager{display:none}
+.comparison-rules{margin:10px 0;font-size:11px;color:var(--muted)}
+.comparison-rules>summary{cursor:pointer;padding:6px 0}
+.score-fold .exhibit{margin-top:0}
+main:has(.comparison-home) .compact-location{display:none}
 @media(max-width:600px){
   header{padding:10px 16px;gap:10px}
   header h1{font-size:19px}
@@ -114,7 +121,7 @@ main:has(.report-lead) .compact-location{display:none}
   header .ops-menu{margin-left:auto}
   header .ops-menu summary{font-size:11px;white-space:nowrap}
   .compact-nav{margin-bottom:18px}
-  .compact-primary{display:flex;flex-wrap:nowrap;overflow-x:auto;width:100%;margin:0;padding:0;scrollbar-width:none;gap:0}
+  .compact-primary{display:grid;grid-template-columns:1fr 1fr;overflow:visible;width:100%;margin:0;padding:0;gap:0}
   .compact-primary::-webkit-scrollbar{display:none}
   .compact-link{flex:none;white-space:nowrap;font-size:13px;padding:13px 10px 10px}
   .compact-tools{order:8;width:100%;margin:10px 0 14px}
@@ -126,4 +133,45 @@ main:has(.report-lead) .compact-location{display:none}
   .personal-key-stats{gap:0 16px}
   .personal-stat strong{font-size:25px}
   .comparison-table td{font-size:13px}
+  .comparison-home .comparison-content{overflow:visible;max-height:none;isolation:auto;border-top:1px solid var(--rule)}
+  .comparison-home .comparison-table{display:none}
+  .comparison-more{display:none!important}
+  .mobile-comparison{display:table;width:100%;min-width:0!important;table-layout:fixed;border-collapse:separate;border-spacing:0;margin:0;font-size:13px}
+  .mobile-comparison th,.mobile-comparison td{padding:8px 4px;text-align:right;white-space:normal;overflow-wrap:anywhere;border-bottom:1px solid var(--line)}
+  .mobile-comparison th:first-child{width:80px;text-align:left}
+  .mobile-comparison thead th{position:sticky;top:0;z-index:3;background:var(--panel);font-size:12px;vertical-align:middle}
+  .mobile-comparison tbody th{background:var(--panel);font-size:12px;line-height:1.45;font-weight:600}
+  .mobile-comparison tbody td{font-size:14px;font-variant-numeric:tabular-nums}
+  .mobile-comparison .matrix-rank{display:block;margin:3px 0 0;font-size:10px;font-weight:400;color:var(--muted)}
+  .mobile-comparison .matrix-value{white-space:normal;overflow-wrap:anywhere}
+  .mobile-comparison .matrix-player{display:block;width:100%;text-decoration:none;min-height:24px}
+  .mobile-comparison .matrix-metric{font-size:12px;line-height:1.5;text-align:right}
+  .mobile-comparison .matrix-sort{min-width:26px;min-height:28px;margin:0;font-size:14px}
+  .mobile-comparison .matrix-best{background:var(--best);color:var(--accent);font-weight:600}
+  .mobile-comparison .matrix-worst{background:var(--worst);color:var(--ink)}
+  .mobile-comparison .matrix-unqualified{color:var(--muted)}
+  .mobile-games{display:block;font-size:10px;color:var(--muted);font-weight:400}
+  .matrix-pager{display:grid;grid-template-columns:36px minmax(0,1fr) 36px;gap:6px;margin:8px 0 12px;align-items:center}
+  .matrix-pager button{height:36px;width:36px;background:var(--panel);border:1px solid var(--line);border-radius:2px;color:var(--ink);font-size:22px;cursor:pointer}
+  .matrix-pager button:disabled{opacity:.35;cursor:default}
+  .matrix-pager select{width:100%;min-width:0;height:36px;padding:4px;background:var(--panel);border:1px solid var(--line);color:var(--ink);font-size:12px}
+  .matrix-controls{gap:6px}
+  .matrix-controls select{max-width:190px}
+  .matrix-order{font-size:11px}
+  .compact-nav{margin-bottom:14px}
+  .compact-tools{margin:6px 0 10px}
+  .report-lead{margin-bottom:14px}
+  .report-kicker{gap:2px 10px;margin-bottom:6px;font-size:11px}
+  .personal-stat{padding:10px 0}
+  .personal-stat strong{font-size:22px}
+  .personal-rank .rank-strip{display:none}
+  .trend-mobile-pager{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:8px 0;color:var(--muted);font-size:12px}
+  .trend-mobile-pager button{width:36px;height:36px;border:1px solid var(--line);background:var(--panel);color:var(--ink);font-size:22px;cursor:pointer}
+  .trend-mobile-pager button:disabled{opacity:.35;cursor:default}
+  .trend-scroll{overflow:visible}
+  .trend-presets{display:none}
+  .trend-toolbar label{gap:8px}
+  .trend-stats{margin:12px 0}
+  .trend-note{font-size:11px;margin:8px 0}
+  .trend-season{font-size:10px}
 }

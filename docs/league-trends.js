@@ -43,7 +43,10 @@
     const quick = el('div','trend-presets'); quick.setAttribute('aria-label','主要指標');
     ['スコア','平均順位','和了率','放銃率','リーチ質スコア'].filter(m=>metrics.includes(m)).forEach(m=>{ const b=el('button','',m); b.type='button'; b.onclick=()=>{select.value=m;render();}; quick.append(b); });
     const stats=el('div','trend-stats'), scroll=el('div','trend-scroll'), plot=el('div','trend-plot'), note=el('p','trend-note'); scroll.append(plot);
-    section.append(toolbar,quick,stats,scroll,note); heading.after(section);
+    const mobilePager=el('div','trend-mobile-pager'),older=el('button','','‹'),period=el('span'),newer=el('button','','›');
+    older.type=newer.type='button';older.setAttribute('aria-label','以前のシーズン');newer.setAttribute('aria-label','次のシーズン');older.title='以前のシーズン';newer.title='次のシーズン';mobilePager.append(older,period,newer);
+    let windowEnd=null;
+    section.append(toolbar,quick,stats,mobilePager,scroll,note); heading.after(section);
     const dialog=el('section','season-dialog season-inline-detail'); dialog.setAttribute('aria-label','シーズン成績の内訳');dialog.hidden=true;section.append(dialog);let opener;
     const closeSeason=()=>{dialog.hidden=true;opener?.focus({preventScroll:true});};
     dialog.addEventListener('keydown',e=>{if(e.key==='Escape'){closeSeason();e.stopPropagation();}});
@@ -54,7 +57,13 @@
     };
     function render(){
       dialog.hidden=true;
-      const chosen=rows.filter(r=>range.value==='all'||(range.value==='old')===r.label.startsWith('旧'));
+      const available=rows.filter(r=>range.value==='all'||(range.value==='old')===r.label.startsWith('旧'));
+      const mobile=matchMedia('(max-width:600px)').matches;
+      const end=Math.min(windowEnd??available.length,available.length),start=Math.max(0,end-3);
+      const chosen=mobile?available.slice(start,end):available;
+      older.disabled=start===0;newer.disabled=end>=available.length;
+      period.textContent=(start+1)+'–'+end+' / '+available.length+'シーズン';
+      older.onclick=()=>{windowEnd=Math.max(3,end-2);render();};newer.onclick=()=>{windowEnd=Math.min(available.length,end+2);render();};
       const key=select.value, values=chosen.map(r=>r.metrics.get(key)?.value ?? null), valid=values.filter(v=>v!==null);
       quick.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',String(b.textContent===key)));
       plot.replaceChildren();stats.replaceChildren();
@@ -66,8 +75,8 @@
       note.textContent='各点・シーズン名から内訳を表示。未参加シーズンは省略し、欠損値は線でつなぎません。';
       if(key==='平均順位')note.textContent+=' 平均順位は低いほど上位。';
       if(!valid.length){plot.append(el('p','','この期間には数値データがありません。'));return;}
-      const left=60,right=55,top=30,bottom=55,padX=30,height=290;
-      const width=Math.max(scroll.clientWidth-2,left+right+padX*2+(chosen.length-1)*80);
+      const left=mobile?48:60,right=mobile?32:55,top=30,bottom=55,padX=mobile?12:30,height=mobile?230:290;
+      const width=mobile?scroll.clientWidth:Math.max(scroll.clientWidth-2,left+right+padX*2+(chosen.length-1)*80);
       plot.style.width=width+'px'; plot.style.minWidth='0'; plot.style.height=height+'px';
       let min=Math.min(...valid),max=Math.max(...valid);const pad=(max-min)*.15||Math.max(Math.abs(max)*.1,1);min-=pad;max+=pad;
       const raw=(max-min)/4,mag=10**Math.floor(Math.log10(raw)),f=raw/mag,step=(f<=1?1:f<=2?2:f<=2.5?2.5:f<=5?5:10)*mag;
@@ -81,6 +90,8 @@
       chosen.forEach((r,i)=>{const v=values[i];if(v!==null){const b=el('button','trend-point');b.type='button';b.style.left=x(i)+'px';b.style.top=y(v)+'px';b.setAttribute('aria-label',r.label+' '+key+' '+r.metrics.get(key).text+' 内訳');b.title=r.label+' / '+r.metrics.get(key).text;b.onclick=()=>openSeason(r,b);plot.append(b);const text=el('span','trend-value',r.metrics.get(key).text);text.style.left=x(i)+'px';text.style.top=(y(v)-25)+'px';plot.append(text);}const b=el('button','trend-season',r.label.replace('（進行中）',' *'));b.type='button';b.style.left=x(i)+'px';b.onclick=()=>openSeason(r,b);plot.append(b);});
       scroll.scrollLeft=scroll.scrollWidth;
     }
-    select.onchange=render;range.onchange=render;render();
+    select.onchange=render;range.onchange=()=>{windowEnd=null;render();};render();
+    let lastWidth=scroll.clientWidth;
+    new ResizeObserver(()=>{if(scroll.clientWidth!==lastWidth){lastWidth=scroll.clientWidth;render();}}).observe(scroll);
   });
 })();

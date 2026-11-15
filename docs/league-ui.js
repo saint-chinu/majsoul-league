@@ -232,6 +232,10 @@
           const label=el('label','','比較項目'),category=el('select');category.setAttribute('aria-label','比較項目');
           views.forEach((_,key)=>{const option=el('option','',key);option.value=key;category.append(option);});label.append(category);controls.append(label);
           const orderStatus=el('span','matrix-order');controls.append(orderStatus);
+          const pager=el('div','matrix-pager'),previous=el('button','','‹'),pageSelect=el('select'),next=el('button','','›');
+          previous.type=next.type='button';previous.setAttribute('aria-label','前の比較項目');next.setAttribute('aria-label','次の比較項目');
+          previous.title='前の比較項目';next.title='次の比較項目';pageSelect.setAttribute('aria-label','表示する比較項目');
+          pager.append(previous,pageSelect,next);let metricPage=0;
           const body=el('div','comparison-content');body.tabIndex=0;body.setAttribute('role','region');body.setAttribute('aria-label','全員比較表');
           const detail=el('section','matrix-detail');detail.id='comparison-detail';detail.hidden=true;
           let detailKey=null,detailOpener=null;
@@ -312,7 +316,7 @@
               const numbers=sorted.filter(counts).map(n=>numeric(values.get(n))).filter(n=>n!==null);
               const best=low?Math.min(...numbers):Math.max(...numbers),worst=low?Math.max(...numbers):Math.min(...numbers);
               sorted.forEach(player=>{
-                const cell=el('td'),text=values.get(player),value=numeric(text);cell.append(el('span','matrix-value',text));
+                const cell=el('td'),text=values.get(player),value=numeric(text);cell.dataset.metric=label;cell.append(el('span','matrix-value',text));
                 if(value===null&&text!=='—')cell.classList.add('matrix-text');
                 if(ranked && value!==null && !counts(player)){
                   cell.classList.add('matrix-unqualified');cell.append(el('small','matrix-rank','参考'));
@@ -324,14 +328,48 @@
                 row.append(cell);
               });tbody.append(row);
             });
-            table.append(tbody);body.replaceChildren(table);updateMore();
+            table.append(tbody);
+            // Keep the complete matrix for desktop and existing chart readers.
+            // On phones, compare every player with three metrics per page.
+            const sourceRows=[...tbody.rows];
+            if(category.value==='主要指標')sourceRows.sort((a,b)=>{
+              const order=['スコア','平均順位','1位率','和了率','放銃率','平均和了点','放銃平均打点','先制テンパイ率','テンパイ維持率','2位率','3位率','半荘数','立直率','副露率'];
+              return order.indexOf(a.cells[1].dataset.metric)-order.indexOf(b.cells[1].dataset.metric);
+            });
+            const pages=Math.ceil(sourceRows.length/3);
+            metricPage=Math.max(0,Math.min(metricPage,pages-1));pageSelect.replaceChildren();
+            for(let p=0;p<pages;p++){
+              const option=el('option','',sourceRows.slice(p*3,p*3+3).map(r=>r.cells[1].dataset.metric).join(' / '));option.value=String(p);pageSelect.append(option);
+            }
+            pageSelect.value=String(metricPage);previous.disabled=metricPage===0;next.disabled=metricPage>=pages-1;
+            const visibleRows=sourceRows.slice(metricPage*3,metricPage*3+3);
+            const mobile=el('table','mobile-comparison'),mobileHead=el('thead'),mobileHeadRow=el('tr'),corner=el('th','','選手');corner.scope='col';mobileHeadRow.append(corner);
+            visibleRows.forEach(r=>{
+              const label=r.cells[1].dataset.metric,th=el('th');th.scope='col';
+              th.append(drillButton(label,'matrix-metric','metric:'+label,b=>showMetric(label,b)));
+              if(dirOf(label)){
+                const sort=el('button','matrix-sort',isLow(label)?'↓':'↑');sort.type='button';sort.title=label+'順に並べ替え';sort.setAttribute('aria-label',sort.title);sort.setAttribute('aria-pressed',String(ordering===label));
+                sort.onclick=()=>{ordering=label;renderComparison();};th.append(sort);
+              }
+              mobileHeadRow.append(th);
+            });mobileHead.append(mobileHeadRow);mobile.append(mobileHead);
+            const mobileBody=el('tbody');
+            sorted.forEach((player,i)=>{
+              const row=el('tr'),th=el('th');th.scope='row';th.append(drillButton(player,'matrix-player','player:'+player,b=>showPlayer(player,b)));
+              const count=games?.get(player);if(count)th.append(el('small','mobile-games',count+'半荘'));row.append(th);
+              visibleRows.forEach(r=>row.append(r.cells[i+1].cloneNode(true)));mobileBody.append(row);
+            });mobile.append(mobileBody);
+            body.replaceChildren(table,mobile);updateMore();
           }
           const more=el('p','comparison-more','↓ 表の中に続きがあります');more.hidden=true;more.setAttribute('aria-hidden','true');
           function updateMore(){more.hidden=body.scrollHeight-body.clientHeight-body.scrollTop<=2;}
           body.addEventListener('scroll',updateMore,{passive:true});addEventListener('resize',updateMore);
           new ResizeObserver(updateMore).observe(body);
-          category.onchange=()=>{clearDetail();renderComparison();};
-          comparison.append(controls,el('p','comparison-note','順位は表示値で比較。同値は同順位。'+(minGames?'率・平均などは規定'+minGames+'半荘未満を参考扱い（最多参加数の30%未満）。回数・合計は全員対象。':'')),body,more,detail);
+          category.onchange=()=>{metricPage=0;clearDetail();renderComparison();};
+          const changePage=p=>{metricPage=p;clearDetail();renderComparison();};
+          previous.onclick=()=>changePage(metricPage-1);next.onclick=()=>changePage(metricPage+1);pageSelect.onchange=()=>changePage(Number(pageSelect.value));
+          const rules=el('details','comparison-rules');rules.append(el('summary','','順位・規定半荘の基準'),el('p','comparison-note','順位は表示値で比較。同値は同順位。'+(minGames?'率・平均などは規定'+minGames+'半荘未満を参考扱い（最多参加数の30%未満）。回数・合計は全員対象。':'')));
+          comparison.append(controls,pager,body,more,rules,detail);
           renderComparison();
         }
       }
