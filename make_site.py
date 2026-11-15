@@ -129,7 +129,9 @@ def split_site_pages(html_text: str) -> dict[str, str]:
         "    header { display:flex; align-items:center; justify-content:space-between; gap:12px; }\n"
         "    .ops-menu { position:relative; font-size:12px; flex-shrink:0; }\n"
         "    .ops-menu summary { cursor:pointer; color:#49655f; }\n"
-        "    .ops-menu a { position:absolute; right:0; top:28px; width:200px; padding:14px; background:white; border:1px solid #dce3e2; z-index:20; color:#087e79; text-decoration:none; }\n  </style>",
+        "    .ops-menu-links { position:absolute; right:0; top:28px; width:220px; max-width:calc(100vw - 32px); background:var(--panel,white); border:1px solid var(--line,#dce3e2); z-index:40; box-shadow:0 6px 18px #0002; }\n"
+        "    .ops-menu .ops-menu-links a { display:block; position:static; width:auto; padding:14px; color:var(--accent,#087e79); text-decoration:none; border:0; }\n"
+        "    .ops-menu .ops-menu-links a:hover { background:var(--fill,#f2f4f7); }\n  </style>",
     )
 
     nav_open = html_text.find('<section class="tab-groups"')
@@ -196,7 +198,7 @@ def split_site_pages(html_text: str) -> dict[str, str]:
 <body>
   <header>
     <h1>魚群リーグ</h1>
-    <details class="ops-menu"><summary>運営メニュー</summary><a href="table-manager.html">シーズン4 卓組管理</a></details>
+    <details class="ops-menu"><summary>運営メニュー</summary><nav class="ops-menu-links" aria-label="卓組管理"><a href="https://gyogun-season6-seating.doppel-tag.workers.dev/">シーズン6 卓組管理</a><a href="https://gyogun-five-seating.doppel-tag.workers.dev/">シーズン5 卓組管理</a><a href="table-manager.html">シーズン4 卓組管理</a></nav></details>
   </header>
   <main>
     {nav_for(key)}
@@ -2766,7 +2768,7 @@ def build_season_contexts(
             season,
             latest_season,
             len(season_to_uuids[season]),
-            full_games=({4: 60, 5: 50}.get(season, full_games) if key_prefix == "new" else full_games),
+            full_games=({4: 60, 5: 50, 6: 30}.get(season, full_games) if key_prefix == "new" else full_games),
             prefix=label_prefix,
         )
         season_contexts.append(
