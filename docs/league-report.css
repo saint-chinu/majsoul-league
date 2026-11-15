@@ -1,0 +1,129 @@
+/* Report layer. Original tables, themes and drilldowns remain available. */
+@font-face{font-family:"Plex Cond";src:url(fonts/ibm-plex-sans-condensed-latin-400-normal.woff2) format("woff2");font-weight:400;font-style:normal;font-display:swap}
+@font-face{font-family:"Plex Cond";src:url(fonts/ibm-plex-sans-condensed-latin-600-normal.woff2) format("woff2");font-weight:600;font-style:normal;font-display:swap}
+:root{
+  --bg:#fff;--panel:#fff;--fill:#f2f4f7;--ink:#0f1e36;--muted:#5a667a;--line:#d9dee6;
+  --accent:#0b6e4f;--accent-soft:#e3f1eb;--gold:#8a6a1f;--danger:#b3261e;--on-accent:#fff;
+  --best:#e3f1eb;--worst:#e9ebeb;
+  --band:#0f1e36;--on-band:#fff;--band-muted:#c0c9d7;--rule:#0f1e36;--neg:#b3261e;
+  --sans:"Plex Cond","Hiragino Sans","Hiragino Kaku Gothic ProN","Yu Gothic","Noto Sans JP","Noto Sans CJK JP",Meiryo,sans-serif;
+  --serif:"Hiragino Mincho ProN","Yu Mincho","Noto Serif JP","Noto Serif CJK JP",serif;
+}
+:root[data-theme=salmon]{--band:#a94338;--on-band:#fff;--band-muted:#ffe5e0;--rule:#382c30;--neg:#a94338}
+:root[data-theme=navy]{--band:#0b1524;--on-band:#f1f1e9;--band-muted:#b2bfd0;--rule:#e3c27a;--neg:#f0a59b}
+:root[data-theme=dark]{--band:#0d0f10;--on-band:#ecf0ed;--band-muted:#b0b9b5;--rule:#a5d6c0;--neg:#f0a59b}
+body{font-family:var(--sans);font-feature-settings:"palt";-webkit-font-smoothing:antialiased}
+button,select,input{font-family:inherit}
+header{background:var(--band);color:var(--on-band);border:0;padding:14px 32px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+header h1{font-family:var(--serif);font-size:22px;font-weight:700;letter-spacing:0;margin:0;color:var(--on-band);white-space:nowrap}
+header h1::after{content:"戦績レポート";font-family:var(--sans);font-size:11px;font-weight:400;letter-spacing:0;color:var(--band-muted);margin-left:14px;padding-left:14px;border-left:1px solid var(--band-muted)}
+header .theme-control{color:var(--band-muted);white-space:nowrap}
+header .theme-control select{background:transparent;color:var(--on-band);border-color:color-mix(in srgb,var(--on-band) 35%,transparent);padding:6px 8px}
+header .theme-control select option{color:#111;background:#fff}
+header .theme-dot{border-color:color-mix(in srgb,var(--on-band) 45%,transparent)}
+header .ops-menu summary{color:var(--band-muted)}
+header :is(select,summary,a):focus-visible{outline-color:var(--on-band)}
+main{padding-top:0}
+.compact-nav{gap:0 14px;padding:0;margin:0 0 22px;border-bottom:1px solid var(--line)}
+.compact-link{font-size:13px;padding:14px 12px 11px;min-height:46px;border-bottom-width:3px;margin-bottom:-1px}
+.compact-link.selected{border-bottom-color:var(--rule);color:var(--ink)}
+.compact-link.in-league{color:var(--ink)}
+.compact-link:hover,.compact-link[aria-expanded=true]{background:transparent;color:var(--accent)}
+.compact-menu-button{min-height:36px;padding:6px 12px;border-radius:2px;font-size:12px}
+.compact-location{order:9;padding:8px 0;font-size:11px;border-top:1px solid var(--line)}
+.compact-nav .league-disclosure,.compact-nav .player-disclosure{order:10}
+.report-lead{margin:0 0 26px;min-width:0}
+.report-kicker{display:flex;flex-wrap:wrap;gap:2px 18px;margin:0 0 12px;font-size:12px;color:var(--muted)}
+.report-kicker b{color:var(--ink);font-weight:600}
+.report-text{min-width:0}
+.report-title{font-family:var(--serif);font-size:30px;line-height:1.4;font-weight:700;letter-spacing:0;margin:0 0 18px;padding:0;border:0;color:var(--ink);text-wrap:balance;overflow-wrap:anywhere}
+.report-title span{display:inline-block;max-width:100%}
+.report-lede{font-size:14px;line-height:1.8;color:var(--ink);margin:-6px 0 18px;max-width:44em;overflow-wrap:anywhere}
+.report-findings{list-style:none;margin:0;padding:0;border-top:2px solid var(--rule)}
+.report-findings li{display:grid;grid-template-columns:4.5em minmax(0,1fr);gap:12px;padding:11px 0;border-bottom:1px solid var(--line);font-size:14px;line-height:1.7;overflow-wrap:anywhere}
+.report-findings li>b{font-size:12px;font-weight:600;color:var(--accent);padding-top:2px}
+.report-findings strong{font-weight:600}
+.exhibit{margin:22px 0 0;min-width:0}
+.exhibit-head{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:4px 12px;border-top:2px solid var(--rule);padding:11px 0 8px}
+.exhibit-head h3{margin:0;font-size:14px;font-weight:700}
+.exhibit-head span{font-size:11px;color:var(--muted)}
+.score-row{display:grid;grid-template-columns:1.4em minmax(5.5em,8.5em) minmax(0,1fr) 5.6em;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--line);font-size:13px}
+.score-rank{color:var(--muted);font-size:12px;text-align:right;font-variant-numeric:tabular-nums}
+.score-name{min-width:0;line-height:1.4;overflow-wrap:anywhere}
+.score-name a{color:var(--ink);font-weight:600;text-decoration:none}
+.score-name a:hover{color:var(--accent);text-decoration:underline;text-underline-offset:3px}
+.score-name small{display:block;font-size:10.5px;color:var(--muted);font-variant-numeric:tabular-nums}
+.score-track{position:relative;height:16px}
+.score-track::before{content:"";position:absolute;top:-6px;bottom:-6px;left:var(--zero);width:1px;background:var(--ink);opacity:.55}
+.score-bar{position:absolute;top:0;bottom:0;background:var(--accent)}
+.score-bar.neg{background:var(--neg)}
+.score-value{text-align:right;font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap}
+.score-value.neg,.neg-value{color:var(--neg)}
+.exhibit-note{font-size:11px;line-height:1.7;color:var(--muted);margin:10px 0 0}
+@media(min-width:1000px){
+  .report-lead.has-exhibit{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,6fr);gap:0 40px;align-items:start}
+  .report-lead.has-exhibit .report-kicker{grid-column:1/-1}
+  .report-lead.has-exhibit .exhibit{margin-top:0}
+}
+.personal-overview{margin-bottom:26px}
+.personal-overview h2,.season-trends>h2,.comparison-home .league-disclosure-head h2{font-size:15px;font-weight:700}
+.personal-key-stats{border-top:2px solid var(--rule);gap:0 28px}
+.personal-stat{padding:14px 0 12px;gap:4px}
+.personal-stat strong{font-size:30px;font-weight:600;line-height:1.15;letter-spacing:0}
+.personal-rank{display:flex;align-items:center;flex-wrap:wrap;gap:8px;font-size:12px;color:var(--muted)}
+.personal-rank.is-top{color:var(--accent);font-weight:600}
+.rank-strip{display:inline-flex;gap:2px}
+.rank-strip i{width:7px;height:7px;background:var(--line)}
+.rank-strip i.on{background:var(--ink)}
+.personal-rank.is-top .rank-strip i.on{background:var(--accent)}
+.table-wrap,.comparison-content{border:0;border-radius:0;border-top:2px solid var(--rule);border-bottom:1px solid var(--line)}
+th,th.sticky-rank,th.sticky-name,.comparison-table thead th{background:var(--panel);color:var(--muted);font-size:12px;font-weight:600;border-bottom:1px solid var(--ink)}
+.comparison-table thead th .matrix-player{color:var(--ink);font-weight:700;font-size:13px}
+td{font-variant-numeric:tabular-nums}
+.comparison-table td{font-size:14px}
+.comparison-table td.matrix-best{color:var(--accent);font-weight:600}
+.comparison-table td.matrix-worst{color:var(--ink)}
+.comparison-table td.matrix-unqualified{color:var(--muted)}
+.matrix-rank{font-size:10.5px}
+.matrix-player,.matrix-metric{text-decoration-color:var(--line);text-decoration-style:solid}
+.comparison-note,.subnote{font-size:11.5px}
+.metric-best td,.metric-best td.sticky-name{background:var(--best)}
+.metric-worst td,.metric-worst td.sticky-name{background:var(--worst);color:var(--ink)}
+.player-card{border-radius:0;border:0;border-top:2px solid var(--rule);padding:14px 0 6px;transition:none}
+.player-card:hover{box-shadow:none;transform:none}
+.summary div{border-left:0;border-top:2px solid var(--rule);padding:10px 0}
+.analysis-card{border-radius:0;border:0;border-top:2px solid var(--rule);padding:14px 0}
+.analysis-card h3{font-family:var(--serif);font-size:17px;color:var(--ink)}
+.stats-fold>summary{font-size:15px;padding:15px 0}
+.stats-fold[open]{border-top:2px solid var(--rule)}
+.stats-fold[open]>summary{color:var(--ink)}
+.season-trends,.parameter-fold{border-top:2px solid var(--rule)}
+.trend-scroll{border:0;border-radius:0;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.trend-stats strong{font-size:26px;font-weight:600}
+.trend-presets button[aria-pressed=true]{border-bottom-color:var(--rule);color:var(--ink)}
+select,.nav-search,.compact-menu-button,.drill-close{border-radius:2px!important}
+.drill-dialog{border-radius:0;border:0;border-top:4px solid var(--rule)}
+footer{border-top:1px solid var(--line);font-size:11.5px;color:var(--muted)}
+main:has(.report-lead) .compact-location{display:none}
+@media(max-width:600px){
+  header{padding:10px 16px;gap:10px}
+  header h1{font-size:19px}
+  header h1::after{display:none}
+  header .theme-control{order:3;width:100%;margin:0;font-size:12px;gap:8px}
+  header .theme-control select{flex:1;font-size:12px;max-width:none;padding:7px 8px}
+  header .ops-menu{margin-left:auto}
+  header .ops-menu summary{font-size:11px;white-space:nowrap}
+  .compact-nav{margin-bottom:18px}
+  .compact-primary{display:flex;flex-wrap:nowrap;overflow-x:auto;width:100%;margin:0;padding:0;scrollbar-width:none;gap:0}
+  .compact-primary::-webkit-scrollbar{display:none}
+  .compact-link{flex:none;white-space:nowrap;font-size:13px;padding:13px 10px 10px}
+  .compact-tools{order:8;width:100%;margin:10px 0 14px}
+  .compact-menu-button{min-height:38px;padding:4px 12px}
+  .compact-location{border-top:0;padding:0 0 8px}
+  .report-title{font-size:22px;margin-bottom:16px}
+  .report-findings li{grid-template-columns:3.6em minmax(0,1fr);gap:10px;font-size:13px}
+  .score-row{grid-template-columns:1.2em minmax(4.5em,6.2em) minmax(0,1fr) 5.4em;gap:6px;font-size:12px}
+  .personal-key-stats{gap:0 16px}
+  .personal-stat strong{font-size:25px}
+  .comparison-table td{font-size:13px}
+}

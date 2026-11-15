@@ -1,6 +1,6 @@
 (() => {
   'use strict';
-  const themes = { white: 'オフホワイト', salmon: 'サーモン', navy: 'ネイビー × ゴールド', dark: 'ダーク' };
+  const themes = { white: 'レポート（白）', salmon: 'サーモン', navy: 'ネイビー × ゴールド', dark: 'ダーク' };
   let theme = 'white';
   try { theme = localStorage.getItem('gyogun-theme') || theme; } catch (_) {}
   document.documentElement.dataset.theme = themes[theme] ? theme : 'white';

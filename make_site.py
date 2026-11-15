@@ -186,10 +186,12 @@ def split_site_pages(html_text: str) -> dict[str, str]:
   <title>{title}</title>
 {METRIC_MODAL_PAGE_SCRIPT}{style_block}
 {meta_script}  <link rel="stylesheet" href="league-ui.css?v=8">
-  <script src="league-ui.js?v=7"></script>
+  <script src="league-ui.js?v=8"></script>
   <script src="league-trends.js?v=3" defer></script>
   <link rel="stylesheet" href="league-profiles.css?v=1">
   <script src="league-profiles.js?v=1" defer></script>
+  <link rel="stylesheet" href="league-report.css?v=1">
+  <script src="league-report.js?v=1" defer></script>
 </head>
 <body>
   <header>
