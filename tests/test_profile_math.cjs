@@ -1,0 +1,16 @@
+const assert = require('node:assert/strict');
+const {position, number} = require('../docs/league-profiles.js');
+assert.deepEqual(position(30,[10,20,30]), {score:100,rank:1,total:3});
+assert.equal(position(10,[10,20,30]).score,0);
+assert.equal(position(10,[10,20,30],true).score,100);
+assert.equal(position(20,[10,20,30]).score,50);
+assert.equal(position(30,[10,30,30]).score,75);
+assert.equal(position(20,[20,20,20]).score,50);
+assert.equal(position(10,[10]).score,null);
+assert.equal(position(null,[10,20]).score,null);
+assert.equal(position(10,[null,10,20],true).score,100);
+assert.equal(number('12,345'),12345);
+assert.equal(number('12.50%'),12.5);
+assert.equal(number('—'),null);
+assert.equal(number(''),null);
+console.log('13 profile math checks passed');
