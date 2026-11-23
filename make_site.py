@@ -18,6 +18,7 @@ YAKUMAN_CSV = Path("yakuman_summary.csv")
 YAKUMAN_DETAILS_CSV = Path("yakuman_details.csv")
 PAIFU_CSV = Path("admin_paifu_ids.csv")
 TEAM_CSV = Path("team_members.csv")
+NEW_TEAM_CSV = Path("data/new/team_members.csv")
 OUTPUT_HTML = Path("docs") / "index.html"
 
 # ---------------------------------------------------------------------------
@@ -1504,8 +1505,8 @@ def split_tables(
     return f"<div class=\"split-tables\">{''.join(blocks)}</div>"
 
 
-def read_team_members() -> dict[int, dict[str, list[str]]]:
-    rows = read_csv(TEAM_CSV)
+def read_team_members(path: Path = TEAM_CSV) -> dict[int, dict[str, list[str]]]:
+    rows = read_csv(path)
     teams: dict[int, dict[str, list[str]]] = defaultdict(lambda: defaultdict(list))
     for row in rows:
         season = row.get("season", "").strip()
@@ -1584,6 +1585,8 @@ def team_champion_rows(season_contexts: list[dict[str, object]]) -> list[dict[st
         lambda: {"wins": 0, "seasons": [], "members": set()}
     )
     for context in season_contexts:
+        if "進行中" in str(context.get("label", "")):
+            continue
         team_rows = list(context.get("team_rows", []))
         if not team_rows:
             continue
@@ -3198,6 +3201,7 @@ def main() -> None:
         "new",
         "新シーズン",
         NEW_LEAGUE_FULL_GAMES,
+        teams_by_season=read_team_members(NEW_TEAM_CSV),
     )
 
     new_context = build_context("new-league", "新リーグ", new_uuids)
