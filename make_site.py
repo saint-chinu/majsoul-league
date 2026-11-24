@@ -188,7 +188,7 @@ def split_site_pages(html_text: str) -> dict[str, str]:
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{title}</title>
 {METRIC_MODAL_PAGE_SCRIPT}{style_block}
-{meta_script}  <link rel="stylesheet" href="league-ui.css?v=8">
+{meta_script}  <link rel="stylesheet" href="league-ui.css?v=9">
   <script src="league-ui.js?v=9"></script>
   <script src="league-trends.js?v=4" defer></script>
   <link rel="stylesheet" href="league-profiles.css?v=1">
@@ -1527,6 +1527,8 @@ def build_team_rows(rows: list[dict[str, str]], season_teams: dict[str, list[str
         member_details = []
         total_score = 0.0
         total_games = 0
+        rank_sum = 0
+        ranked_games = 0
         for player in members:
             row = by_player.get(player)
             if not row:
@@ -1535,6 +1537,11 @@ def build_team_rows(rows: list[dict[str, str]], season_teams: dict[str, list[str
             score = float(row.get("earned_score", 0) or 0)
             total_score += score
             total_games += int(row.get("games", 0) or 0)
+            games = int(row.get("games", 0) or 0)
+            # Recover integer finishes, not averages of rounded member averages.
+            finishes = [pct_count(row, f"rank{rank}_rate", games) for rank in (1, 2, 3)]
+            rank_sum += sum(rank * count for rank, count in enumerate(finishes, 1))
+            ranked_games += sum(finishes)
             member_details.append(
                 f"{player}: {number(score, 1)} / 平均{row.get('average_rank', '-')}"
             )
@@ -1545,9 +1552,37 @@ def build_team_rows(rows: list[dict[str, str]], season_teams: dict[str, list[str
                 "member_details": " / ".join(member_details),
                 "total_score": round(total_score, 1),
                 "total_games": total_games,
+                "average_rank": rank_sum / total_games if total_games and ranked_games == total_games else None,
             }
         )
     return sorted(team_rows, key=lambda row: (-float(row["total_score"]), str(row["team"])))
+
+
+def team_summary_cards(context: dict[str, object]) -> str:
+    match = re.fullmatch(r"(old|new)-season-(\d+)", str(context.get("key", "")))
+    if context.get("is_cumulative") or not match:
+        return ""
+    source = TEAM_CSV if match[1] == "old" else NEW_TEAM_CSV
+    teams = read_team_members(source).get(int(match[2]), {})
+    # Reuse cached individual results for historical seasons; never refetch them.
+    rows = build_team_rows(list(context.get("rows", [])), teams)
+    if not rows:
+        return ""
+    cards = []
+    for row in rows:
+        score = float(row["total_score"])
+        rank = 1 + sum(float(other["total_score"]) > score for other in rows)
+        score_text = f"{score:+,.1f}" if score else "0.0"
+        average_text = number(row["average_rank"], 2) if row["average_rank"] is not None else "—"
+        cards.append(
+            f'<article class="team-summary-card{" is-leader" if rank == 1 else ""}">'
+            f'<div class="team-summary-head"><span class="team-summary-rank">{rank}位</span>'
+            f'<h3>{esc(row["team"])}</h3></div>'
+            '<dl><div><dt>スコア</dt>'
+            f'<dd class="{"team-score-negative" if score < 0 else ""}">{score_text}</dd></div>'
+            f'<div><dt>平均順位</dt><dd>{average_text}</dd></div></dl></article>'
+        )
+    return '<section class="team-summary" aria-label="チーム順位">' + ''.join(cards) + '</section>'
 
 
 def team_section(team_rows: list[dict[str, object]]) -> str:
@@ -2649,6 +2684,7 @@ def render_stats_panel(context: dict[str, object]) -> str:
 
     return f"""
     <section class="tab-panel" id="panel-{esc(context['key'])}" data-panel="{esc(context['key'])}">
+      {team_summary_cards(context)}
       <h2>{esc(context['label'])} ダイジェスト</h2>
       <section class="cards digest-cards">
         {digest_cards(rows)}

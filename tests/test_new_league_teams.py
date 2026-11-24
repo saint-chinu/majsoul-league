@@ -31,6 +31,37 @@ class NewLeagueTeamTests(unittest.TestCase):
         self.assertEqual(site.team_champion_rows([ongoing]), [])
         self.assertEqual([r['wins'] for r in site.team_champion_rows([ongoing, complete])], [1, 1])
 
+    def test_team_average_uses_finish_counts_and_game_weights(self):
+        rows = [
+            {'player': 'A', 'games': '3', 'average_rank': '1.33',
+             'rank1_rate': '66.67%', 'rank2_rate': '33.33%', 'rank3_rate': '0%'},
+            {'player': 'B', 'games': '1', 'average_rank': '3.0',
+             'rank1_rate': '0%', 'rank2_rate': '0%', 'rank3_rate': '100%'},
+        ]
+        result = site.build_team_rows(rows, {'Blue': ['A', 'B', 'C'], 'Empty': ['D']})
+        self.assertEqual(result[0]['average_rank'], 1.75)
+        self.assertIsNone(result[1]['average_rank'])
+
+    def test_cards_only_for_mapped_seasons_and_escape_names(self):
+        context = {'key': 'new-season-8', 'rows': [
+            {'player': 'A', 'games': '1', 'earned_score': '10', 'rank1_rate': '100%'},
+            {'player': 'B', 'games': '1', 'earned_score': '10', 'rank2_rate': '100%'},
+            {'player': 'C', 'games': '1', 'earned_score': '-20', 'rank3_rate': '100%'},
+        ]}
+        with patch.object(site, 'read_team_members', return_value={8: {'<Blue>': ['A'], 'Red': ['B'], 'Green': ['C']}}) as read:
+            html = site.team_summary_cards(context)
+            read.assert_called_with(site.NEW_TEAM_CSV)
+            self.assertIn('&lt;Blue&gt;', html)
+            self.assertEqual(html.count('team-summary-rank">1'), 2)
+            self.assertIn('team-summary-rank">3', html)
+            self.assertIn('>1.00<', html)
+            self.assertIn('team-score-negative">-20.0', html)
+            self.assertEqual(site.team_summary_cards({**context, 'key': 'new-season-7'}), '')
+            self.assertEqual(site.team_summary_cards({**context, 'is_cumulative': True}), '')
+            self.assertEqual(site.team_summary_cards({**context, 'key': 'new-league'}), '')
+            site.team_summary_cards({**context, 'key': 'old-season-8'})
+            read.assert_called_with(site.TEAM_CSV)
+
     def test_team_mapping_passed_to_each_season(self):
         teams = {8: {'Blue': ['A']}}
         with patch.object(site, 'build_context', return_value={}) as build:
