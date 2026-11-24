@@ -35,7 +35,7 @@ window.SEATING_DATA = {
   ],
   "source_available": true,
   "source_count": 64,
-  "updated": "2026-11-24T05:05:36+09:00",
+  "updated": "2026-11-25T00:51:00+09:00",
   "records": [
     {
       "uuid": "261008-2f1bde94-01b2-44e4-950a-21bccc9931d7",
