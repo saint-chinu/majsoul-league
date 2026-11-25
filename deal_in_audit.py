@@ -9,7 +9,8 @@ from invalid_games import is_invalid
 
 CACHE_DIR = Path('build/deal-in-audit')
 OUTPUT_DIR = Path('docs/deal-in-audit')
-RULE_VERSION = hashlib.sha256(Path(league.__file__).read_bytes()).hexdigest()[:16]
+import deal_in_suji
+RULE_VERSION = hashlib.sha256(Path(league.__file__).read_bytes() + Path(deal_in_suji.__file__).read_bytes()).hexdigest()[:16]
 
 
 def fingerprint(uuid):

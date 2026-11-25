@@ -8,7 +8,7 @@
   <link rel="stylesheet" href="league-report.css?v=2">
   <link rel="stylesheet" href="deal-in-review.css?v=1">
   <script src="league-ui.js?v=9"></script>
-  <script src="deal-in-review.js?v=1" defer></script>
+  <script src="deal-in-review.js?v=2" defer></script>
 </head>
 <body>
   <header><h1>魚群リーグ</h1></header>
@@ -26,6 +26,7 @@
       <dl class="audit-totals" id="totals"></dl>
       <p class="audit-note">平均スコア＝合計加減点÷ロン放銃件数。同一放銃の条件は重複加算。ダブロンは和了者ごとに1件。分類の割合はロン放銃件数が分母です。</p>
       <p class="audit-note">リーグ独自の配点です。減点の有無だけで打牌の正誤は断定しません。持ち点の変化は局全体、支払点は和了者ごとの値です。</p>
+      <details class="audit-rules"><summary>筋・国士の減点条件</summary><div class="event-body"><p>放銃者のリーチ宣言牌・リーチ後は除外。疝気筋−5点、暗刻筋−3点。同じ両面筋が複合すると追加−7点、合計−15点。</p><p>疝気筋：相手の河の2→4–7、3→5–8、4→6–9、6→1–4、7→2–5、8→3–6。暗刻筋：筋の2種類が本人から合計4枚以上見えている場合。片側が相手の河にある筋、間の牌が4枚見える両面は除外。手牌・河・副露・公開済みドラ表示牌を数え、相手の手牌や裏ドラは使いません。</p><p>国士放銃：和了者の河と北抜きにヤオチュウ牌2種類で−15点、3種類以上で−25点。同じ牌は1種類とし、2種・3種の減点は重複させません。その他の条件は加算します。</p><a href="https://note.com/tanyao_chanta/n/n8076a9342703" target="_blank" rel="noopener noreferrer">筋の定義：麻雀捨て牌読みのススメ</a></div></details>
       <h3>加減点の原因</h3>
       <div class="cause-heading"><span>分類 / 1回の配点</span><span>件数・割合</span><span>合計 / 平均への寄与</span></div>
       <div id="causes"></div>

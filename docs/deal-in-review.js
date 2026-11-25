@@ -66,6 +66,15 @@
         const li=el('li');li.append(el('span','',c.label),el('b',scoreClass(c.points),signed(c.points)));reasons.append(li);
       });
       body.append(reasons,el('p','', '放銃牌：'+tile(e.tile)+' / 採点の参照状態：'+(e.riichi?'リーチ':e.shanten>=8?'不明（初打牌前）':e.shanten<=0?'テンパイ':e.shanten+'シャンテン')+' / 相手：'+(e.winner_riichi?'リーチ':e.winner_melds?e.winner_melds+'副露':'ダマ')));
+      (e.suji_patterns||[]).forEach(p=>{
+        const pair=p.pair.map(tile).join('・');
+        const source=p.senki_sources.length?'相手の捨て牌 '+p.senki_sources.map(tile).join('・')+' から疝気筋。':'';
+        const visible=p.pair.map((t,i)=>tile(t)+' '+p.visible[i]+'枚（手牌'+p.hand[i]+'枚）').join('＋');
+        body.append(el('p','audit-note',(p.overlap?'両面本命の複合：':'筋の判定根拠：')+pair+'。'+source+
+          '打牌直前に '+visible+' が見えていた。相手の河に両端の牌なし。間の牌の見え枚数 '+p.middle_visible.join('・')+'枚。'+
+          (p.anko?'暗刻筋の合計4枚以上に該当。':'')+'相手の実際の待ち形ではなく、本人から見た両面の可能性で判定。'));
+      });
+      if(e.kokushi_signals?.length)body.append(el('p','audit-note','国士の警戒材料：相手の捨て牌・北抜きに '+e.kokushi_signals.map(tile).join('・')+'（'+e.kokushi_signals.length+'種類）。同じ牌の重複と北抜きの重複は1種類として数えます。'));
       if(action)body.append(el('p','audit-note',action+'放銃。既存採点のシャンテン・終盤判定は直前の打牌時点を参照します。初打牌前は不明値が2シャンテン以下扱いになるため、減点理由は要確認です。'));
       if(e.riichi_info?.riichi)body.append(el('p','audit-note','リーチ時の採点情報：'+(e.riichi_info.good_shape?'良形':'愚形')+' / ドラ評価数 '+e.riichi_info.dora_count+' / 推定打点 '+fmt(e.riichi_info.estimated_point)+'点'));
       if(e.scores_before?.length && e.scores_after?.length){

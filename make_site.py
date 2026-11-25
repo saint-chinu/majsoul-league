@@ -355,7 +355,7 @@ METRIC_DESCRIPTIONS = {
     "vs_two_called_houjuu_rate": "ロン放銃のうち、2副露以上の相手へ放銃した割合。",
     "vs_haneman_houjuu_rate": "ロン放銃のうち、支払点12,000点以上だった割合。",
     "late_noten_houjuu_share": "ロン放銃のうち、12巡目以降の非テンパイ打牌で放銃した割合。",
-    "deal_in_quality_score": "放銃時の押し理由と失点状況を採点した平均値。スコアから加減点の内訳と該当局を確認できます。",
+    "deal_in_quality_score": "放銃時の押し理由と失点状況の平均採点。非リーチ時は疝気筋−5・暗刻筋−3、同じ両面筋の複合は追加−7（合計−15）。内訳と該当局を確認できます。",
     "deal_in_quality_top_category": "そのプレイヤーで最も多かった放銃分類。",
     "called_houjuu_rate": "参加局のうち、鳴いた手へのロン放銃になった割合。",
     "two_called_houjuu_rate": "参加局のうち、2副露以上の手へのロン放銃になった割合。",
@@ -1240,7 +1240,12 @@ def deal_in_quality_definition_table() -> str:
             "</tr>"
         )
     head = "<th>スコア</th><th>分類</th>"
-    return f"<div class=\"table-wrap quality-def\"><table><thead><tr>{head}</tr></thead><tbody>{''.join(body)}</tbody></table></div>"
+    note = ('<p class="subnote">筋の減点は放銃者のリーチ宣言牌・リーチ後を除外。疝気筋は相手の河の2→4–7、3→5–8、4→6–9、6→1–4、7→2–5、8→3–6。'
+            '暗刻筋は同じ筋の2種類が本人から合計4枚以上見える場合。片側が相手の河にある筋、間の牌が4枚見える両面は除外。'
+            '同じ両面筋で両条件が重なると合計−15点。相手のリーチ・実際の待ち形は不問で、打牌時点の見える情報で判定。'
+            '非リーチ時の国士放銃は、和了者の河と北抜きのヤオチュウ牌が2種類なら−15、3種類以上なら−25（両者は重複しない）。'
+            '<a href="https://note.com/tanyao_chanta/n/n8076a9342703" target="_blank" rel="noopener noreferrer">定義の出典</a></p>')
+    return f"<div class=\"table-wrap quality-def\"><table><thead><tr>{head}</tr></thead><tbody>{''.join(body)}</tbody></table></div>" + note
 
 
 def deal_in_quality_breakdown_table(row: dict[str, str]) -> str:
@@ -3016,6 +3021,7 @@ def top_category_from_rows(rows: list[dict[str, str]], count_col: str, label_col
 
 
 def combine_player_rows(contexts: list[dict[str, object]]) -> list[dict[str, str]]:
+    from aggregate_league import DEAL_IN_QUALITY_SCORE
     rows_by_player: dict[str, list[dict[str, str]]] = defaultdict(list)
     for context in contexts:
         for row in list(context.get("rows", [])):
@@ -3043,6 +3049,7 @@ def combine_player_rows(contexts: list[dict[str, object]]) -> list[dict[str, str
         nanba_overtaken_chances = sum(parse_int(row.get("nanba_overtaken_chances", 0)) for row in rows)
         nanba_overtaken = sum(parse_int(row.get("nanba_overtaken", 0)) for row in rows)
         deal_in_events = houjuu
+        quality_events = sum(parse_int(row.get('deal_in_event_count', pct_count(row, 'houjuu_rate', parse_int(row.get('rounds', 0))))) for row in rows)
         riichi_recommended = sum(pct_count(row, "riichi_recommended_rate", parse_int(row.get("riichi", 0))) for row in rows)
 
         rank_counts = {
@@ -3095,7 +3102,8 @@ def combine_player_rows(contexts: list[dict[str, object]]) -> list[dict[str, str
                 "vs_two_called_houjuu_rate": fmt_pct_count(sum(pct_count(row, "vs_two_called_houjuu_rate", pct_count(row, "houjuu_rate", parse_int(row.get("rounds", 0)))) for row in rows), deal_in_events),
                 "vs_haneman_houjuu_rate": fmt_pct_count(sum(pct_count(row, "vs_haneman_houjuu_rate", pct_count(row, "houjuu_rate", parse_int(row.get("rounds", 0)))) for row in rows), deal_in_events),
                 "late_noten_houjuu_share": fmt_pct_count(sum(pct_count(row, "late_noten_houjuu_share", pct_count(row, "houjuu_rate", parse_int(row.get("rounds", 0)))) for row in rows), deal_in_events),
-                "deal_in_quality_score": weighted_average(sum(parse_float(row.get("deal_in_quality_score", 0)) * pct_count(row, "houjuu_rate", parse_int(row.get("rounds", 0))) for row in rows), deal_in_events, 2),
+                "deal_in_quality_score": weighted_average(sum(DEAL_IN_QUALITY_SCORE.get(k, 0) * v for k, v in deal_breakdown.items()), quality_events, 2),
+                "deal_in_event_count": str(quality_events),
                 "deal_in_quality_top_category": top_category_from_rows(rows, "games", "deal_in_quality_top_category"),
                 "deal_in_quality_breakdown": format_quality_breakdown(deal_breakdown),
                 "called_houjuu_rate": fmt_pct_count(sum(pct_count(row, "called_houjuu_rate", parse_int(row.get("rounds", 0))) for row in rows), rounds),

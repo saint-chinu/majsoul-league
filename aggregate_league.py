@@ -4,6 +4,7 @@ from dataclasses import dataclass, field
 from functools import lru_cache
 import csv
 import re
+from deal_in_suji import SujiTracker, categories_for
 
 import ms.protocol_pb2 as pb
 from google.protobuf.json_format import MessageToDict
@@ -159,6 +160,11 @@ DEAL_IN_QUALITY_CATEGORIES = [
     ("two_shanten_or_worse_vs_riichi", "2シャンテン以下から対リーチ放銃"),
     ("top_haneman_deal_in", "トップ目から跳満以上放銃"),
     ("oorasu_rank_drop_deal_in", "オーラス着順落ち放銃"),
+    ("senki_nonriichi", "非リーチ時・疝気筋放銃"),
+    ("anko_suji_nonriichi", "非リーチ時・暗刻筋放銃"),
+    ("honmei_suji_overlap", "疝気筋＋暗刻筋の両面本命放銃（追加）"),
+    ("kokushi_two_signals", "非リーチ時・ヤオチュウ牌2種切れ国士放銃"),
+    ("kokushi_three_signals", "非リーチ時・ヤオチュウ牌3種以上切れ国士放銃"),
     ("other_deal_in", "その他放銃"),
 ]
 DEAL_IN_QUALITY_SCORE = {
@@ -175,6 +181,11 @@ DEAL_IN_QUALITY_SCORE = {
     "two_shanten_or_worse_vs_riichi": -7,
     "top_haneman_deal_in": -8,
     "oorasu_rank_drop_deal_in": -10,
+    "senki_nonriichi": -5,
+    "anko_suji_nonriichi": -3,
+    "honmei_suji_overlap": -7,
+    "kokushi_two_signals": -15,
+    "kokushi_three_signals": -25,
     "other_deal_in": 0,
 }
 DEAL_IN_QUALITY_LABELS = {
@@ -1117,6 +1128,8 @@ def classify_deal_in_event(
     last_chase_riichi,
     chang,
     dealer,
+    suji_patterns=None,
+    kokushi_signals=None,
 ):
     categories = []
     loser_riichi = bool(loser_riichi_info.get("riichi"))
@@ -1160,6 +1173,12 @@ def classify_deal_in_event(
         after_rank = score_rank(scores_after, loser)
         if before_rank is not None and after_rank is not None and after_rank > before_rank:
             categories.append("oorasu_rank_drop_deal_in")
+
+    if not loser_riichi and not last_riichi_declaration:
+        categories.extend(categories_for(suji_patterns or []))
+        signal_count = len(set(kokushi_signals or []))
+        if signal_count >= 2:
+            categories.append('kokushi_three_signals' if signal_count >= 3 else 'kokushi_two_signals')
 
     if not categories:
         categories.append("other_deal_in")
@@ -1415,6 +1434,7 @@ def aggregate_game(uuid, stats, yakuman_details, deal_in_details=None):
         player_stats.final_points.append(detail["point"])
 
     wrappers = load_record_wrappers(record_path)
+    suji_tracker = SujiTracker()
 
     round_no = 0
     riichi = set()
@@ -1549,6 +1569,8 @@ def aggregate_game(uuid, stats, yakuman_details, deal_in_details=None):
     for record_index, wrapper in enumerate(wrappers):
         record_name = wrapper["name"]
         msg = decode_record(record_name, wrapper["body"])
+
+        suji_tracker.observe(record_name, msg)
 
         if record_name == ".lq.RecordNewRound":
             flush_round()
@@ -1808,6 +1830,8 @@ def aggregate_game(uuid, stats, yakuman_details, deal_in_details=None):
                                 loser_stats.vs_riichi_houjuu += int(winner in riichi)
                                 loser_stats.vs_called_houjuu += int(winner_melds >= 1)
                                 loser_stats.vs_dama_houjuu += int(winner not in riichi and winner_melds == 0)
+                                suji_patterns = suji_tracker.evidence(loser, winner)
+                                kokushi_signals = suji_tracker.kokushi_signals(winner) if kokushi_name(hule) else []
                                 categories, score = classify_deal_in_event(
                                     loser,
                                     winner,
@@ -1824,6 +1848,8 @@ def aggregate_game(uuid, stats, yakuman_details, deal_in_details=None):
                                     last_discard_chase_riichi.get(loser, False),
                                     current_chang,
                                     current_dealer,
+                                    suji_patterns,
+                                    kokushi_signals,
                                 )
                                 loser_stats.deal_in_quality_score_sum += score
                                 for category in categories:
@@ -1838,6 +1864,8 @@ def aggregate_game(uuid, stats, yakuman_details, deal_in_details=None):
                                         "tile": last_discard_tiles.get(loser, ""),
                                         "payment": payment, "score": score,
                                         "categories": list(categories),
+                                        "suji_patterns": suji_patterns,
+                                        "kokushi_signals": kokushi_signals,
                                         "shanten": last_discard_shanten.get(loser, 8),
                                         "riichi": loser in riichi, "winner_riichi": winner in riichi,
                                         "winner_melds": winner_melds,
