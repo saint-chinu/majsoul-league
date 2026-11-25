@@ -448,6 +448,7 @@ def commit_and_push(config: dict, season_csv: Path) -> None:
         if extra.exists():
             targets.append(str(extra.relative_to(ROOT)))
     targets += [str(p.relative_to(ROOT)) for p in (ROOT / "docs").glob("*.html")]
+    targets += [str(p.relative_to(ROOT)) for p in (ROOT / "docs/deal-in-audit").glob("*.json")]
     if (ROOT / "docs/seating/data.js").exists():
         targets.append("docs/seating/data.js")
     subprocess.run([git, "add", *targets], cwd=ROOT, check=True)

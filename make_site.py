@@ -355,7 +355,7 @@ METRIC_DESCRIPTIONS = {
     "vs_two_called_houjuu_rate": "ロン放銃のうち、2副露以上の相手へ放銃した割合。",
     "vs_haneman_houjuu_rate": "ロン放銃のうち、支払点12,000点以上だった割合。",
     "late_noten_houjuu_share": "ロン放銃のうち、12巡目以降の非テンパイ打牌で放銃した割合。",
-    "deal_in_quality_score": "放銃時の押し理由と失点状況を採点した平均値。スコアをクリックすると分類内訳を表示。",
+    "deal_in_quality_score": "放銃時の押し理由と失点状況を採点した平均値。スコアから加減点の内訳と該当局を確認できます。",
     "deal_in_quality_top_category": "そのプレイヤーで最も多かった放銃分類。",
     "called_houjuu_rate": "参加局のうち、鳴いた手へのロン放銃になった割合。",
     "two_called_houjuu_rate": "参加局のうち、2副露以上の手へのロン放銃になった割合。",
@@ -1255,7 +1255,8 @@ def deal_in_quality_breakdown_table(row: dict[str, str]) -> str:
         return "<p>分類内訳はありません。</p>"
 
     body_rows = []
-    for key, label in DEAL_IN_QUALITY_CATEGORIES:
+    ordered = sorted(DEAL_IN_QUALITY_CATEGORIES, key=lambda item: counts.get(item[0], 0) * DEAL_IN_QUALITY_SCORE[item[0]])
+    for key, label in ordered:
         count = counts.get(key, 0)
         if not count:
             continue
@@ -1265,10 +1266,11 @@ def deal_in_quality_breakdown_table(row: dict[str, str]) -> str:
             f"<td>{count}</td>"
             f"<td>{percent_text(count, total)}</td>"
             f"<td>{esc(DEAL_IN_QUALITY_SCORE.get(key, ''))}</td>"
+            f"<td>{count * DEAL_IN_QUALITY_SCORE[key]:+d}</td>"
             "</tr>"
         )
 
-    head = "<th>分類</th><th>回数</th><th>割合</th><th>スコア</th>"
+    head = "<th>分類</th><th>回数</th><th>分類件数比</th><th>1回の配点</th><th>合計加減点</th>"
     return (
         "<h3>分類内訳</h3>"
         "<div class=\"table-wrap quality-breakdown\">"
@@ -1282,8 +1284,10 @@ def deal_in_quality_score_cell(row: dict[str, str]) -> str:
     if not row.get("deal_in_quality_breakdown"):
         return score
     subject = row.get("player") or row.get("season") or "放銃質"
+    query = urllib.parse.urlencode({'scope': row.get('deal_in_audit_scope', 'new-league'), 'player': row.get('player', '')})
     popup_html = (
         "<p>この行のロン放銃を分類ごとに分解した内訳です。複合条件は重複して数えています。</p>"
+        f'<p><a class="drill-link" href="deal-in-review.html?{esc(query)}">減点理由・該当局を確認</a></p>'
         f"{deal_in_quality_breakdown_table(row)}"
         "<h3>配点表</h3>"
         f"{deal_in_quality_definition_table()}"
@@ -2144,7 +2148,10 @@ def aggregate_uuids(uuids: set[str]) -> tuple[list[dict[str, str]], list[dict[st
         if not record_path.exists() or not detail_path.exists():
             continue
         try:
-            aggregate_game(uuid, stats, yakuman_details)
+            from deal_in_audit import save_game_audit
+            audit_events = []
+            aggregate_game(uuid, stats, yakuman_details, audit_events)
+            save_game_audit(uuid, audit_events)
         except Exception as exc:
             print(f"skip {uuid}: {exc}")
 
@@ -2192,6 +2199,7 @@ def aggregate_uuids(uuids: set[str]) -> tuple[list[dict[str, str]], list[dict[st
                     average(player_stats.deal_in_quality_score_sum, player_stats.deal_in_events, 2)
                 ),
                 "deal_in_quality_top_category": deal_in_quality_top_label(player_stats),
+                "deal_in_event_count": str(player_stats.deal_in_events),
                 "deal_in_quality_breakdown": deal_in_quality_breakdown(player_stats),
                 "called_houjuu_rate": percent(player_stats.called_houjuu, player_stats.rounds),
                 "two_called_houjuu_rate": percent(player_stats.two_called_houjuu, player_stats.rounds),
@@ -3248,6 +3256,13 @@ def main() -> None:
         context['excluded_games'] = len(seating_data['excluded'])
 
     contexts = [new_context] + new_season_contexts + [lifetime_context, old_context] + old_season_contexts
+    for context in contexts:
+        for row in context.get('rows', []):
+            row['deal_in_audit_scope'] = context['key']
+    from deal_in_audit import export_audit
+    audit_seasons = {f'old-season-{s}': ids for s, ids in group_uuids_by_season(read_season_paifu_rows()).items()}
+    audit_seasons.update({f'new-season-{s}': ids for s, ids in new_season_to_uuids.items()})
+    export_audit(audit_seasons, contexts)
     new_player_names = sorted_player_names(new_context)
     lifetime_player_names = sorted_player_names(lifetime_context)
 

@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>放銃の質・該当局 | 魚群リーグ</title>
+  <link rel="stylesheet" href="league-ui.css?v=9">
+  <link rel="stylesheet" href="league-report.css?v=2">
+  <link rel="stylesheet" href="deal-in-review.css?v=1">
+  <script src="league-ui.js?v=9"></script>
+  <script src="deal-in-review.js?v=1" defer></script>
+</head>
+<body>
+  <header><h1>魚群リーグ</h1></header>
+  <main class="audit-main">
+    <nav class="audit-nav"><a id="back-link" href="index.html">成績一覧へ</a><span>放銃の質</span></nav>
+    <h2>放銃の質・該当局</h2>
+    <div class="audit-filters">
+      <label>集計範囲<select id="scope" disabled></select></label>
+      <label>プレイヤー<select id="player" disabled></select></label>
+    </div>
+    <p id="status" role="status">読み込み中…</p>
+    <button id="retry" type="button" hidden>再読み込み</button>
+    <p id="warning" role="status" hidden></p>
+    <section id="audit-content" hidden>
+      <dl class="audit-totals" id="totals"></dl>
+      <p class="audit-note">平均スコア＝合計加減点÷ロン放銃件数。同一放銃の条件は重複加算。ダブロンは和了者ごとに1件。分類の割合はロン放銃件数が分母です。</p>
+      <p class="audit-note">リーグ独自の配点です。減点の有無だけで打牌の正誤は断定しません。持ち点の変化は局全体、支払点は和了者ごとの値です。</p>
+      <h3>加減点の原因</h3>
+      <div class="cause-heading"><span>分類 / 1回の配点</span><span>件数・割合</span><span>合計 / 平均への寄与</span></div>
+      <div id="causes"></div>
+      <section class="audit-rounds" aria-labelledby="rounds-title">
+        <div class="rounds-heading"><h3 id="rounds-title">該当局</h3><button type="button" id="clear-cause" hidden>絞り込み解除</button></div>
+        <p id="selected-cause" hidden></p>
+        <div class="audit-filters">
+          <label>対象<select id="mode"><option value="negative">減点を含む放銃</option><option value="all">すべての放銃</option><option value="positive">加点を含む放銃</option></select></label>
+          <label>並び順<select id="sort"><option value="penalty">減点の大きい順</option><option value="recent">日時の新しい順</option></select></label>
+        </div>
+        <div id="events"></div>
+        <div class="audit-pagination"><button type="button" id="previous" aria-label="前のページ" title="前のページ">←</button><span id="page-status" role="status"></span><button type="button" id="next" aria-label="次のページ" title="次のページ">→</button></div>
+      </section>
+    </section>
+  </main>
+</body>
+</html>

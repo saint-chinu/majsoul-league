@@ -1398,7 +1398,7 @@ def victim_rows_from_hule(uuid, round_no, msg, hule, yakuman_name, seat_to_name)
         for victim in victims
     ]
 
-def aggregate_game(uuid, stats, yakuman_details):
+def aggregate_game(uuid, stats, yakuman_details, deal_in_details=None):
     record_path = RAW_DIR / f"{uuid}_record.bin"
     detail_path = RAW_DIR / f"{uuid}_detail.bin"
 
@@ -1447,6 +1447,8 @@ def aggregate_game(uuid, stats, yakuman_details):
     first_tenpai_seat = None
     round_start_scores = [35000, 35000, 35000]
     current_chang = 0
+    current_honba = 0
+    last_discard_tiles = {}
     current_dealer = 0
     winning_run_seat = None
     winning_run_start_score = None
@@ -1544,7 +1546,7 @@ def aggregate_game(uuid, stats, yakuman_details):
 
         return removed
 
-    for wrapper in wrappers:
+    for record_index, wrapper in enumerate(wrappers):
         record_name = wrapper["name"]
         msg = decode_record(record_name, wrapper["body"])
 
@@ -1553,6 +1555,8 @@ def aggregate_game(uuid, stats, yakuman_details):
             round_no += 1
             current_chang = int(getattr(msg, "chang", 0))
             current_dealer = int(getattr(msg, "ju", 0))
+            current_honba = int(getattr(msg, "ben", 0))
+            last_discard_tiles = {}
             riichi = set()
             riichi_winners = set()
             called = set()
@@ -1602,6 +1606,7 @@ def aggregate_game(uuid, stats, yakuman_details):
             if seat is not None:
                 seat = int(seat)
                 discard_tile = getattr(msg, "tile", "")
+                last_discard_tiles[seat] = discard_tile
                 remove_one_tile(current_hands[seat], discard_tile)
                 turn_counts[seat] += 1
                 late_noten = is_late_noten_discard(msg, seat, turn_counts, riichi)
@@ -1823,6 +1828,24 @@ def aggregate_game(uuid, stats, yakuman_details):
                                 loser_stats.deal_in_quality_score_sum += score
                                 for category in categories:
                                     loser_stats.deal_in_quality_counts[category] += 1
+                                if deal_in_details is not None:
+                                    deal_in_details.append({
+                                        "id": f"{uuid}:{record_index}:{winner}",
+                                        "uuid": uuid, "round_no": round_no,
+                                        "chang": current_chang, "ju": current_dealer,
+                                        "honba": current_honba, "turn": turn_counts[loser],
+                                        "player": loser_name, "winner": seat_to_name.get(winner, ""),
+                                        "tile": last_discard_tiles.get(loser, ""),
+                                        "payment": payment, "score": score,
+                                        "categories": list(categories),
+                                        "shanten": last_discard_shanten.get(loser, 8),
+                                        "riichi": loser in riichi, "winner_riichi": winner in riichi,
+                                        "winner_melds": winner_melds,
+                                        "riichi_info": dict(riichi_info.get(loser, {})),
+                                        "scores_before": scores_before_hule,
+                                        "scores_after": scores_after_hule,
+                                        "seat": loser,
+                                    })
 
             for hule in msg.hules:
                 seat = int(getattr(hule, "seat", -1))
