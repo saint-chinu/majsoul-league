@@ -1130,6 +1130,7 @@ def classify_deal_in_event(
     dealer,
     suji_patterns=None,
     kokushi_signals=None,
+    loser_points_before=None,
 ):
     categories = []
     loser_riichi = bool(loser_riichi_info.get("riichi"))
@@ -1165,7 +1166,9 @@ def classify_deal_in_event(
     if last_late_noten:
         categories.append("late_noten_deal_in")
 
-    if score_rank(scores_before, loser) == 1 and payment >= 12000:
+    points_before = loser_points_before if loser_points_before is not None else (scores_before[loser] if len(scores_before) > loser else None)
+    east_low_top = chang == 0 and points_before is not None and points_before <= 40000
+    if score_rank(scores_before, loser) == 1 and payment >= 12000 and not east_low_top:
         categories.append("top_haneman_deal_in")
 
     if is_oorasu(chang, dealer) and scores_after and len(scores_after) >= 3:
@@ -1850,6 +1853,7 @@ def aggregate_game(uuid, stats, yakuman_details, deal_in_details=None):
                                     current_dealer,
                                     suji_patterns,
                                     kokushi_signals,
+                                    list(msg.old_scores)[loser] if len(msg.old_scores) > loser else None,
                                 )
                                 loser_stats.deal_in_quality_score_sum += score
                                 for category in categories:
