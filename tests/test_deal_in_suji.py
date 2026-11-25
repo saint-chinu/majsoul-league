@@ -40,7 +40,7 @@ class SujiTests(unittest.TestCase):
 
     def score(self, patterns, riichi=False, declaration=False):
         return league.classify_deal_in_event(0, 1, 4000, None, [35000]*3, [31000,39000,35000],
-            0, {'riichi': riichi, 'good_shape': True}, False, 0, False, declaration, False, 0, 1, patterns)
+            0, {'riichi': riichi, 'good_shape': True}, False, 0, False, declaration, False, 0, 2, patterns)
 
     def test_points_and_riichi_exclusion(self):
         e = suji_evidence('5p', ['3p'], Counter({'5p': 2, '8p': 2}))
@@ -112,7 +112,7 @@ class SujiTests(unittest.TestCase):
         for signals, score in ((['1p'], 0), (['1p','4z'], -15), (['1p','4z','7z'], -25), (['1p','4z','7z','9m'], -25)):
             for riichi in (False, True):
                 cats, value = league.classify_deal_in_event(0,1,8000,None,[35000]*3,[27000,43000,35000],
-                    0,{'riichi':riichi,'good_shape':True},False,0,False,False,False,0,1,[],signals)
+                    0,{'riichi':riichi,'good_shape':True},False,0,False,False,False,0,2,[],signals)
                 self.assertEqual(value, 0 if riichi else score)
                 self.assertFalse('kokushi_two_signals' in cats and 'kokushi_three_signals' in cats)
 

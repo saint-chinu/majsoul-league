@@ -160,6 +160,7 @@ DEAL_IN_QUALITY_CATEGORIES = [
     ("two_shanten_or_worse_vs_riichi", "2シャンテン以下から対リーチ放銃"),
     ("top_haneman_deal_in", "トップ目から跳満以上放銃"),
     ("oorasu_rank_drop_deal_in", "オーラス着順落ち放銃"),
+    ("nonriichi_child_to_dealer", "非リーチ時・子から親への放銃"),
     ("senki_nonriichi", "非リーチ時・疝気筋放銃"),
     ("anko_suji_nonriichi", "非リーチ時・暗刻筋放銃"),
     ("honmei_suji_overlap", "疝気筋＋暗刻筋の両面本命放銃（追加）"),
@@ -181,6 +182,7 @@ DEAL_IN_QUALITY_SCORE = {
     "two_shanten_or_worse_vs_riichi": -7,
     "top_haneman_deal_in": -8,
     "oorasu_rank_drop_deal_in": -10,
+    "nonriichi_child_to_dealer": -3,
     "senki_nonriichi": -5,
     "anko_suji_nonriichi": -3,
     "honmei_suji_overlap": -7,
@@ -1178,6 +1180,8 @@ def classify_deal_in_event(
             categories.append("oorasu_rank_drop_deal_in")
 
     if not loser_riichi and not last_riichi_declaration:
+        if loser != dealer and winner == dealer:
+            categories.append("nonriichi_child_to_dealer")
         categories.extend(categories_for(suji_patterns or []))
         signal_count = len(set(kokushi_signals or []))
         if signal_count >= 2:
