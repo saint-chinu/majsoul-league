@@ -69,6 +69,21 @@ class NewLeagueTeamTests(unittest.TestCase):
         self.assertEqual(build.call_args.kwargs['teams_by_season'], teams)
         self.assertEqual(build.call_args.kwargs['season'], 8)
 
+    def test_season8_remaining_games(self):
+        context = {'key': 'new-season-8', 'rows': [{'player': 'A', 'games': '37'}]}
+        with patch.object(site, 'read_team_members', return_value={8: {'Blue': ['A']}}):
+            for played, remaining in ((0, 60), (37, 23), (59, 1), (60, 0), (61, 0)):
+                with self.subTest(played=played):
+                    html = site.team_summary_cards({**context, 'total_games': played})
+                    self.assertIn(f'<dt>残り試合</dt><dd>{remaining}試合</dd>', html)
+            self.assertNotIn('team-remaining', site.team_summary_cards({**context, 'key': 'old-season-8'}))
+
+    def test_season8_finishes_at_sixty_games(self):
+        for played, ongoing in ((59, True), (60, False), (61, False)):
+            with patch.object(site, 'build_context', return_value={}) as build:
+                site.build_season_contexts({8: {str(i) for i in range(played)}}, 'new', 'Season', 135)
+            self.assertEqual('進行中' in build.call_args.args[1], ongoing)
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -230,6 +230,7 @@ NEW_PAIFU_CSV = NEW_DATA_DIR / "admin_paifu_ids.csv"
 NEW_SEASON_FILE_RE = re.compile(r"admin_paifu_ids_new_season(\d+)\.csv$")
 OLD_LEAGUE_FULL_GAMES = 120
 NEW_LEAGUE_FULL_GAMES = 135
+NEW_LEAGUE_GAME_TARGETS = {4: 60, 5: 50, 6: 30, 7: 30, 8: 60}
 OLD_CONTEXT_CACHE = Path("data") / "old_league_contexts.json"
 OLD_CONTEXT_CACHE_VERSION = 4
 
@@ -1579,6 +1580,11 @@ def team_summary_cards(context: dict[str, object]) -> str:
     rows = build_team_rows(list(context.get("rows", [])), teams)
     if not rows:
         return ""
+    target = NEW_LEAGUE_GAME_TARGETS.get(int(match[2])) if match[1] == "new" else None
+    remaining = ""
+    if target is not None:
+        completed = int(context.get("total_games", 0))
+        remaining = f'<div class="team-remaining"><dt>残り試合</dt><dd>{max(0, target - completed)}試合</dd></div>'
     cards = []
     for row in rows:
         score = float(row["total_score"])
@@ -1591,7 +1597,7 @@ def team_summary_cards(context: dict[str, object]) -> str:
             f'<h3>{esc(row["team"])}</h3></div>'
             '<dl><div><dt>スコア</dt>'
             f'<dd class="{"team-score-negative" if score < 0 else ""}">{score_text}</dd></div>'
-            f'<div><dt>平均順位</dt><dd>{average_text}</dd></div></dl></article>'
+            f'<div><dt>平均順位</dt><dd>{average_text}</dd></div>{remaining}</dl></article>'
         )
     return '<section class="team-summary" aria-label="チーム順位">' + ''.join(cards) + '</section>'
 
@@ -2822,7 +2828,7 @@ def build_season_contexts(
             season,
             latest_season,
             len(season_to_uuids[season]),
-            full_games=({4: 60, 5: 50, 6: 30, 7: 30}.get(season, full_games) if key_prefix == "new" else full_games),
+            full_games=(NEW_LEAGUE_GAME_TARGETS.get(season, full_games) if key_prefix == "new" else full_games),
             prefix=label_prefix,
         )
         season_contexts.append(
