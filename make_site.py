@@ -2589,8 +2589,9 @@ def render_player_panel(
         use_manual=use_manual_analysis,
         manual_analysis=manual_analysis,
     )
+    player_review_note = _REVIEWED_ANALYSIS.get("review_notes", {}).get(player, ANALYSIS_REVIEW_NOTE)
     review_note = (
-        f'<p class="subnote">{esc(ANALYSIS_REVIEW_NOTE)}</p>'
+        f'<p class="subnote">{esc(player_review_note)}</p>'
         if manual_analysis and player in manual_analysis else ""
     )
 
