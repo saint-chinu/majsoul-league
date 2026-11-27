@@ -230,7 +230,7 @@ NEW_PAIFU_CSV = NEW_DATA_DIR / "admin_paifu_ids.csv"
 NEW_SEASON_FILE_RE = re.compile(r"admin_paifu_ids_new_season(\d+)\.csv$")
 OLD_LEAGUE_FULL_GAMES = 120
 NEW_LEAGUE_FULL_GAMES = 135
-NEW_LEAGUE_GAME_TARGETS = {4: 60, 5: 50, 6: 30, 7: 30, 8: 60}
+NEW_LEAGUE_GAME_TARGETS = {4: 60, 5: 50, 6: 30, 7: 30, 8: 60, 9: 60}
 OLD_CONTEXT_CACHE = Path("data") / "old_league_contexts.json"
 OLD_CONTEXT_CACHE_VERSION = 4
 
